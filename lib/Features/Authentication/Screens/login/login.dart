@@ -1,239 +1,302 @@
 import 'package:flutter/material.dart';
-import 'package:medicus/Utilities/sizes.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
-import 'package:medicus/Utilities/colors.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:get/get.dart';
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+import 'package:medicus/Features/Authentication/Models/auth_role.dart';
+import '../../Models/auth_account.dart';
+import '../registration/registration_screen.dart';
+import '../../Screens/role_landing/role_landing_screen.dart';
+import '../../Services/auth_registry.dart';
+import 'package:medicus/Utilities/auth_validators.dart';
+import '../../Widgets/auth_role_selector.dart';
+import '../../Widgets/auth_text_field.dart';
+import 'package:medicus/Utilities/colors.dart';
+import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/sizes.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, this.initialUserId, this.initialRole});
+
+  final String? initialUserId;
+  final AuthRole? initialRole;
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _userIdController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  AuthRole? _selectedRole;
+  bool _isRegisterSheetExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _userIdController.text = widget.initialUserId ?? '';
+    _selectedRole = widget.initialRole;
+  }
+
+  @override
+  void dispose() {
+    _userIdController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-      final dark = MHelperFunctions.isDarkMode(context);
+    final bool dark = MHelperFunctions.isDarkMode(context);
+
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.only(
-            top: Sizes.getAppBarHeight(context),
-            left: Sizes.defaultpadding,
-            right: Sizes.defaultpadding,
-            bottom: Sizes.defaultpadding,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[Color(0xFFFDF2F0), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          child: Column(
+        ),
+        child: SafeArea(
+          child: Stack(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-               
-                children: [
-                  Image(
-                    image: AssetImage(dark ? 'assets/Logos/M_dark1152.png' : 'assets/Logos/M1152.png'),
-                    height: 150,
-                  ),
-                  SizedBox(height: Sizes.screenHeight(context) * 0.02),
-                  Text(
-                    'Welcome Back!',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  SizedBox(height: Sizes.screenHeight(context) * 0.02),
-                  Text(
-                    'Please login to your account in accordance to your role',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-              SizedBox(height: Sizes.screenHeight(context) * 0.02),
-
-              Form(
-              child: Column(
-                children: [
-                  TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'ID',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: Sizes.screenHeight(context) * 0.02),
-                  TextFormField(
-                    obscureText: true,  
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
-                    )
-                  ),
-      
-                  Align(
-                    alignment: Alignment.centerRight,
-                  child: TextButton(onPressed: (){}, child: Text('Forgot Password?', style: TextStyle(color: MColors.primaryColor, ),textAlign: TextAlign.right,))),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side : BorderSide(
-                          color: dark ? Colors.grey : Colors.black,
-                        ),
+              SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  top: Sizes.responsiveHeight(context, 0.01, min: 6, max: 12),
+                  left: Sizes.responsivePadding(context),
+                  right: Sizes.responsivePadding(context),
+                  bottom: Sizes.responsiveHeight(context, 0.12, min: 90, max: 140),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxWidth: 460),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: dark ? const Color(0xFF181818) : Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(color: MColors.primaryColor.withValues(alpha: 0.12)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 28,
+                            offset: Offset(0, 14),
+                          ),
+                        ],
                       ),
-                      onPressed: () {
-                        // Handle login logic here
-                      },
-                      child: Text('Login',style:TextStyle(color: dark ? Colors.white : Colors.black)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Image.asset(
+                            dark ? 'assets/Logos/M_dark1152.png' : 'assets/Logos/M1152.png',
+                            height: Sizes.responsiveHeight(context, 0.15, min: 88, max: 140),
+                          ),
+                          SizedBox(height: Sizes.responsiveHeight(context, 0.02, min: 12, max: 18)),
+                          Text(
+                            'Welcome back',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          SizedBox(height: Sizes.responsiveHeight(context, 0.015, min: 8, max: 14)),
+                          Text(
+                            'Login with your 4-digit user ID, password, and role.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          SizedBox(height: Sizes.responsiveHeight(context, 0.02, min: 12, max: 18)),
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                AuthTextField(
+                                  controller: _userIdController,
+                                  label: 'User ID',
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 4,
+                                  validator: AuthValidators.userId,
+                                ),
+                                const SizedBox(height: 14),
+                                AuthTextField(
+                                  controller: _passwordController,
+                                  label: 'Password',
+                                  obscureText: true,
+                                  validator: AuthValidators.requiredField,
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _login,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: MColors.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    ),
+                                    child: const Text('Login'),
+                                  ),
+                                ),
+                                const SizedBox(height: 18),
+                                _buildRoleHeader(context, dark),
+                                const SizedBox(height: 12),
+                                AuthRoleSelector(
+                                  selectedRole: _selectedRole,
+                                  dark: dark,
+                                  onChanged: (AuthRole role) => setState(() => _selectedRole = role),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  /*SizedBox(width: double.infinity, child: 
-                   OutlinedButton(onPressed: (){}, child: Text('Register', style: TextStyle(color: dark ? Colors.white : Colors.black)))
-                  ),*/
-                ]
-              )
-            ),
-          
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              
-              children: [
-                SizedBox(height: Sizes.screenHeight(context) * 0.089),
-                Flexible(child: Divider(color: dark ? Colors.white : Colors.grey, thickness: 0.5, indent: 60, endIndent: 5)),
-                Text('Choose Your Role', style: Theme.of(context).textTheme.bodyMedium),
-                Flexible(child: Divider(color: dark ? Colors.white : Colors.grey, thickness: 0.5, indent: 5, endIndent: 60))
-              ],
-            ),
+                  ],
+                ),
+              ),
+              NotificationListener<DraggableScrollableNotification>(
+                onNotification: (DraggableScrollableNotification notification) {
+                  final bool expanded = notification.extent > 0.2;
+                  if (expanded != _isRegisterSheetExpanded) {
+                    setState(() {
+                      _isRegisterSheetExpanded = expanded;
+                    });
+                  }
+                  return false;
+                },
+                child: DraggableScrollableSheet(
+                  initialChildSize: 0.14,
+                  minChildSize: 0.08,
+                  maxChildSize: 0.9,
+                  snap: true,
+                  snapSizes: const [0.14, 0.9],
+                  builder: (BuildContext context, ScrollController scrollController) {
+                    return Container(
+                      margin: const EdgeInsets.only(top: 24),
+                      clipBehavior: Clip.hardEdge,
+                      decoration: const BoxDecoration(
+                        color: MColors.primaryColor,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(36),
+                          topRight: Radius.circular(36),
+                        ),
+                        boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black26)],
+                      ),
+                      child: ListView(
+                        controller: scrollController,
+                        padding: EdgeInsets.only(
+                          left: Sizes.responsivePadding(context),
+                          right: Sizes.responsivePadding(context),
+                          top: 12,
+                          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                        ),
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 48,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: Colors.white70,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _isRegisterSheetExpanded ? 'Swipe down to login' : 'Swipe up to register',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: Sizes.responsiveFontSize(context, 18, min: 16, max: 20),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _isRegisterSheetExpanded
+                                ? 'Finish the registration flow here, then swipe down to login.'
+                                : 'Open the sheet to complete registration.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 18),
+                          RegistrationScreen(
+                            selectedRole: _selectedRole,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                SizedBox(
-      width: Sizes.screenWidth(context) * 0.37,
-      height: Sizes.screenHeight(context) * 0.1,
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle Patient login logic here
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: MColors.primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+  Widget _buildRoleHeader(BuildContext context, bool dark) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: dark ? Colors.white70 : Colors.grey,
+            thickness: 0.5,
+            endIndent: 8,
           ),
         ),
-        // Use a Column to position both the icon and text at the bottom
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end, // Pushes everything to the bottom
-            children: [
-              const Icon(Icons.medical_services, color: Colors.white, size: 40), // Your Iconsax Icon
-              const SizedBox(height: 10), // Space between icon and text
-              Text(
-                'Doctor',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.justify,
-              ),
-            ],
+        Text(
+          'Choose Your Role',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        Expanded(
+          child: Divider(
+            color: dark ? Colors.white70 : Colors.grey,
+            thickness: 0.5,
+            indent: 8,
           ),
         ),
-      ),
-    ),
-                SizedBox(
-      width: Sizes.screenWidth(context) * 0.37,
-      height: Sizes.screenHeight(context) * 0.1,
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle Patient login logic here
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: MColors.primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        // Use a Column to position both the icon and text at the bottom
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end, // Pushes everything to the bottom
-            children: [
-              const Icon(Iconsax.message_edit, color: Colors.white, size: 40), // Your Iconsax Icon
-              const SizedBox(height: 10), // Space between icon and text
-              Text(
-                'Pharmacist',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.justify,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-                
-            ],
-          ),
-          SizedBox(height: Sizes.screenHeight(context) * 0.02),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-                 SizedBox(
-      width: Sizes.screenWidth(context) * 0.37,
-      height: Sizes.screenHeight(context) * 0.1,
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle Patient login logic here
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: MColors.primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        // Use a Column to position both the icon and text at the bottom
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end, // Pushes everything to the bottom
-            children: [
-              const Icon(Icons.science, color: Colors.white, size: 40), // Your Iconsax Icon
-              const SizedBox(height: 10), // Space between icon and text
-              Text(
-                'Lab Specialist',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.justify,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-                SizedBox(
-      width: Sizes.screenWidth(context) * 0.37,
-      height: Sizes.screenHeight(context) * 0.1,
-      child: ElevatedButton(
-        onPressed: () {
-          // Handle Patient login logic here
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: MColors.primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-        ),
-        // Use a Column to position both the icon and text at the bottom
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end, // Pushes everything to the bottom
-            children: [
-              const Icon(Iconsax.user, color: Colors.white, size: 40), // Your Iconsax Icon
-              const SizedBox(height: 10), // Space between icon and text
-              Text(
-                'Patient',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.justify,
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-            ]
-        ),
-      ])
-    )));
+      ],
+    );
+  }
+
+  void _login() {
+    final bool valid = _formKey.currentState?.validate() ?? false;
+    if (!valid) {
+      return;
+    }
+
+    final AuthRole? role = _selectedRole;
+    if (role == null) {
+      Get.snackbar(
+        'Select a role',
+        'Choose the account role before logging in.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final AuthAccount? account = AuthRegistry.instance.login(
+      userId: _userIdController.text,
+      password: _passwordController.text,
+      role: role,
+    );
+
+    if (account == null) {
+      Get.snackbar(
+        'Login failed',
+        'Check the user ID, password, role, and email verification status.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    Get.offAll(() => RoleLandingScreen(account: account), transition: Transition.fadeIn);
   }
 }

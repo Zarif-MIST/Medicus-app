@@ -166,7 +166,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedSpecialty,
+                initialValue: _selectedSpecialty,
                 items: _doctorSpecialties
                     .map(
                       (String specialty) => DropdownMenuItem<String>(

@@ -2,6 +2,7 @@ import 'auth_role.dart';
 
 class AuthAccount {
   const AuthAccount({
+    this.firebaseUid,
     required this.userId,
     required this.role,
     required this.firstName,
@@ -21,6 +22,7 @@ class AuthAccount {
     this.isVerified = false,
   });
 
+  final String? firebaseUid;
   final String userId;
   final AuthRole role;
   final String firstName;
@@ -51,6 +53,7 @@ class AuthAccount {
   }
 
   AuthAccount copyWith({
+    String? firebaseUid,
     String? userId,
     AuthRole? role,
     String? firstName,
@@ -70,6 +73,7 @@ class AuthAccount {
     bool? isVerified,
   }) {
     return AuthAccount(
+      firebaseUid: firebaseUid ?? this.firebaseUid,
       userId: userId ?? this.userId,
       role: role ?? this.role,
       firstName: firstName ?? this.firstName,

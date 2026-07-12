@@ -120,13 +120,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                             borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(color: MColors.primaryColor),
                           ),
-                          helperText: 'Prototype code for all users is 1234.',
+                          helperText: 'Use the latest code sent to your email inbox.',
                         ),
                       ),
                       const SizedBox(height: 10),
                       TextButton(
-                        onPressed: () {
-                          AuthRegistry.instance.updateVerificationCode(userId: widget.account.userId);
+                        onPressed: () async {
+                          await AuthRegistry.instance.updateVerificationCode(userId: widget.account.userId);
                           Get.snackbar(
                             'Verification code refreshed',
                             'A new code is ready for ${widget.account.maskedEmail}.',
@@ -165,13 +165,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     );
   }
 
-  void _verify() {
+  Future<void> _verify() async {
     final bool valid = _formKey.currentState?.validate() ?? false;
     if (!valid) {
       return;
     }
 
-    final bool verified = AuthRegistry.instance.verifyEmail(
+    final bool verified = await AuthRegistry.instance.verifyEmail(
       userId: widget.account.userId,
       code: _codeController.text,
     );

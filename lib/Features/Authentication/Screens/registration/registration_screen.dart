@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
@@ -41,6 +42,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _selectedSpecialty;
   bool _showVerificationStep = false;
   bool _verificationCompleted = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   AuthAccount? _registeredAccount;
   final TextEditingController _verificationCodeController = TextEditingController();
 
@@ -122,7 +125,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Text(
             'Create account',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -130,7 +133,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Text(
             'Pick a role and complete the matching fields.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 18),
           Text(
@@ -252,10 +255,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             AuthTextField(
               controller: _phoneController,
               label: 'Phone number',
-              prefixText: '+880 ',
+              prefixText: '+88 ',
               keyboardType: TextInputType.phone,
-              maxLength: 10,
-              helperText: 'Enter the 10 digits after the Bangladeshi country code.',
+              maxLength: 11,
+              helperText: 'Enter the 11 digits after the Bangladeshi country code.',
               inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
               validator: AuthValidators.bangladeshPhone,
             ),
@@ -263,18 +266,40 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             AuthTextField(
               controller: _passwordController,
               label: 'Password',
-              obscureText: true,
+              obscureText: _obscurePassword,
               validator: AuthValidators.password,
               helperText: 'Use 8+ characters with upper, lower, number, and symbol.',
+              suffixIcon: IconButton(
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                ),
+                tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+              ),
             ),
             const SizedBox(height: 12),
             AuthTextField(
               controller: _confirmPasswordController,
               label: 'Confirm password',
-              obscureText: true,
+              obscureText: _obscureConfirmPassword,
               validator: (String? value) => AuthValidators.confirmPassword(
                 value,
                 _passwordController.text,
+              ),
+              suffixIcon: IconButton(
+                onPressed: () {
+                  setState(() {
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                  });
+                },
+                icon: Icon(
+                  _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                ),
+                tooltip: _obscureConfirmPassword ? 'Show password' : 'Hide password',
               ),
             ),
             const SizedBox(height: 20),
@@ -398,22 +423,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Enter the prototype code sent to ${account.maskedEmail}.',
+          'Enter the verification code sent to ${account.maskedEmail}.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: MColors.primaryColor.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Text(
-            'Prototype code for all users: 1234',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
         ),
         const SizedBox(height: 12),
         AuthTextField(
@@ -492,7 +504,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  void _register() {
+  Future<void> _register() async {
     final bool valid = _formKey.currentState?.validate() ?? false;
     if (!valid || _selectedRole == null) {
       if (_selectedRole == null) {
@@ -521,7 +533,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       lastName: _lastNameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      phoneNumber: '+880${_phoneController.text.trim()}',
+      phoneNumber: '+88${_phoneController.text.trim()}',
       verificationCode: '',
       specialty: _selectedSpecialty,
       licenseNumber: _licenseController.text.trim(),
@@ -530,15 +542,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       nidNumber: _nidController.text.trim(),
     );
 
-    final AuthAccount registeredAccount = AuthRegistry.instance.register(account);
-    setState(() {
-      _registeredAccount = registeredAccount;
-      _showVerificationStep = false;
-      _verificationCompleted = false;
-    });
+    try {
+      final AuthAccount registeredAccount = await AuthRegistry.instance.register(account);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _registeredAccount = registeredAccount;
+        _showVerificationStep = false;
+        _verificationCompleted = false;
+      });
+      Get.snackbar(
+        'Verification email sent',
+        'A verification code was sent to ${registeredAccount.maskedEmail}.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } on FirebaseAuthException catch (error) {
+      Get.snackbar(
+        'Registration failed',
+        error.message ?? 'Could not create the account. Try a different email.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      Get.snackbar(
+        'Registration failed',
+        error.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
-  void _verifyEmail(AuthAccount account) {
+  Future<void> _verifyEmail(AuthAccount account) async {
     final String? codeValidation = AuthValidators.numericCode(
       _verificationCodeController.text,
       length: 4,
@@ -553,7 +587,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    final bool verified = AuthRegistry.instance.verifyEmail(
+    final bool verified = await AuthRegistry.instance.verifyEmail(
       userId: account.userId,
       code: _verificationCodeController.text,
     );
@@ -561,7 +595,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!verified) {
       Get.snackbar(
         'Verification failed',
-        'Use the prototype code 1234 to complete verification.',
+        'The code does not match the one sent to ${account.maskedEmail}.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;

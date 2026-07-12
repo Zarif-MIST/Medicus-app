@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import '../../Models/auth_account.dart';
 import '../registration/registration_screen.dart';
-import '../../Screens/role_landing/role_landing_screen.dart';
+import '../email_verification/email_verification_screen.dart';
 import '../../Services/auth_registry.dart';
 import 'package:medicus/Utilities/auth_validators.dart';
 import '../../Widgets/auth_role_selector.dart';
@@ -12,6 +12,11 @@ import '../../Widgets/auth_text_field.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_dash.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_dash.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharm_dash.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pat_dash.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.initialUserId, this.initialRole});
@@ -30,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   AuthRole? _selectedRole;
   bool _isRegisterSheetExpanded = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -51,21 +57,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[Color(0xFFFDF2F0), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF181818) : Colors.white,
         ),
         child: SafeArea(
           child: Stack(
             children: [
               SingleChildScrollView(
                 padding: EdgeInsets.only(
-                  top: Sizes.responsiveHeight(context, 0.01, min: 6, max: 12),
-                  left: Sizes.responsivePadding(context),
-                  right: Sizes.responsivePadding(context),
                   bottom: Sizes.responsiveHeight(context, 0.12, min: 90, max: 140),
                 ),
                 child: Column(
@@ -77,15 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: dark ? const Color(0xFF181818) : Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: MColors.primaryColor.withValues(alpha: 0.12)),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A000000),
-                            blurRadius: 28,
-                            offset: Offset(0, 14),
-                          ),
-                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -125,8 +115,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 AuthTextField(
                                   controller: _passwordController,
                                   label: 'Password',
-                                  obscureText: true,
+                                  obscureText: _obscurePassword,
                                   validator: AuthValidators.requiredField,
+                                  suffixIcon: IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    ),
+                                    tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
                                 SizedBox(
@@ -179,8 +180,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     return Container(
                       margin: const EdgeInsets.only(top: 24),
                       clipBehavior: Clip.hardEdge,
-                      decoration: const BoxDecoration(
+                      decoration:  BoxDecoration(
                         color: MColors.primaryColor,
+                        border: Border.all(
+                          color: MColors.primaryColor.withValues(alpha: 0.10),
+                          width: 10,
+                          style: BorderStyle.solid
+                        ),
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(36),
                           topRight: Radius.circular(36),
@@ -216,15 +222,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 48),
                           Text(
                             _isRegisterSheetExpanded
-                                ? 'Finish the registration flow here, then swipe down to login.'
+                                ? 'Finish the registration here'
                                 : 'Open the sheet to complete registration.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: Colors.white70),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 48),
                           RegistrationScreen(
                             selectedRole: _selectedRole,
                           ),
@@ -266,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _login() {
+  Future<void> _login() async {
     final bool valid = _formKey.currentState?.validate() ?? false;
     if (!valid) {
       return;
@@ -282,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final AuthAccount? account = AuthRegistry.instance.login(
+    final AuthAccount? account = await AuthRegistry.instance.login(
       userId: _userIdController.text,
       password: _passwordController.text,
       role: role,
@@ -291,12 +297,40 @@ class _LoginScreenState extends State<LoginScreen> {
     if (account == null) {
       Get.snackbar(
         'Login failed',
-        'Check the user ID, password, role, and email verification status.',
+        'Check the user ID, password, and selected role.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
 
-    Get.offAll(() => RoleLandingScreen(account: account), transition: Transition.fadeIn);
+    if (!account.isVerified) {
+      Get.to(
+        () => EmailVerificationScreen(account: account),
+        transition: Transition.fadeIn,
+      );
+      return;
+    }
+
+    if (account.role == AuthRole.doctor) {
+      Get.offAll(
+        () => DoctorDash(),
+        transition: Transition.fadeIn,
+      );
+    } else if (account.role == AuthRole.labSpecialist) {
+      Get.offAll(
+        () => LabDashboardScreen(),
+        transition: Transition.fadeIn,
+      );
+    } else if (account.role == AuthRole.pharmacist) {
+      Get.offAll(
+        () => PharmacistDashboardScreen(),
+        transition: Transition.fadeIn,
+      );
+    } else if (account.role == AuthRole.patient) {
+      Get.offAll(
+        () => PatientDashboardScreen(),
+        transition: Transition.fadeIn,
+      );
+    }
   }
 }

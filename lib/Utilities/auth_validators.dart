@@ -83,8 +83,8 @@ class AuthValidators {
     }
 
     final String digitsOnly = value!.replaceAll(RegExp(r'\D'), '');
-    if (!RegExp(r'^1[3-9]\d{8}$').hasMatch(digitsOnly)) {
-      return 'Enter a valid number after +880';
+    if (!RegExp(r'^01[3-9]\d{8}$').hasMatch(digitsOnly)) {
+      return 'Enter a valid number after +88';
     }
     return null;
   }

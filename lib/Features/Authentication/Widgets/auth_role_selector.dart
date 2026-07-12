@@ -36,7 +36,7 @@ class AuthRoleSelector extends StatelessWidget {
                   onPressed: () => onChanged(role),
                   style: OutlinedButton.styleFrom(
                     backgroundColor: selectedRole == role ? MColors.primaryColor.withValues(alpha: 0.08) : null,
-                    side: BorderSide(color: dark ? Colors.white : MColors.primaryColor),
+                    side: BorderSide(color: dark ? Colors.white : MColors.primaryColor, width: 2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),

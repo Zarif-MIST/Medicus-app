@@ -61,7 +61,7 @@ class _HomeShellState extends State<HomeShell> {
  
 class _DemoPage extends StatelessWidget {
   final String title;
-  const _DemoPage({required this.title, super.key});
+  const _DemoPage({required this.title});
  
   @override
   Widget build(BuildContext context) {

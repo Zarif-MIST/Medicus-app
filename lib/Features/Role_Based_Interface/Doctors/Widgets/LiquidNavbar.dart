@@ -136,7 +136,7 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = widget.accentColor ?? const Color(0xFF92140c);
+    final accent = widget.accentColor ?? (isDark ? const Color.fromARGB(255, 255, 17, 0) : const Color.fromARGB(255, 82, 7, 2));
     final radius = widget.height;
 
     // Settings for the main bar body — clear, frosted, barely tinted.
@@ -154,7 +154,7 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
     final indicatorSettings = LiquidGlassSettings(
       thickness: 26,
       blur: 6,
-      glassColor: accent.withOpacity(1),
+      glassColor: accent.withValues(alpha: 1),
       lightIntensity: 1.6,
       saturation: 1.3,
       refractiveIndex: 1.5,
@@ -169,7 +169,7 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
           borderRadius: BorderRadius.circular(radius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+              color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -279,8 +279,8 @@ class _NavItemButtonState extends State<_NavItemButton> {
     // Unselected sits directly on the bar's own glass, which is pale in
     // light mode — so it needs a dark, not white, unselected color there.
     final unselectedColor = widget.isDark
-        ? Colors.white.withOpacity(0.6)
-        : Colors.black.withOpacity(0.45);
+        ? Colors.white.withValues(alpha: 0.6)
+        : Colors.black.withValues(alpha: 0.45);
     const selectedColor = Colors.white;
 
     return GestureDetector(

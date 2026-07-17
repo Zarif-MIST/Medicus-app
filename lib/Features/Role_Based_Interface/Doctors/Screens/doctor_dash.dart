@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/colors.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/queue.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 class DoctorDash extends StatelessWidget {
-  const DoctorDash({super.key});
- 
+  const DoctorDash({required this.account, super.key});
+  final AuthAccount account;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: const HomeShell(),
+      body:  HomeShell(),
     );
   }
 }
@@ -22,16 +28,16 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
   final _items = const [
     LiquidNavItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home'),
-    LiquidNavItem(icon: Icons.search, selectedIcon: Icons.search, label: 'Search'),
-    LiquidNavItem(icon: Icons.favorite_border, selectedIcon: Icons.favorite, label: 'Saved'),
+    LiquidNavItem(icon: Icons.queue_outlined, selectedIcon: Icons.queue, label: 'Queue'),
+    LiquidNavItem(icon: Icons.qr_code_scanner_outlined, selectedIcon: Icons.qr_code_scanner, label: 'Scan QR'),
     LiquidNavItem(icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Profile'),
   ];
  
   final _pages = [
     _DemoPage(title: 'Home'),
-    _DemoPage(title: 'Search'),
-    _DemoPage(title: 'Saved'),
-    _DemoPage(title: 'Profile'),
+    QueueScreen(),
+    Scanqr(),
+    ProfileScreen(),
   ];
  
   @override
@@ -61,19 +67,124 @@ class _HomeShellState extends State<HomeShell> {
  
 class _DemoPage extends StatelessWidget {
   final String title;
-  const _DemoPage({required this.title, super.key});
- 
+  const _DemoPage({required this.title});
+  String _greeting() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good Morning,';
+  if (hour < 17) return 'Good Afternoon,';
+  return 'Good Evening,';
+}
   @override
   Widget build(BuildContext context) {
 
+    return Scaffold(
+  body: SingleChildScrollView(
+    child: Column(
+      children: [
+        ClipPath(
+          clipper: MCurvedEdges(),
+          child: Container(
+            color: MColors.primaryColor,
+            padding: EdgeInsets.all(0),
+            child: SizedBox(
+              height: 380,
+              child: Stack(
+                children: [
+                  Positioned(top: -150, right: -250, child: MCircularPath()),
+                  Positioned(top: 100, right: -300, child: MCircularPath()),
+
+                  // Greeting + search bar, on top of the decorative circles
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 50),
+                            Text(
+                              _greeting(),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Dr. Sarah Ahmed', // swap for your doctor name variable
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 30),
+                            LiquidGlassSearchBar(
+                              hintText: 'Search patient ID',
+                              onChanged: (value) {
+                                // hook up your patient search here
+                              },
+                              onSubmitted: (value) {
+                                // e.g. navigate to patient record
+                              },
+                            ),
+                            const SizedBox(height: 35),
+                            GestureDetector(
+                              onTap: () {
+                                // navigate to QR scanner page
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const Scanqr()),
+                                );
+                              },
+                              child: Icon(Icons.qr_code_scanner, color: Colors.white, size: 35),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+  }
+}
+
+class MCircularPath extends StatelessWidget {
+  const MCircularPath({
+    super.key,
+    this.radius =400,
+    this.width =400,
+    this.height = 400,
+    this.padding = 0,
+    this.child,
+    this.backgroundColor = Colors.white,
+  });
+  final double? radius;
+  final double? width;
+  final double height;
+  final double padding;
+  final Widget? child;
+  final Color backgroundColor;
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      width: width,
+      height: height,
       decoration: BoxDecoration(
-       color: MHelperFunctions.isDarkMode(context) ? const Color(0xFF181818) : Colors.white,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        title,
-        style: const TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.bold),
+        borderRadius: BorderRadius.circular(radius!),
+        color: backgroundColor.withOpacity(0.1),
       ),
     );
   }

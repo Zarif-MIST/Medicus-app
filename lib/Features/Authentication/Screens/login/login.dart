@@ -313,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (account.role == AuthRole.doctor) {
       Get.offAll(
-        () => DoctorDash(),
+        () => DoctorDash(account: account),
         transition: Transition.fadeIn,
       );
     } else if (account.role == AuthRole.labSpecialist) {

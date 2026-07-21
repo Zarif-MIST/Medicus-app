@@ -60,7 +60,7 @@ class LiquidGlassSearchBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),

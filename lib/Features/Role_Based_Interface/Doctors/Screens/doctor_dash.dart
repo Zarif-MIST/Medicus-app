@@ -69,11 +69,12 @@ class _DemoPage extends StatelessWidget {
   final String title;
   const _DemoPage({required this.title});
   String _greeting() {
-  final hour = DateTime.now().hour;
-  if (hour < 12) return 'Good Morning,';
-  if (hour < 17) return 'Good Afternoon,';
-  return 'Good Evening,';
-}
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning,';
+    if (hour < 17) return 'Good Afternoon,';
+    return 'Good Evening,';
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -184,7 +185,7 @@ class MCircularPath extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius!),
-        color: backgroundColor.withOpacity(0.1),
+        color: backgroundColor.withValues(alpha: 0.1),
       ),
     );
   }

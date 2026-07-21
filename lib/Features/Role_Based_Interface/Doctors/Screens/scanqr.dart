@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 
 class Scanqr extends StatelessWidget {
   const Scanqr({super.key});

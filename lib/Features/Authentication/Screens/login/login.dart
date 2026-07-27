@@ -17,7 +17,6 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharm_dash.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pat_dash.dart';
 
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.initialUserId, this.initialRole});
 
@@ -65,7 +64,12 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               SingleChildScrollView(
                 padding: EdgeInsets.only(
-                  bottom: Sizes.responsiveHeight(context, 0.12, min: 90, max: 140),
+                  bottom: Sizes.responsiveHeight(
+                    context,
+                    0.12,
+                    min: 90,
+                    max: 140,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,24 +85,51 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Image.asset(
-                            dark ? 'assets/Logos/M_dark1152.png' : 'assets/Logos/M1152.png',
-                            height: Sizes.responsiveHeight(context, 0.15, min: 88, max: 140),
+                            dark
+                                ? 'assets/Logos/M_dark1152.png'
+                                : 'assets/Logos/M1152.png',
+                            height: Sizes.responsiveHeight(
+                              context,
+                              0.15,
+                              min: 88,
+                              max: 140,
+                            ),
                           ),
-                          SizedBox(height: Sizes.responsiveHeight(context, 0.02, min: 12, max: 18)),
+                          SizedBox(
+                            height: Sizes.responsiveHeight(
+                              context,
+                              0.02,
+                              min: 12,
+                              max: 18,
+                            ),
+                          ),
                           Text(
                             'Welcome back',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
-                          SizedBox(height: Sizes.responsiveHeight(context, 0.015, min: 8, max: 14)),
+                          SizedBox(
+                            height: Sizes.responsiveHeight(
+                              context,
+                              0.015,
+                              min: 8,
+                              max: 14,
+                            ),
+                          ),
                           Text(
                             'Login with your 4-digit user ID, password, and role.',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
-                          SizedBox(height: Sizes.responsiveHeight(context, 0.02, min: 12, max: 18)),
+                          SizedBox(
+                            height: Sizes.responsiveHeight(
+                              context,
+                              0.02,
+                              min: 12,
+                              max: 18,
+                            ),
+                          ),
                           Form(
                             key: _formKey,
                             child: Column(
@@ -124,9 +155,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       });
                                     },
                                     icon: Icon(
-                                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
                                     ),
-                                    tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                                    tooltip: _obscurePassword
+                                        ? 'Show password'
+                                        : 'Hide password',
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -137,8 +172,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: MColors.primaryColor,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                     ),
                                     child: const Text('Login'),
                                   ),
@@ -149,7 +188,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 AuthRoleSelector(
                                   selectedRole: _selectedRole,
                                   dark: dark,
-                                  onChanged: (AuthRole role) => setState(() => _selectedRole = role),
+                                  onChanged: (AuthRole role) =>
+                                      setState(() => _selectedRole = role),
                                 ),
                               ],
                             ),
@@ -176,68 +216,82 @@ class _LoginScreenState extends State<LoginScreen> {
                   maxChildSize: 0.9,
                   snap: true,
                   snapSizes: const [0.14, 0.9],
-                  builder: (BuildContext context, ScrollController scrollController) {
-                    return Container(
-                      margin: const EdgeInsets.only(top: 24),
-                      clipBehavior: Clip.hardEdge,
-                      decoration:  BoxDecoration(
-                        color: MColors.primaryColor,
-                        border: Border.all(
-                          color: MColors.primaryColor.withValues(alpha: 0.10),
-                          width: 10,
-                          style: BorderStyle.solid
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(36),
-                          topRight: Radius.circular(36),
-                        ),
-                        boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black26)],
-                      ),
-                      child: ListView(
-                        controller: scrollController,
-                        padding: EdgeInsets.only(
-                          left: Sizes.responsivePadding(context),
-                          right: Sizes.responsivePadding(context),
-                          top: 12,
-                          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                        ),
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 48,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: Colors.white70,
-                                borderRadius: BorderRadius.circular(999),
+                  builder:
+                      (
+                        BuildContext context,
+                        ScrollController scrollController,
+                      ) {
+                        return Container(
+                          margin: const EdgeInsets.only(top: 24),
+                          clipBehavior: Clip.hardEdge,
+                          decoration: BoxDecoration(
+                            color: MColors.primaryColor,
+                            border: Border.all(
+                              color: MColors.primaryColor.withValues(
+                                alpha: 0.10,
                               ),
+                              width: 10,
+                              style: BorderStyle.solid,
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _isRegisterSheetExpanded ? 'Swipe down to login' : 'Swipe up to register',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: Sizes.responsiveFontSize(context, 18, min: 16, max: 20),
-                              fontWeight: FontWeight.w700,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(36),
+                              topRight: Radius.circular(36),
                             ),
+                            boxShadow: [
+                              BoxShadow(blurRadius: 10, color: Colors.black26),
+                            ],
                           ),
-                          const SizedBox(height: 48),
-                          Text(
-                            _isRegisterSheetExpanded
-                                ? 'Finish the registration here'
-                                : 'Open the sheet to complete registration.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white70),
+                          child: ListView(
+                            controller: scrollController,
+                            padding: EdgeInsets.only(
+                              left: Sizes.responsivePadding(context),
+                              right: Sizes.responsivePadding(context),
+                              top: 12,
+                              bottom:
+                                  MediaQuery.of(context).viewInsets.bottom + 24,
+                            ),
+                            children: [
+                              Center(
+                                child: Container(
+                                  width: 48,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white70,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _isRegisterSheetExpanded
+                                    ? 'Swipe down to login'
+                                    : 'Swipe up to register',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: Sizes.responsiveFontSize(
+                                    context,
+                                    18,
+                                    min: 16,
+                                    max: 20,
+                                  ),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 48),
+                              Text(
+                                _isRegisterSheetExpanded
+                                    ? 'Finish the registration here'
+                                    : 'Open the sheet to complete registration.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                              const SizedBox(height: 48),
+                              RegistrationScreen(selectedRole: _selectedRole),
+                            ],
                           ),
-                          const SizedBox(height: 48),
-                          RegistrationScreen(
-                            selectedRole: _selectedRole,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
                 ),
               ),
             ],
@@ -257,10 +311,7 @@ class _LoginScreenState extends State<LoginScreen> {
             endIndent: 8,
           ),
         ),
-        Text(
-          'Choose Your Role',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        Text('Choose Your Role', style: Theme.of(context).textTheme.bodyMedium),
         Expanded(
           child: Divider(
             color: dark ? Colors.white70 : Colors.grey,
@@ -318,17 +369,17 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else if (account.role == AuthRole.labSpecialist) {
       Get.offAll(
-        () => LabDashboardScreen(),
+        () => LabDashboardScreen(account: account),
         transition: Transition.fadeIn,
       );
     } else if (account.role == AuthRole.pharmacist) {
       Get.offAll(
-        () => PharmacistDashboardScreen(),
+        () => PharmacistDashboardScreen(account: account),
         transition: Transition.fadeIn,
       );
     } else if (account.role == AuthRole.patient) {
       Get.offAll(
-        () => PatientDashboardScreen(),
+        () => PatientDashboardScreen(account: account),
         transition: Transition.fadeIn,
       );
     }

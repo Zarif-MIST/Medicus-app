@@ -1,29 +1,85 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_queue_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
 
 class PharmacistDashboardScreen extends StatelessWidget {
-  const PharmacistDashboardScreen({super.key});
+  const PharmacistDashboardScreen({super.key, required this.account});
+
+  final AuthAccount account;
 
   @override
   Widget build(BuildContext context) {
+    return _PharmacistShell(account: account);
+  }
+}
+
+class _PharmacistShell extends StatefulWidget {
+  const _PharmacistShell({required this.account});
+
+  final AuthAccount account;
+
+  @override
+  State<_PharmacistShell> createState() => _PharmacistShellState();
+}
+
+class _PharmacistShellState extends State<_PharmacistShell> {
+  int _index = 0;
+
+  final List<LiquidNavItem> _items = const [
+    LiquidNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
+    LiquidNavItem(
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long,
+      label: 'Queue',
+    ),
+    LiquidNavItem(
+      icon: Icons.inventory_2_outlined,
+      selectedIcon: Icons.inventory_2,
+      label: 'Inventory',
+    ),
+    LiquidNavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Profile',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      PharmacistHomeScreen(
+        account: widget.account,
+        onOpenQueue: () => setState(() => _index = 1),
+      ),
+      const PrescriptionQueueScreen(),
+      const InventoryScreen(),
+      ProfileScreen(account: widget.account),
+    ];
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[Color(0xFF92140C), Color(0xFF5D0B07)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      extendBody: true,
+      body: Stack(
+        children: [
+          pages[_index],
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: LiquidGlassNavBar(
+              items: _items,
+              selectedIndex: _index,
+              onTap: (index) => setState(() => _index = index),
+            ),
           ),
-        ),
-        child: Center(
-          child: Text(
-            'Pharmacist!!!!!!',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ),
+        ],
       ),
     );
   }

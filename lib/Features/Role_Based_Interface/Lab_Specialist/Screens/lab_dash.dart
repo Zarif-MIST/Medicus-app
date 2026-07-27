@@ -1,29 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_orders_screen.dart';
 
 class LabDashboardScreen extends StatelessWidget {
-  const LabDashboardScreen({super.key});
+  const LabDashboardScreen({super.key, required this.account});
+
+  final AuthAccount account;
 
   @override
   Widget build(BuildContext context) {
+    return _LabShell(account: account);
+  }
+}
+
+class _LabShell extends StatefulWidget {
+  const _LabShell({required this.account});
+
+  final AuthAccount account;
+
+  @override
+  State<_LabShell> createState() => _LabShellState();
+}
+
+class _LabShellState extends State<_LabShell> {
+  int _index = 0;
+
+  final List<LiquidNavItem> _items = const [
+    LiquidNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
+    LiquidNavItem(
+      icon: Icons.science_outlined,
+      selectedIcon: Icons.science,
+      label: 'Orders',
+    ),
+    LiquidNavItem(
+      icon: Icons.upload_file_outlined,
+      selectedIcon: Icons.upload_file,
+      label: 'Results',
+    ),
+    LiquidNavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Profile',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      LabHomeScreen(
+        account: widget.account,
+        onOpenOrders: () => setState(() => _index = 1),
+      ),
+      const LabOrdersScreen(),
+      const LabOrdersScreen(),
+      ProfileScreen(account: widget.account),
+    ];
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[Color(0xFF92140C), Color(0xFF5D0B07)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      extendBody: true,
+      body: Stack(
+        children: [
+          pages[_index],
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: LiquidGlassNavBar(
+              items: _items,
+              selectedIndex: _index,
+              onTap: (index) => setState(() => _index = index),
+            ),
           ),
-        ),
-        child: Center(
-          child: Text(
-            'Lab Specialist!!!!!!',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ),
+        ],
       ),
     );
   }

@@ -10,12 +10,14 @@ class PrescriptionTimelineEntry {
     required this.dosage,
     required this.dayCurrent,
     required this.dayTotal,
+    required this.prescribedOn,
   });
 
   final String medicineName;
   final String dosage;
   final int dayCurrent;
   final int dayTotal;
+  final DateTime prescribedOn;
 
   bool get isCompleted => dayCurrent >= dayTotal;
   double get progress => dayTotal == 0 ? 0 : (dayCurrent / dayTotal).clamp(0, 1);

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
@@ -9,6 +10,7 @@ class DoctorService {
   DoctorService._();
 
   static final DoctorService instance = DoctorService._();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static final Map<String, PatientRecordModel> _mockPatientRecords =
       <String, PatientRecordModel>{
@@ -120,11 +122,75 @@ class DoctorService {
     );
   }
 
+  Future<List<PatientRecordModel>> searchPatients(String query) async {
+    final String normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return _mockPatientRecords.values.toList();
+    }
+
+    // TODO(firebase): optimize patient search with dedicated indexes when data grows.
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'patient')
+        .limit(50)
+        .get();
+
+    final List<PatientRecordModel> firestoreMatches = [];
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final String userId = (data['userId'] ?? '').toString();
+      final String firstName = (data['firstName'] ?? '').toString();
+      final String lastName = (data['lastName'] ?? '').toString();
+      final String fullName = '$firstName $lastName'.trim().toLowerCase();
+
+      if (!userId.toLowerCase().contains(normalized) &&
+          !fullName.contains(normalized)) {
+        continue;
+      }
+
+      final PatientRecordModel? record = await getPatientRecordById(userId);
+      if (record != null) {
+        firestoreMatches.add(record);
+      }
+    }
+
+    if (firestoreMatches.isNotEmpty) {
+      return firestoreMatches;
+    }
+
+    return _mockPatientRecords.values
+        .where((record) {
+          final String fullName = record.account.fullName.toLowerCase();
+          final String userId = record.account.userId.toLowerCase();
+          return fullName.contains(normalized) || userId.contains(normalized);
+        })
+        .toList();
+  }
+
   Future<void> savePrescription(DoctorPrescriptionModel prescription) async {
-    // TODO(firebase): save prescription to Firestore and link it to the patient visit timeline.
     if (prescription.diagnosis.trim().isEmpty) {
       throw ArgumentError('Diagnosis cannot be empty.');
     }
+
+    await _firestore.collection('prescriptions').add(<String, dynamic>{
+      'patientId': prescription.patientId,
+      'doctorId': prescription.doctorId,
+      'specialty': prescription.specialty,
+      'diagnosis': prescription.diagnosis,
+      'additionalNotes': prescription.additionalNotes,
+      'specialtyExtras': prescription.specialtyExtras,
+      'medicines': prescription.medicines
+          .map(
+            (medicine) => <String, dynamic>{
+              'name': medicine.name,
+              'dosage': medicine.dosage,
+              'instructions': medicine.instructions,
+            },
+          )
+          .toList(),
+      'status': 'pendingPharmacy',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   static PatientRecordModel _buildMockPatientRecord({

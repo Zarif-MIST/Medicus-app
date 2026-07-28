@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class Scanqr extends StatefulWidget {
-  const Scanqr({super.key});
+  const Scanqr({super.key, required this.account});
+
+  final AuthAccount account;
 
   @override
   State<Scanqr> createState() => _ScanqrState();
@@ -21,6 +26,63 @@ class _ScanqrState extends State<Scanqr> {
   );
 
   bool _isHandlingScan = false;
+
+  Future<void> _openScanAction(PatientRecordModel record) async {
+    final _ScanAction? action = await showModalBottomSheet<_ScanAction>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.badge_outlined),
+                  title: Text(record.account.fullName),
+                  subtitle: Text('Patient ID: ${record.account.userId}'),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  onTap: () => Navigator.of(sheetContext).pop(_ScanAction.record),
+                  leading: const Icon(Icons.folder_shared_outlined),
+                  title: const Text('Open Patient Record'),
+                ),
+                ListTile(
+                  onTap: () => Navigator.of(sheetContext).pop(_ScanAction.prescription),
+                  leading: const Icon(Icons.edit_note_outlined),
+                  title: const Text('Go To Prescription Form'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    if (action == _ScanAction.record) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record)),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PrescriptionFormScreen(
+          doctor: widget.account,
+          patient: record,
+        ),
+      ),
+    );
+  }
 
   Future<void> _handleDetection(BarcodeCapture capture) async {
     if (_isHandlingScan) {
@@ -54,9 +116,7 @@ class _ScanqrState extends State<Scanqr> {
       return;
     }
 
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record)),
-    );
+    await _openScanAction(record);
 
     if (!mounted) {
       return;
@@ -157,3 +217,5 @@ class _ScanqrState extends State<Scanqr> {
     );
   }
 }
+
+enum _ScanAction { record, prescription }

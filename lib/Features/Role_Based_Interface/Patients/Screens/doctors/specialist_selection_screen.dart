@@ -5,105 +5,10 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/specialty_filter_chips.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Services/doctor_directory_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/doctor_profile_screen.dart';
-
-// Mock data — replaced by a Firestore query (users collection, role=doctor)
-// once the data layer is wired up. One doctor per specialty so every chip
-// returns a real result.
-const List<DoctorSummary> _mockDoctors = [
-  DoctorSummary(
-    name: 'Dr. Kamrul Islam',
-    specialty: 'General',
-    hospital: 'United Hospital, Dhaka',
-    rating: 4.6,
-    experienceYears: 8,
-    fee: 500,
-    nextAvailable: 'Tomorrow 10 AM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Farhana Rahman',
-    specialty: 'Cardiologist',
-    hospital: 'Square Hospital, Dhaka',
-    rating: 4.8,
-    experienceYears: 12,
-    fee: 800,
-    nextAvailable: 'Today 5 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Nusrat Jahan',
-    specialty: 'Dermatologist',
-    hospital: 'Apollo Hospital, Dhaka',
-    rating: 4.9,
-    experienceYears: 15,
-    fee: 1000,
-    nextAvailable: 'Today 7 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Shafiul Alam',
-    specialty: 'Pediatrician',
-    hospital: 'Dhaka Shishu Hospital',
-    rating: 4.7,
-    experienceYears: 10,
-    fee: 600,
-    nextAvailable: 'Today 6 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Mahbub Hasan',
-    specialty: 'Orthopedic',
-    hospital: 'Square Hospital, Dhaka',
-    rating: 4.5,
-    experienceYears: 14,
-    fee: 900,
-    nextAvailable: 'Tomorrow 11 AM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Sadia Afrin',
-    specialty: 'Dentist',
-    hospital: 'Smile Dental Care',
-    rating: 4.8,
-    experienceYears: 9,
-    fee: 700,
-    nextAvailable: 'Today 4 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Rehana Begum',
-    specialty: 'Gynecologist',
-    hospital: 'LabAid Hospital, Dhaka',
-    rating: 4.9,
-    experienceYears: 18,
-    fee: 900,
-    nextAvailable: 'Tomorrow 9 AM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Anisur Rahman',
-    specialty: 'ENT',
-    hospital: 'Apollo Hospital, Dhaka',
-    rating: 4.6,
-    experienceYears: 11,
-    fee: 650,
-    nextAvailable: 'Today 3 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Fahmida Sultana',
-    specialty: 'Psychiatrist',
-    hospital: 'United Hospital, Dhaka',
-    rating: 4.7,
-    experienceYears: 7,
-    fee: 750,
-    nextAvailable: 'Tomorrow 2 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Zahidul Karim',
-    specialty: 'Neurologist',
-    hospital: 'Square Hospital, Dhaka',
-    rating: 4.8,
-    experienceYears: 16,
-    fee: 1200,
-    nextAvailable: 'Today 8 PM',
-  ),
-];
 
 class SpecialistSelectionScreen extends StatefulWidget {
   const SpecialistSelectionScreen({
@@ -122,6 +27,27 @@ class SpecialistSelectionScreen extends StatefulWidget {
 
 class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
   Specialty? _selectedSpecialty;
+  final DoctorDirectoryService _directoryService = DoctorDirectoryService.instance;
+  List<DoctorSummary> _allDoctors = const <DoctorSummary>[];
+  String _searchQuery = '';
+  bool _isLoadingDoctors = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDoctors();
+  }
+
+  Future<void> _loadDoctors() async {
+    final List<DoctorSummary> doctors = await _directoryService.getDoctors();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _allDoctors = doctors;
+      _isLoadingDoctors = false;
+    });
+  }
 
   void _handleSpecialtyTap(Specialty specialty) {
     setState(() {
@@ -141,12 +67,26 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
   }
 
   List<DoctorSummary> get _visibleDoctors {
-    if (_selectedSpecialty == null) {
-      return _mockDoctors.take(3).toList();
+    final String normalizedQuery = _searchQuery.trim().toLowerCase();
+    Iterable<DoctorSummary> doctors = _allDoctors;
+
+    if (_selectedSpecialty != null) {
+      doctors = doctors.where((d) => d.specialty == _selectedSpecialty!.name);
     }
-    return _mockDoctors
-        .where((d) => d.specialty == _selectedSpecialty!.name)
-        .toList();
+
+    if (normalizedQuery.isNotEmpty) {
+      doctors = doctors.where((d) {
+        return d.name.toLowerCase().contains(normalizedQuery) ||
+            d.specialty.toLowerCase().contains(normalizedQuery) ||
+            d.hospital.toLowerCase().contains(normalizedQuery);
+      });
+    }
+
+    final List<DoctorSummary> filtered = doctors.toList();
+    if (_selectedSpecialty == null && normalizedQuery.isEmpty) {
+      return filtered.take(3).toList();
+    }
+    return filtered;
   }
 
   @override
@@ -181,7 +121,8 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
             SizedBox(height: pad * 0.8),
             LiquidGlassSearchBar(
               hintText: 'Search specialist or doctor name',
-              onSubmitted: (_) {},
+              onChanged: (value) => setState(() => _searchQuery = value),
+              onSubmitted: (value) => setState(() => _searchQuery = value),
             ),
             SizedBox(height: pad * 0.8),
             SpecialtyFilterChips(
@@ -191,17 +132,27 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
             ),
             SizedBox(height: pad * 0.5),
             Text(
-              _selectedSpecialty == null
+              _searchQuery.trim().isNotEmpty
+                  ? 'Search Results'
+                  : _selectedSpecialty == null
                   ? 'Top Doctors'
                   : '${_selectedSpecialty!.name} Specialists',
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 14),
+            if (_isLoadingDoctors)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
             if (doctors.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Text(
-                  'No doctors found for this specialty yet.',
+                  _searchQuery.trim().isNotEmpty
+                      ? 'No doctors match your search query.'
+                      : 'No doctors found for this specialty yet.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: Colors.grey,
                   ),

@@ -4,6 +4,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.da
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_orders_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
 
 class LabDashboardScreen extends StatelessWidget {
   const LabDashboardScreen({super.key, required this.account});
@@ -59,7 +60,7 @@ class _LabShellState extends State<_LabShell> {
         onOpenOrders: () => setState(() => _index = 1),
       ),
       const LabOrdersScreen(),
-      const LabOrdersScreen(),
+      const LabResultsScreen(),
       ProfileScreen(account: widget.account),
     ];
 

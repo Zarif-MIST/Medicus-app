@@ -59,6 +59,19 @@ class AuthRegistry {
     return _fromFirestore(snapshot.docs.first.id, snapshot.docs.first.data());
   }
 
+  /// All registered pharmacist accounts — the source of truth for the
+  /// patient-facing pharmacy directory.
+  Future<List<AuthAccount>> pharmacistAccounts() async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: AuthRole.pharmacist.name)
+        .get();
+
+    return [
+      for (final doc in snapshot.docs) _fromFirestore(doc.id, doc.data()),
+    ];
+  }
+
   Future<AuthAccount?> login({
     required String userId,
     required String password,
@@ -206,6 +219,8 @@ Future<void> _queueVerificationEmail(AuthAccount account) async {
       'tradeLicense': account.tradeLicense,
       'nidNumber': account.nidNumber,
       'pharmacyLocation': account.pharmacyLocation,
+      'pharmacyLat': account.pharmacyLat,
+      'pharmacyLng': account.pharmacyLng,
       'isVerified': account.isVerified,
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -229,6 +244,8 @@ Future<void> _queueVerificationEmail(AuthAccount account) async {
       tradeLicense: data['tradeLicense'] as String?,
       nidNumber: data['nidNumber'] as String?,
       pharmacyLocation: data['pharmacyLocation'] as String?,
+      pharmacyLat: (data['pharmacyLat'] as num?)?.toDouble(),
+      pharmacyLng: (data['pharmacyLng'] as num?)?.toDouble(),
       isVerified: (data['isVerified'] ?? false) as bool,
     );
   }

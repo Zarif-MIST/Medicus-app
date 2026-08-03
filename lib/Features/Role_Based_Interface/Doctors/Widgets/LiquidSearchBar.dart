@@ -43,7 +43,7 @@ class LiquidGlassSearchBar extends StatelessWidget {
     this.textColor = Colors.white,
     this.hintColor = const Color(0xB3FFFFFF),
     this.autofocus = false,
-    this.fake = false,
+    this.fake = true,
   });
 
   @override

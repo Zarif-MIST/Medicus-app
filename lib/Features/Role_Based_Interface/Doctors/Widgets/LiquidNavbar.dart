@@ -46,7 +46,7 @@ class LiquidGlassNavBar extends StatefulWidget {
     this.accentColor,
     this.height = 68,
     this.margin = const EdgeInsets.fromLTRB(20, 0, 20, 24),
-    this.fake = false,
+    this.fake = true,
   }) : assert(items.length >= 2, 'Provide at least 2 nav items');
 
   @override
@@ -136,7 +136,7 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = widget.accentColor ?? const Color(0xFF92140c);
+    final accent = widget.accentColor ?? (isDark ? const Color.fromARGB(255, 255, 17, 0) : const Color.fromARGB(255, 82, 7, 2));
     final radius = widget.height;
 
     // Settings for the main bar body — clear, frosted, barely tinted.

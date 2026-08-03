@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -22,8 +23,6 @@ const List<Specialty> kSpecialties = [
   Specialty(name: 'Neurologist', icon: Icons.bolt_outlined),
 ];
 
-/// Horizontal, single-line pill chips — tapping toggles selection
-/// (tapping the active one again clears the filter).
 class SpecialtyFilterChips extends StatelessWidget {
   const SpecialtyFilterChips({
     super.key,
@@ -59,7 +58,11 @@ class SpecialtyFilterChips extends StatelessWidget {
 }
 
 class _SpecialtyChip extends StatelessWidget {
-  const _SpecialtyChip({required this.specialty, required this.selected, required this.onTap});
+  const _SpecialtyChip({
+    required this.specialty,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Specialty specialty;
   final bool selected;
@@ -69,28 +72,51 @@ class _SpecialtyChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
 
-    return Material(
-      color: selected ? MColors.primaryColor : (isDark ? const Color(0xFF1F1F1F) : Colors.grey.shade100),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(specialty.icon, size: 16, color: selected ? Colors.white : MColors.primaryColor),
-              const SizedBox(width: 6),
-              Text(
-                specialty.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : (isDark ? Colors.white : Colors.black87),
-                ),
+    return LiquidGlassLayer(
+      settings: LiquidGlassSettings(
+        thickness: 12,
+        blur: 8,
+        glassColor: selected
+            ? MColors.primaryColor.withValues(alpha: 0.32)
+            : (isDark ? const Color(0x22FFFFFF) : const Color(0x70FFFFFF)),
+        lightIntensity: 1.0,
+        saturation: 1.1,
+        refractiveIndex: 1.2,
+      ),
+      child: LiquidGlass(
+        shape: LiquidRoundedSuperellipse(borderRadius: 20),
+        child: Material(
+          color: selected
+              ? MColors.primaryColor
+              : (isDark ? const Color(0xFF1F1F1F) : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    specialty.icon,
+                    size: 16,
+                    color: selected ? Colors.white : MColors.primaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    specialty.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: selected
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

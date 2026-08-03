@@ -19,6 +19,8 @@ class AuthAccount {
     this.tradeLicense,
     this.nidNumber,
     this.pharmacyLocation,
+    this.pharmacyLat,
+    this.pharmacyLng,
     this.isVerified = false,
   });
 
@@ -39,6 +41,8 @@ class AuthAccount {
   final String? tradeLicense;
   final String? nidNumber;
   final String? pharmacyLocation;
+  final double? pharmacyLat;
+  final double? pharmacyLng;
   final bool isVerified;
 
   String get fullName => '$firstName $lastName'.trim();
@@ -70,6 +74,8 @@ class AuthAccount {
     String? tradeLicense,
     String? nidNumber,
     String? pharmacyLocation,
+    double? pharmacyLat,
+    double? pharmacyLng,
     bool? isVerified,
   }) {
     return AuthAccount(
@@ -90,6 +96,8 @@ class AuthAccount {
       tradeLicense: tradeLicense ?? this.tradeLicense,
       nidNumber: nidNumber ?? this.nidNumber,
       pharmacyLocation: pharmacyLocation ?? this.pharmacyLocation,
+      pharmacyLat: pharmacyLat ?? this.pharmacyLat,
+      pharmacyLng: pharmacyLng ?? this.pharmacyLng,
       isVerified: isVerified ?? this.isVerified,
     );
   }

@@ -8,14 +8,19 @@ import 'package:medicus/Utilities/colors.dart';
 /// short-lived session issued by a Core `qr_session_service` (Firestore
 /// backed) is future work once the doctor-side scanner is built.
 class MyQrScreen extends StatelessWidget {
-  const MyQrScreen({super.key, required this.patientId, required this.patientName});
+  const MyQrScreen({
+    super.key,
+    required this.patientId,
+    required this.patientName,
+  });
 
   final String patientId;
   final String patientName;
 
   @override
   Widget build(BuildContext context) {
-    final String qrData = 'MEDICUS-PATIENT-$patientId';
+    // TODO(security): replace the raw patient ID with a signed, short-lived token.
+    final String qrData = patientId;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +41,9 @@ class MyQrScreen extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Patient ID: $patientId',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
               ),
               const SizedBox(height: 28),
               Container(
@@ -56,7 +63,10 @@ class MyQrScreen extends StatelessWidget {
                   data: qrData,
                   version: QrVersions.auto,
                   size: 220,
-                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: MColors.primaryColor),
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: MColors.primaryColor,
+                  ),
                   dataModuleStyle: const QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.square,
                     color: Colors.black87,
@@ -67,7 +77,9 @@ class MyQrScreen extends StatelessWidget {
               Text(
                 'Show this code to your doctor to link this visit\nto your medical record.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey),
               ),
             ],
           ),

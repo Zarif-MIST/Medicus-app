@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/home/patient_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/specialist_selection_screen.dart';
@@ -18,7 +19,11 @@ final List<Prescription> _initialPrescriptions = [
     doctorName: 'Dr. Farhana Rahman',
     date: DateTime.now().subtract(const Duration(days: 12)),
     medicines: const [
-      PrescriptionMedicine(name: 'Metformin 500mg', dosage: '1 tablet, twice daily', durationDays: 30),
+      PrescriptionMedicine(
+        name: 'Metformin 500mg',
+        dosage: '1 tablet, twice daily',
+        durationDays: 30,
+      ),
     ],
   ),
   Prescription(
@@ -26,7 +31,11 @@ final List<Prescription> _initialPrescriptions = [
     doctorName: 'Dr. Kamrul Islam',
     date: DateTime.now().subtract(const Duration(days: 5)),
     medicines: const [
-      PrescriptionMedicine(name: 'Amoxicillin 250mg', dosage: '1 capsule, three times daily', durationDays: 7),
+      PrescriptionMedicine(
+        name: 'Amoxicillin 250mg',
+        dosage: '1 capsule, three times daily',
+        durationDays: 7,
+      ),
     ],
   ),
   Prescription(
@@ -34,7 +43,11 @@ final List<Prescription> _initialPrescriptions = [
     doctorName: 'Dr. Nusrat Jahan',
     date: DateTime.now().subtract(const Duration(days: 20)),
     medicines: const [
-      PrescriptionMedicine(name: 'Cetirizine 10mg', dosage: '1 tablet, once daily', durationDays: 5),
+      PrescriptionMedicine(
+        name: 'Cetirizine 10mg',
+        dosage: '1 tablet, once daily',
+        durationDays: 5,
+      ),
     ],
   ),
   Prescription(
@@ -42,24 +55,30 @@ final List<Prescription> _initialPrescriptions = [
     doctorName: 'Dr. Shafiul Alam',
     date: DateTime.now().subtract(const Duration(days: 45)),
     medicines: const [
-      PrescriptionMedicine(name: 'Ibuprofen 400mg', dosage: '1 tablet, as needed', durationDays: 3),
+      PrescriptionMedicine(
+        name: 'Ibuprofen 400mg',
+        dosage: '1 tablet, as needed',
+        durationDays: 3,
+      ),
     ],
   ),
 ];
 
 class PatientDashboardScreen extends StatelessWidget {
-  const PatientDashboardScreen({super.key});
+  const PatientDashboardScreen({super.key, required this.account});
+
+  final AuthAccount account;
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: _PatientHomeShell(),
-    );
+    return Scaffold(body: _PatientHomeShell(account: account));
   }
 }
 
 class _PatientHomeShell extends StatefulWidget {
-  const _PatientHomeShell();
+  const _PatientHomeShell({required this.account});
+
+  final AuthAccount account;
 
   @override
   State<_PatientHomeShell> createState() => _PatientHomeShellState();
@@ -71,10 +90,26 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
   final List<Prescription> _prescriptions = List.of(_initialPrescriptions);
 
   final _items = const [
-    LiquidNavItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home'),
-    LiquidNavItem(icon: Icons.calendar_month_outlined, selectedIcon: Icons.calendar_month, label: 'Appointment'),
-    LiquidNavItem(icon: Icons.local_pharmacy_outlined, selectedIcon: Icons.local_pharmacy, label: 'Pharmacies'),
-    LiquidNavItem(icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Profile'),
+    LiquidNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
+    LiquidNavItem(
+      icon: Icons.calendar_month_outlined,
+      selectedIcon: Icons.calendar_month,
+      label: 'Appointment',
+    ),
+    LiquidNavItem(
+      icon: Icons.local_pharmacy_outlined,
+      selectedIcon: Icons.local_pharmacy,
+      label: 'Pharmacies',
+    ),
+    LiquidNavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Profile',
+    ),
   ];
 
   void _addAppointment(BookedAppointment appointment) {
@@ -84,9 +119,16 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      PatientHomeScreen(appointments: _appointments, prescriptions: _prescriptions),
-      SpecialistSelectionScreen(appointments: _appointments, onBook: _addAppointment),
-      const PharmacyLocatorScreen(),
+      PatientHomeScreen(
+        account: widget.account,
+        appointments: _appointments,
+        prescriptions: _prescriptions,
+      ),
+      SpecialistSelectionScreen(
+        appointments: _appointments,
+        onBook: _addAppointment,
+      ),
+      PharmacyLocatorScreen(account: widget.account),
       PatientProfileScreen(prescriptions: _prescriptions),
     ];
 

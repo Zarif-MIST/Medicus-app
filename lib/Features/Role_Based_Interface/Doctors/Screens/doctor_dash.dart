@@ -1,48 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_appointments_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_home_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+
 class DoctorDash extends StatelessWidget {
-  const DoctorDash({super.key});
- 
+  const DoctorDash({required this.account, super.key});
+
+  final AuthAccount account;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: const HomeShell(),
-    );
+    return Scaffold(body: HomeShell(account: account));
   }
 }
- 
+
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  const HomeShell({super.key, required this.account});
+
+  final AuthAccount account;
+
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
- 
+
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
   final _items = const [
-    LiquidNavItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home'),
-    LiquidNavItem(icon: Icons.search, selectedIcon: Icons.search, label: 'Search'),
-    LiquidNavItem(icon: Icons.favorite_border, selectedIcon: Icons.favorite, label: 'Saved'),
-    LiquidNavItem(icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Profile'),
+    LiquidNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
+    LiquidNavItem(
+      icon: Icons.calendar_month_outlined,
+      selectedIcon: Icons.calendar_month,
+      label: 'Schedule',
+    ),
+    LiquidNavItem(
+      icon: Icons.qr_code_scanner_outlined,
+      selectedIcon: Icons.qr_code_scanner,
+      label: 'Scan QR',
+    ),
+    LiquidNavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Profile',
+    ),
   ];
- 
-  final _pages = [
-    _DemoPage(title: 'Home'),
-    _DemoPage(title: 'Search'),
-    _DemoPage(title: 'Saved'),
-    _DemoPage(title: 'Profile'),
-  ];
- 
+
   @override
   Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      DoctorHomeScreen(
+        account: widget.account,
+        onOpenScanner: () => setState(() => _index = 2),
+      ),
+      DoctorAppointmentsScreen(account: widget.account),
+      const Scanqr(),
+      ProfileScreen(account: widget.account),
+    ];
+
     return Scaffold(
-      // extendBody lets page content flow behind the nav bar so the
-      // BackdropFilter actually has something colorful to blur.
       extendBody: true,
       body: Stack(
         children: [
-          _pages[_index],
+          pages[_index],
           Positioned(
             left: 0,
             right: 0,
@@ -58,24 +83,4 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 }
- 
-class _DemoPage extends StatelessWidget {
-  final String title;
-  const _DemoPage({required this.title});
- 
-  @override
-  Widget build(BuildContext context) {
 
-    return Container(
-      decoration: BoxDecoration(
-       color: MHelperFunctions.isDarkMode(context) ? const Color(0xFF181818) : Colors.white,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        title,
-        style: const TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
- 

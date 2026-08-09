@@ -12,10 +12,12 @@ class PharmacistHomeScreen extends StatefulWidget {
     super.key,
     required this.account,
     required this.onOpenQueue,
+    required this.onOpenScanner,
   });
 
   final AuthAccount account;
   final VoidCallback onOpenQueue;
+  final VoidCallback onOpenScanner;
 
   @override
   State<PharmacistHomeScreen> createState() => _PharmacistHomeScreenState();
@@ -62,7 +64,7 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                   child: Container(
                     color: MColors.primaryColor,
                     child: SizedBox(
-                      height: 380,
+                      height: 420,
                       child: Stack(
                         children: [
                           const Positioned(
@@ -114,18 +116,38 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                                     const SizedBox(height: 24),
                                     Align(
                                       alignment: Alignment.centerLeft,
-                                      child: FilledButton.icon(
-                                        onPressed: widget.onOpenQueue,
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: Colors.white,
-                                          foregroundColor: MColors.primaryColor,
-                                        ),
-                                        icon: const Icon(
-                                          Icons.local_shipping_outlined,
-                                        ),
-                                        label: const Text('Open Queue'),
+                                      child: Wrap(
+                                        spacing: 12,
+                                        runSpacing: 12,
+                                        children: [
+                                          FilledButton.icon(
+                                            onPressed: widget.onOpenQueue,
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: Colors.white,
+                                              foregroundColor:
+                                                  MColors.primaryColor,
+                                            ),
+                                            icon: const Icon(
+                                              Icons.local_shipping_outlined,
+                                            ),
+                                            label: const Text('Open Queue'),
+                                          ),
+                                          FilledButton.icon(
+                                            onPressed: widget.onOpenScanner,
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: Colors.white,
+                                              foregroundColor:
+                                                  MColors.primaryColor,
+                                            ),
+                                            icon: const Icon(
+                                              Icons.qr_code_scanner,
+                                            ),
+                                            label: const Text('QR Scan'),
+                                          ),
+                                        ],
                                       ),
                                     ),
+                                    const SizedBox(height: 12),
                                   ],
                                 ),
                               ),

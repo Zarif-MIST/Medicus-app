@@ -42,16 +42,26 @@ class _ActionTile extends StatelessWidget {
       color: isEmergency
           ? MColors.primaryColor
           : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(18),
+      elevation: 0,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         onTap: action.onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
           child: Column(
             children: [
-              Icon(action.icon, color: isEmergency ? Colors.white : MColors.primaryColor, size: 22),
-              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isEmergency
+                      ? Colors.white.withValues(alpha: 0.18)
+                      : MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(action.icon, color: isEmergency ? Colors.white : MColors.primaryColor, size: 20),
+              ),
+              const SizedBox(height: 10),
               Text(
                 action.label,
                 textAlign: TextAlign.center,

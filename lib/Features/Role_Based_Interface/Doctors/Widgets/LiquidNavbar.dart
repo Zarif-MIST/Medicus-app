@@ -46,7 +46,7 @@ class LiquidGlassNavBar extends StatefulWidget {
     this.accentColor,
     this.height = 68,
     this.margin = const EdgeInsets.fromLTRB(20, 0, 20, 24),
-    this.fake = false,
+    this.fake = true,
   }) : assert(items.length >= 2, 'Provide at least 2 nav items');
 
   @override

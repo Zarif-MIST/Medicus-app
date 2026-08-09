@@ -6,6 +6,8 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/qr/my_qr_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/appointment_calendar_sheet.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/emergency_hospitals_sheet.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/next_dose_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/prescription_timeline.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/quick_actions_row.dart';
@@ -47,6 +49,13 @@ class PatientHomeScreen extends StatelessWidget {
     return list;
   }
 
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
@@ -71,7 +80,7 @@ class PatientHomeScreen extends StatelessWidget {
               child: Container(
                 color: MColors.primaryColor,
                 child: SizedBox(
-                  height: 390,
+                  height: 360,
                   child: Stack(
                     children: [
                       const Positioned(
@@ -91,29 +100,74 @@ class PatientHomeScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const SizedBox(height: 50),
-                              const Text(
-                                'Welcome back,',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      patientName.isNotEmpty ? patientName[0].toUpperCase() : 'P',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _greeting,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          patientName,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Material(
+                                    color: Colors.white.withValues(alpha: 0.14),
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: () {},
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(10),
+                                        child: Icon(
+                                          Icons.notifications_none_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                patientName,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 28),
-                              LiquidGlassSearchBar(
-                                hintText: 'Search doctor, medicine, or record',
-                                onChanged: (_) {},
-                              ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 26),
                               Row(
                                 children: [
                                   Expanded(
@@ -130,6 +184,10 @@ class PatientHomeScreen extends StatelessWidget {
                                       style: FilledButton.styleFrom(
                                         backgroundColor: Colors.white,
                                         foregroundColor: MColors.primaryColor,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
                                       ),
                                       icon: const Icon(
                                         Icons.qr_code_2_outlined,
@@ -145,6 +203,10 @@ class PatientHomeScreen extends StatelessWidget {
                                         backgroundColor: Colors.white
                                             .withValues(alpha: 0.16),
                                         foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
                                       ),
                                       icon: const Icon(
                                         Icons.calendar_month_outlined,
@@ -153,6 +215,11 @@ class PatientHomeScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 16),
+                              LiquidGlassSearchBar(
+                                hintText: 'Search doctor, medicine, or record',
+                                onChanged: (_) {},
                               ),
                             ],
                           ),
@@ -163,12 +230,20 @@ class PatientHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            SizedBox(height: pad * 0.6),
             Padding(
-              padding: EdgeInsets.fromLTRB(pad, 12, pad, 120),
+              padding: EdgeInsets.fromLTRB(pad, 0, pad, 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   StatCardRow(
+                    highlightIndex: 2,
+                    onHighlightTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => AppointmentCalendarSheet(appointments: appointments),
+                    ),
                     stats: [
                       StatCardData(
                         label: 'Total Prescriptions',
@@ -196,9 +271,26 @@ class PatientHomeScreen extends StatelessWidget {
                       adherence: 0.7,
                     ),
                   SizedBox(height: pad),
-                  Text(
-                    'Prescription Timeline',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Prescription Timeline',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      if (ongoing.isNotEmpty)
+                        TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            foregroundColor: MColors.primaryColor,
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('See all', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   if (ongoing.isEmpty)
@@ -231,7 +323,12 @@ class PatientHomeScreen extends StatelessWidget {
                       QuickAction(
                         label: 'Emergency',
                         icon: Icons.emergency_outlined,
-                        onTap: () {},
+                        onTap: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const EmergencyHospitalsSheet(),
+                        ),
                       ),
                     ],
                   ),

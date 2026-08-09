@@ -128,7 +128,7 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
         appointments: _appointments,
         onBook: _addAppointment,
       ),
-      const PharmacyLocatorScreen(),
+      PharmacyLocatorScreen(account: widget.account),
       PatientProfileScreen(prescriptions: _prescriptions),
     ];
 

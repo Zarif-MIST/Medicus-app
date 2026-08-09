@@ -12,6 +12,20 @@ class AuthRegistry {
 
   static final AuthRegistry instance = AuthRegistry._();
 
+  static const AuthAccount _demoPharmacistAccount = AuthAccount(
+    userId: '2468',
+    role: AuthRole.pharmacist,
+    firstName: 'Demo',
+    lastName: 'Pharmacist',
+    email: 'pharmacist@example.com',
+    password: 'Pharma@123',
+    phoneNumber: '+8801900000000',
+    verificationCode: '2468',
+    pharmacyName: 'Medicus Demo Pharmacy',
+    tradeLicense: 'DL-0002468',
+    isVerified: true,
+  );
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -46,6 +60,10 @@ class AuthRegistry {
   }
 
   Future<AuthAccount?> accountForUserId(String userId) async {
+    if (userId.trim() == _demoPharmacistAccount.userId) {
+      return _demoPharmacistAccount;
+    }
+
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('users')
         .where('userId', isEqualTo: userId.trim())
@@ -84,6 +102,10 @@ class AuthRegistry {
 
     if (account.role != role) {
       return null;
+    }
+
+    if (account.userId == _demoPharmacistAccount.userId) {
+      return password == _demoPharmacistAccount.password ? account : null;
     }
 
     try {

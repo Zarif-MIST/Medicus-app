@@ -29,6 +29,8 @@ class _PharmacistShell extends StatefulWidget {
 
 class _PharmacistShellState extends State<_PharmacistShell> {
   int _index = 0;
+  final GlobalKey<PharmacistHomeScreenState> _homeKey =
+      GlobalKey<PharmacistHomeScreenState>();
 
   final List<LiquidNavItem> _items = const [
     LiquidNavItem(
@@ -57,10 +59,16 @@ class _PharmacistShellState extends State<_PharmacistShell> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       PharmacistHomeScreen(
+        key: _homeKey,
         account: widget.account,
-        onOpenQueue: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PrescriptionQueueScreen()),
-        ),
+        onOpenQueue: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const PrescriptionQueueScreen(),
+            ),
+          );
+          _homeKey.currentState?.refreshQueueData();
+        },
         onOpenScanner: () => setState(() => _index = 1),
       ),
       Scanqr(account: widget.account),

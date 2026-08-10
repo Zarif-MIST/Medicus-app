@@ -39,28 +39,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     final bool? result = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
+      useSafeArea: true,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Add medicine'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Medicine name'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: supplierController,
-                decoration: const InputDecoration(labelText: 'Supplier'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: stockController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Initial stock'),
-              ),
-            ],
+          content: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Medicine name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: supplierController,
+                  decoration: const InputDecoration(labelText: 'Supplier'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: stockController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Initial stock'),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(

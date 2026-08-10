@@ -329,12 +329,6 @@ class _DoctorQueueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor = switch (appointment.status) {
-      'Confirmed' => Colors.green,
-      'Waiting' => Colors.orange,
-      _ => MColors.primaryColor,
-    };
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -381,21 +375,6 @@ class _DoctorQueueTile extends StatelessWidget {
                   ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(99),
-            ),
-            child: Text(
-              appointment.status,
-              style: TextStyle(
-                color: statusColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
             ),
           ),
           IconButton(

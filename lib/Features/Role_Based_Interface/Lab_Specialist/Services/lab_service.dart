@@ -22,7 +22,7 @@ class LabService {
         patientName: 'Nafis Ahmed',
         orderType: 'Chest X-Ray',
         requestedBy: 'Dr. Nusrat Jahan',
-        status: 'In Queue',
+        status: 'Completed',
       ),
     ];
   }

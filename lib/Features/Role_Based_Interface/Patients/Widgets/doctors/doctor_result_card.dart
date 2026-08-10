@@ -47,6 +47,7 @@ class DoctorResultCard extends StatelessWidget {
         saturation: 1.12,
         refractiveIndex: 1.25,
       ),
+      fake: true,
       child: LiquidGlass(
         shape: LiquidRoundedSuperellipse(borderRadius: 16),
         child: Material(

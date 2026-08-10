@@ -5,6 +5,7 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/specialty_filter_chips.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/doctor_profile_screen.dart';
@@ -161,60 +162,88 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
       child: SafeArea(
         bottom: false,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(pad, pad * 0.8, pad, 120),
+          padding: EdgeInsets.zero,
           children: [
-            if (widget.appointments.isNotEmpty) ...[
-              Text('Upcoming Appointments', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 14),
-              for (int i = 0; i < widget.appointments.length; i++) ...[
-                if (i != 0) const SizedBox(height: 10),
-                _UpcomingAppointmentCard(appointment: widget.appointments[i]),
-              ],
-              SizedBox(height: pad),
-            ],
-            Text('Find a Doctor', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 4),
-            Text(
-              'Choose a specialist or search directly',
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
-            SizedBox(height: pad * 0.8),
-            LiquidGlassSearchBar(
-              hintText: 'Search specialist or doctor name',
-              onSubmitted: (_) {},
-            ),
-            SizedBox(height: pad * 0.8),
-            SpecialtyFilterChips(
-              specialties: kSpecialties,
-              selected: _selectedSpecialty,
-              onSelected: _handleSpecialtyTap,
-            ),
-            SizedBox(height: pad * 0.5),
-            Text(
-              _selectedSpecialty == null
-                  ? 'Top Doctors'
-                  : '${_selectedSpecialty!.name} Specialists',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 14),
-            if (doctors.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  'No doctors found for this specialty yet.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+            ClipPath(
+              clipper: MCurvedEdges(),
+              child: Container(
+                color: MColors.primaryColor,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(pad, pad * 0.8, pad, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Find a Doctor',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Choose a specialist or search directly',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
+                      SizedBox(height: pad * 0.8),
+                      LiquidGlassSearchBar(
+                        hintText: 'Search specialist or doctor name',
+                        onSubmitted: (_) {},
+                      ),
+                    ],
                   ),
                 ),
-              )
-            else
-              for (int i = 0; i < doctors.length; i++) ...[
-                if (i != 0) const SizedBox(height: 10),
-                DoctorResultCard(
-                  doctor: doctors[i],
-                  onTap: () => _onDoctorSelected(doctors[i]),
-                ),
-              ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(pad, pad * 0.8, pad, 120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.appointments.isNotEmpty) ...[
+                    Text('Upcoming Appointments', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 14),
+                    for (int i = 0; i < widget.appointments.length; i++) ...[
+                      if (i != 0) const SizedBox(height: 10),
+                      _UpcomingAppointmentCard(appointment: widget.appointments[i]),
+                    ],
+                    SizedBox(height: pad),
+                  ],
+                  SpecialtyFilterChips(
+                    specialties: kSpecialties,
+                    selected: _selectedSpecialty,
+                    onSelected: _handleSpecialtyTap,
+                  ),
+                  SizedBox(height: pad * 0.5),
+                  Text(
+                    _selectedSpecialty == null
+                        ? 'Top Doctors'
+                        : '${_selectedSpecialty!.name} Specialists',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 14),
+                  if (doctors.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'No doctors found for this specialty yet.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                    )
+                  else
+                    for (int i = 0; i < doctors.length; i++) ...[
+                      if (i != 0) const SizedBox(height: 10),
+                      DoctorResultCard(
+                        doctor: doctors[i],
+                        onTap: () => _onDoctorSelected(doctors[i]),
+                      ),
+                    ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -268,6 +297,7 @@ class _UpcomingAppointmentCard extends StatelessWidget {
         saturation: 1.15,
         refractiveIndex: 1.25,
       ),
+      fake: true,
       child: LiquidGlass(
         shape: LiquidRoundedSuperellipse(borderRadius: 16),
         child: Material(

@@ -83,6 +83,7 @@ class _SpecialtyChip extends StatelessWidget {
         saturation: 1.1,
         refractiveIndex: 1.2,
       ),
+      fake: true,
       child: LiquidGlass(
         shape: LiquidRoundedSuperellipse(borderRadius: 20),
         child: Material(

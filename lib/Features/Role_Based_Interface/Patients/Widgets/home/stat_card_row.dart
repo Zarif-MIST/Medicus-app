@@ -15,7 +15,13 @@ class StatCardData {
 /// A bento-style stat layout: one "highlight" card (spotlighting the most
 /// actionable stat) beside the remaining stats stacked in a column.
 class StatCardRow extends StatelessWidget {
-  const StatCardRow({super.key, required this.stats, this.highlightIndex = 0, this.onHighlightTap});
+  const StatCardRow({
+    super.key,
+    required this.stats,
+    this.highlightIndex = 0,
+    this.onHighlightTap,
+    this.highlightActionLabel,
+  });
 
   final List<StatCardData> stats;
 
@@ -24,6 +30,9 @@ class StatCardRow extends StatelessWidget {
 
   /// Called when the highlight card is tapped. If null, the card is static.
   final VoidCallback? onHighlightTap;
+
+  /// Optional label shown as the highlight card's action hint.
+  final String? highlightActionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +47,11 @@ class StatCardRow extends StatelessWidget {
         children: [
           Expanded(
             flex: 5,
-            child: _HighlightStatCard(data: stats[highlightIndex], onTap: onHighlightTap),
+            child: _HighlightStatCard(
+              data: stats[highlightIndex],
+              onTap: onHighlightTap,
+              actionLabel: highlightActionLabel,
+            ),
           ),
           SizedBox(width: Sizes.defaultpadding * 0.5),
           Expanded(
@@ -59,10 +72,11 @@ class StatCardRow extends StatelessWidget {
 }
 
 class _HighlightStatCard extends StatelessWidget {
-  const _HighlightStatCard({required this.data, this.onTap});
+  const _HighlightStatCard({required this.data, this.onTap, this.actionLabel});
 
   final StatCardData data;
   final VoidCallback? onTap;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -128,12 +142,12 @@ class _HighlightStatCard extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                     maxLines: 2,
                   ),
-                  if (onTap != null) ...[
+                    if (onTap != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Text(
-                          'View calendar',
+                          actionLabel ?? 'View details',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,

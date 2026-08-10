@@ -168,58 +168,26 @@ class PatientHomeScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 26),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: FilledButton.icon(
-                                      onPressed: () =>
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) => MyQrScreen(
-                                                patientId: patientId,
-                                                patientName: patientName,
-                                              ),
-                                            ),
-                                          ),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: MColors.primaryColor,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.qr_code_2_outlined,
-                                      ),
-                                      label: const Text('My QR Code'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: FilledButton.icon(
-                                      onPressed: () {},
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: Colors.white
-                                            .withValues(alpha: 0.16),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.calendar_month_outlined,
-                                      ),
-                                      label: const Text('Appointments'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
                               LiquidGlassSearchBar(
                                 hintText: 'Search doctor, medicine, or record',
                                 onChanged: (_) {},
+                              ),
+                              const SizedBox(height: 24),
+                              Align(
+                                alignment: Alignment.center,
+                                child: IconButton(
+                                  onPressed: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => MyQrScreen(
+                                        patientId: patientId,
+                                        patientName: patientName,
+                                      ),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.qr_code_2_outlined),
+                                  color: Colors.white,
+                                  iconSize: 30,
+                                ),
                               ),
                             ],
                           ),

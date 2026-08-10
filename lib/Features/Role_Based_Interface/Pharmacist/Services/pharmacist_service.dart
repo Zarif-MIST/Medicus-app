@@ -5,26 +5,44 @@ class PharmacistService {
 
   static final PharmacistService instance = PharmacistService._();
 
+  static final List<_PharmacyPrescriptionRecord> _records = <_PharmacyPrescriptionRecord>[
+    _PharmacyPrescriptionRecord(
+      id: 'RX-1001',
+      patientId: '4821',
+      patientName: 'Tareq Hasan',
+      doctorName: 'Dr. Farhana Rahman',
+      status: 'Pending',
+      medicines: <String>['Metformin 500mg', 'Vitamin B Complex'],
+    ),
+    _PharmacyPrescriptionRecord(
+      id: 'RX-1002',
+      patientId: '5634',
+      patientName: 'Sadia Rahman',
+      doctorName: 'Dr. Kamrul Islam',
+      status: 'Pending',
+      medicines: <String>['Amoxicillin 250mg'],
+    ),
+  ];
+
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptions() async {
     // TODO(firebase): replace mock queue with Firestore prescriptions filtered by pending pharmacy fulfillment.
-    return const <PharmacyPrescriptionQueueItem>[
-      PharmacyPrescriptionQueueItem(
-        id: 'RX-1001',
-        patientId: '4821',
-        patientName: 'Tareq Hasan',
-        doctorName: 'Dr. Farhana Rahman',
-        status: 'Pending',
-        medicines: <String>['Metformin 500mg', 'Vitamin B Complex'],
-      ),
-      PharmacyPrescriptionQueueItem(
-        id: 'RX-1002',
-        patientId: '5634',
-        patientName: 'Sadia Rahman',
-        doctorName: 'Dr. Kamrul Islam',
-        status: 'Ready',
-        medicines: <String>['Amoxicillin 250mg'],
-      ),
+    return [
+      for (final record in _records)
+        if (record.status == 'Pending')
+          record.toItem(),
     ];
+  }
+
+  Future<List<PharmacyPrescriptionQueueItem>> getDispensedPrescriptions() async {
+    return [
+      for (final record in _records)
+        if (record.status == 'Dispensed')
+          record.toItem(),
+    ];
+  }
+
+  Future<int> getDispensedTodayCount() async {
+    return _records.where((record) => record.status == 'Dispensed').length;
   }
 
   Future<List<MedicineInventoryItem>> getInventory() async {
@@ -53,5 +71,41 @@ class PharmacistService {
     if (prescriptionId.trim().isEmpty) {
       throw ArgumentError('Prescription ID is required.');
     }
+
+    for (final record in _records) {
+      if (record.id == prescriptionId.trim()) {
+        record.status = 'Dispensed';
+        return;
+      }
+    }
+  }
+}
+
+class _PharmacyPrescriptionRecord {
+  _PharmacyPrescriptionRecord({
+    required this.id,
+    required this.patientId,
+    required this.patientName,
+    required this.doctorName,
+    required this.status,
+    required this.medicines,
+  });
+
+  final String id;
+  final String patientId;
+  final String patientName;
+  final String doctorName;
+  String status;
+  final List<String> medicines;
+
+  PharmacyPrescriptionQueueItem toItem() {
+    return PharmacyPrescriptionQueueItem(
+      id: id,
+      patientId: patientId,
+      patientName: patientName,
+      doctorName: doctorName,
+      status: status,
+      medicines: medicines,
+    );
   }
 }

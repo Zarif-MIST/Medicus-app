@@ -20,17 +20,35 @@ class PharmacistHomeScreen extends StatefulWidget {
   final VoidCallback onOpenScanner;
 
   @override
-  State<PharmacistHomeScreen> createState() => _PharmacistHomeScreenState();
+  State<PharmacistHomeScreen> createState() => PharmacistHomeScreenState();
 }
 
-class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
-  late Future<List<PharmacyPrescriptionQueueItem>> _queueFuture;
+class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
+  late Future<_HomeQueueData> _queueFuture;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _queueFuture = PharmacistService.instance.getPendingPrescriptions();
+    _queueFuture = _loadQueueData();
+  }
+
+  void refreshQueueData() {
+    setState(() {
+      _queueFuture = _loadQueueData();
+    });
+  }
+
+  Future<_HomeQueueData> _loadQueueData() async {
+    final results = await Future.wait<List<PharmacyPrescriptionQueueItem>>([
+      PharmacistService.instance.getPendingPrescriptions(),
+      PharmacistService.instance.getDispensedPrescriptions(),
+    ]);
+
+    return _HomeQueueData(
+      pending: results[0],
+      dispensed: results[1],
+    );
   }
 
   String _greeting() {
@@ -43,11 +61,14 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<List<PharmacyPrescriptionQueueItem>>(
+      body: FutureBuilder<_HomeQueueData>(
         future: _queueFuture,
         builder: (context, snapshot) {
-          final items = snapshot.data ?? <PharmacyPrescriptionQueueItem>[];
-          final visible = items.where((item) {
+          final pendingItems = snapshot.data?.pending ??
+              <PharmacyPrescriptionQueueItem>[];
+          final dispensedItems = snapshot.data?.dispensed ??
+              <PharmacyPrescriptionQueueItem>[];
+          final visiblePending = pendingItems.where((item) {
             final query = _query.trim().toLowerCase();
             if (query.isEmpty) {
               return true;
@@ -55,6 +76,18 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
             return item.patientName.toLowerCase().contains(query) ||
                 item.id.toLowerCase().contains(query);
           }).toList();
+          final visibleDispensed = dispensedItems.where((item) {
+            final query = _query.trim().toLowerCase();
+            if (query.isEmpty) {
+              return true;
+            }
+            return item.patientName.toLowerCase().contains(query) ||
+                item.id.toLowerCase().contains(query);
+          }).toList();
+          final allItems = <PharmacyPrescriptionQueueItem>[
+            ...pendingItems,
+            ...dispensedItems,
+          ];
 
           return SingleChildScrollView(
             child: Column(
@@ -115,39 +148,18 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                                     ),
                                     const SizedBox(height: 24),
                                     Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Wrap(
-                                        spacing: 12,
-                                        runSpacing: 12,
-                                        children: [
-                                          FilledButton.icon(
-                                            onPressed: widget.onOpenQueue,
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: Colors.white,
-                                              foregroundColor:
-                                                  MColors.primaryColor,
-                                            ),
-                                            icon: const Icon(
-                                              Icons.local_shipping_outlined,
-                                            ),
-                                            label: const Text('Open Queue'),
-                                          ),
-                                          FilledButton.icon(
-                                            onPressed: widget.onOpenScanner,
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: Colors.white,
-                                              foregroundColor:
-                                                  MColors.primaryColor,
-                                            ),
-                                            icon: const Icon(
-                                              Icons.qr_code_scanner,
-                                            ),
-                                            label: const Text('QR Scan'),
-                                          ),
-                                        ],
+                                      alignment: Alignment.center,
+                                      child: IconButton(
+                                        onPressed: widget.onOpenScanner,
+                                        icon: const Icon(
+                                          Icons.qr_code_scanner,
+                                        ),
+                                        color: Colors.white,
+                                        iconSize: 30,
+                                        tooltip: 'Scan QR',
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
+                                    const SizedBox(height: 18),
                                   ],
                                 ),
                               ),
@@ -164,31 +176,31 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       StatCardRow(
+                        onHighlightTap: widget.onOpenQueue,
+                        highlightActionLabel: 'View queue',
                         stats: [
                           StatCardData(
                             label: 'Pending Queue',
-                            value: items
+                            value: pendingItems
                                 .where((item) => item.status == 'Pending')
                                 .length,
                             icon: Icons.receipt_long_outlined,
                           ),
                           StatCardData(
-                            label: 'Ready Pickup',
-                            value: items
-                                .where((item) => item.status == 'Ready')
-                                .length,
-                            icon: Icons.inventory_2_outlined,
+                            label: 'Dispensed Today',
+                            value: dispensedItems.length,
+                            icon: Icons.check_circle_outline,
                           ),
                           StatCardData(
-                            label: 'Dispensed Today',
-                            value: 12,
-                            icon: Icons.check_circle_outline,
+                            label: 'Queue Items',
+                            value: pendingItems.length,
+                            icon: Icons.inventory_2_outlined,
                           ),
                         ],
                       ),
                       const SizedBox(height: 22),
                       Text(
-                        'Prescription Queue',
+                        'Pending Prescriptions',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
@@ -199,7 +211,20 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                           ),
                         )
                       else
-                        for (final item in visible.take(3)) ...[
+                        for (final item in visiblePending.take(3)) ...[
+                          _QueuePreview(item: item),
+                          const SizedBox(height: 12),
+                        ],
+                      const SizedBox(height: 10),
+                      Text(
+                        'Dispensed Log',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      if (!snapshot.hasData)
+                        const SizedBox.shrink()
+                      else
+                        for (final item in visibleDispensed.take(3)) ...[
                           _QueuePreview(item: item),
                           const SizedBox(height: 12),
                         ],
@@ -213,6 +238,13 @@ class _PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
       ),
     );
   }
+}
+
+class _HomeQueueData {
+  const _HomeQueueData({required this.pending, required this.dispensed});
+
+  final List<PharmacyPrescriptionQueueItem> pending;
+  final List<PharmacyPrescriptionQueueItem> dispensed;
 }
 
 class _QueuePreview extends StatelessWidget {

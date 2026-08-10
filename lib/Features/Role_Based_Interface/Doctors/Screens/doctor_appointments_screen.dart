@@ -90,11 +90,6 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final appointment = appointments[index];
-              final Color statusColor = switch (appointment.status) {
-                'Confirmed' => Colors.green,
-                'Waiting' => Colors.orange,
-                _ => MColors.primaryColor,
-              };
 
               return Container(
                 padding: const EdgeInsets.all(16),
@@ -114,33 +109,9 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            appointment.patientName,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            appointment.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      appointment.patientName,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 6),
                     Text(

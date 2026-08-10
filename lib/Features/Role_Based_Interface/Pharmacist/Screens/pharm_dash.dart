@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_queue_screen.dart';
@@ -36,9 +37,9 @@ class _PharmacistShellState extends State<_PharmacistShell> {
       label: 'Home',
     ),
     LiquidNavItem(
-      icon: Icons.receipt_long_outlined,
-      selectedIcon: Icons.receipt_long,
-      label: 'Queue',
+      icon: Icons.qr_code_scanner_outlined,
+      selectedIcon: Icons.qr_code_scanner,
+      label: 'Scan QR',
     ),
     LiquidNavItem(
       icon: Icons.inventory_2_outlined,
@@ -57,9 +58,12 @@ class _PharmacistShellState extends State<_PharmacistShell> {
     final List<Widget> pages = [
       PharmacistHomeScreen(
         account: widget.account,
-        onOpenQueue: () => setState(() => _index = 1),
+        onOpenQueue: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PrescriptionQueueScreen()),
+        ),
+        onOpenScanner: () => setState(() => _index = 1),
       ),
-      const PrescriptionQueueScreen(),
+      const Scanqr(),
       const InventoryScreen(),
       ProfileScreen(account: widget.account),
     ];

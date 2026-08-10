@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
+import 'package:medicus/Features/Authentication/Screens/registration/pharmacy_location_picker_screen.dart';
 import 'package:medicus/Features/Authentication/Widgets/auth_role_selector.dart';
 import 'package:medicus/Features/Authentication/Widgets/auth_text_field.dart';
 import 'package:medicus/Utilities/colors.dart';
@@ -37,7 +39,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _pharmacyNameController = TextEditingController();
   final TextEditingController _tradeLicenseController = TextEditingController();
   final TextEditingController _nidController = TextEditingController();
+  final TextEditingController _pharmacyAddressController = TextEditingController();
 
+  LatLng? _pharmacyLatLng;
   AuthRole? _selectedRole;
   String? _selectedSpecialty;
   bool _showVerificationStep = false;
@@ -82,6 +86,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _pharmacyNameController.dispose();
     _tradeLicenseController.dispose();
     _nidController.dispose();
+    _pharmacyAddressController.dispose();
     _verificationCodeController.dispose();
     super.dispose();
   }
@@ -212,6 +217,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 label: 'Trade license number',
                 validator: AuthValidators.requiredField,
               ),
+              const SizedBox(height: 12),
+              AuthTextField(
+                controller: _pharmacyAddressController,
+                label: 'Pharmacy address',
+                helperText: 'A short address patients will see on your pharmacy listing.',
+                validator: AuthValidators.requiredField,
+              ),
+              const SizedBox(height: 12),
+              _PharmacyMapPinField(picked: _pharmacyLatLng, onTap: _pickPharmacyLocation),
             ] else if (_selectedRole == AuthRole.patient) ...[
               AuthTextField(
                 controller: _firstNameController,
@@ -504,6 +518,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Future<void> _pickPharmacyLocation() async {
+    final LatLng? picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => PharmacyLocationPickerScreen(initial: _pharmacyLatLng),
+      ),
+    );
+    if (picked == null) return;
+    setState(() => _pharmacyLatLng = picked);
+  }
+
   Future<void> _register() async {
     final bool valid = _formKey.currentState?.validate() ?? false;
     if (!valid || _selectedRole == null) {
@@ -526,6 +550,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
+    if (_selectedRole == AuthRole.pharmacist && _pharmacyLatLng == null) {
+      Get.snackbar(
+        'Missing pharmacy location',
+        'Pin your pharmacy on the map so patients can find you.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
     final AuthAccount account = AuthAccount(
       userId: '',
       role: _selectedRole!,
@@ -540,6 +573,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       pharmacyName: _pharmacyNameController.text.trim(),
       tradeLicense: _tradeLicenseController.text.trim(),
       nidNumber: _nidController.text.trim(),
+      pharmacyLocation: _pharmacyAddressController.text.trim(),
+      pharmacyLat: _pharmacyLatLng?.latitude,
+      pharmacyLng: _pharmacyLatLng?.longitude,
     );
 
     try {
@@ -605,5 +641,61 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _verificationCompleted = true;
       _showVerificationStep = false;
     });
+  }
+}
+
+class _PharmacyMapPinField extends StatelessWidget {
+  const _PharmacyMapPinField({required this.picked, required this.onTap});
+
+  final LatLng? picked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isPicked = picked != null;
+
+    return Material(
+      color: isPicked ? Colors.green.withValues(alpha: 0.08) : MColors.primaryColor.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isPicked ? Colors.green : MColors.primaryColor, width: 1),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isPicked ? Icons.check_circle_rounded : Icons.location_on_outlined,
+                color: isPicked ? Colors.green : MColors.primaryColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isPicked
+                      ? 'Pinned at ${picked!.latitude.toStringAsFixed(4)}, ${picked!.longitude.toStringAsFixed(4)}'
+                      : 'Pin your pharmacy on the map',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isPicked ? Colors.green.shade700 : MColors.primaryColor,
+                  ),
+                ),
+              ),
+              Text(
+                isPicked ? 'Change' : 'Open map',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isPicked ? Colors.green.shade700 : MColors.primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

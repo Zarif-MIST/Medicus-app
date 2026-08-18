@@ -4,7 +4,6 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavb
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
-import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_queue_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
 
 class PharmacistDashboardScreen extends StatelessWidget {
@@ -61,14 +60,6 @@ class _PharmacistShellState extends State<_PharmacistShell> {
       PharmacistHomeScreen(
         key: _homeKey,
         account: widget.account,
-        onOpenQueue: () async {
-          await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const PrescriptionQueueScreen(),
-            ),
-          );
-          _homeKey.currentState?.refreshQueueData();
-        },
         onOpenScanner: () => setState(() => _index = 1),
         onOpenInventory: () => setState(() => _index = 2),
       ),

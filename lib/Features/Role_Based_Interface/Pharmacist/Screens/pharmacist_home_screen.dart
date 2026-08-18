@@ -5,20 +5,20 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShap
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_log_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_fulfillment_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
 import 'package:medicus/Utilities/colors.dart';
+import 'package:medicus/Utilities/helperFunctions.dart';
 
 class PharmacistHomeScreen extends StatefulWidget {
   const PharmacistHomeScreen({
     super.key,
     required this.account,
-    required this.onOpenQueue,
     required this.onOpenScanner,
     required this.onOpenInventory,
   });
 
   final AuthAccount account;
-  final VoidCallback onOpenQueue;
   final VoidCallback onOpenScanner;
   final VoidCallback onOpenInventory;
 
@@ -64,6 +64,13 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
     );
   }
 
+  Future<void> _openFulfillment(PharmacyPrescriptionQueueItem item) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PrescriptionFulfillmentScreen(item: item)),
+    );
+    refreshQueueData();
+  }
+
   String _greeting() {
     final int hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning,';
@@ -77,6 +84,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
       body: FutureBuilder<_HomeQueueData>(
         future: _queueFuture,
         builder: (context, snapshot) {
+          final bool isDark = MHelperFunctions.isDarkMode(context);
           final pendingItems = snapshot.data?.pending ??
               <PharmacyPrescriptionQueueItem>[];
           final dispensedItems = snapshot.data?.dispensed ??
@@ -193,26 +201,18 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                         const SizedBox(height: 16),
                       ],
                       StatCardRow(
-                        onHighlightTap: widget.onOpenQueue,
-                        highlightActionLabel: 'View queue',
+                        onHighlightTap: _openInventoryLog,
+                        highlightActionLabel: 'View log',
                         stats: [
                           StatCardData(
-                            label: 'Pending Queue',
-                            value: pendingItems
-                                .where((item) => item.status == 'Pending')
-                                .length,
-                            icon: Icons.receipt_long_outlined,
+                            label: 'Inventory Log',
+                            value: snapshot.data?.logCount ?? 0,
+                            icon: Icons.receipt_outlined,
                           ),
                           StatCardData(
                             label: 'Dispensed Today',
                             value: dispensedItems.length,
                             icon: Icons.check_circle_outline,
-                          ),
-                          StatCardData(
-                            label: 'Inventory Log',
-                            value: snapshot.data?.logCount ?? 0,
-                            icon: Icons.receipt_outlined,
-                            onTap: _openInventoryLog,
                           ),
                         ],
                       ),
@@ -228,12 +228,22 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                             color: MColors.primaryColor,
                           ),
                         )
-                      else
-                        for (final item in visiblePending.take(3)) ...[
-                          _QueuePreview(item: item),
+                      else ...[
+                        for (final item in visiblePending) ...[
+                          _QueueCard(
+                            item: item,
+                            isDark: isDark,
+                            onFulfill: () => _openFulfillment(item),
+                          ),
                           const SizedBox(height: 12),
                         ],
-                      const SizedBox(height: 10),
+                        if (visiblePending.isEmpty)
+                          _EmptyState(
+                            message: 'No pending prescriptions right now.',
+                            isDark: isDark,
+                          ),
+                      ],
+                      const SizedBox(height: 18),
                       Text(
                         'Dispensed Log',
                         style: Theme.of(context).textTheme.titleMedium,
@@ -241,9 +251,19 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                       const SizedBox(height: 12),
                       if (!snapshot.hasData)
                         const SizedBox.shrink()
+                      else if (visibleDispensed.isEmpty)
+                        _EmptyState(
+                          message: 'No dispensed prescriptions yet.',
+                          isDark: isDark,
+                        )
                       else
-                        for (final item in visibleDispensed.take(3)) ...[
-                          _QueuePreview(item: item),
+                        for (final item in visibleDispensed) ...[
+                          _QueueCard(
+                            item: item,
+                            isDark: isDark,
+                            showFulfillButton: false,
+                            trailingColor: Colors.green,
+                          ),
                           const SizedBox(height: 12),
                         ],
                     ],
@@ -272,16 +292,23 @@ class _HomeQueueData {
   final int logCount;
 }
 
-class _QueuePreview extends StatelessWidget {
-  const _QueuePreview({required this.item});
+class _QueueCard extends StatelessWidget {
+  const _QueueCard({
+    required this.item,
+    required this.isDark,
+    this.onFulfill,
+    this.showFulfillButton = true,
+    this.trailingColor = MColors.primaryColor,
+  });
 
   final PharmacyPrescriptionQueueItem item;
+  final bool isDark;
+  final VoidCallback? onFulfill;
+  final bool showFulfillButton;
+  final Color trailingColor;
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool pending = item.status == 'Pending';
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -295,52 +322,102 @@ class _QueuePreview extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: MColors.primaryColor.withValues(alpha: 0.14),
-            child: const Icon(
-              Icons.medication_outlined,
-              color: MColors.primaryColor,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              Expanded(
+                child: Text(
                   item.patientName,
-                  style: Theme.of(context).textTheme.titleSmall,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  item.id,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
+              Text(
+                item.status,
+                style: TextStyle(
+                  color: trailingColor,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Prescription: ${item.id} • Doctor: ${item.doctorName}',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${item.medicines.length} ${item.medicines.length == 1 ? 'medicine' : 'medicines'}',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: MColors.primaryColor,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: (pending ? MColors.primaryColor : Colors.green).withValues(
-                alpha: 0.12,
+          const SizedBox(height: 6),
+          for (final medicine in item.medicines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: medicine.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextSpan(
+                      text: '  •  ${medicine.dosage}, ${medicine.frequency} • Qty ${medicine.quantity}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              borderRadius: BorderRadius.circular(99),
             ),
-            child: Text(
-              item.status,
-              style: TextStyle(
-                color: pending ? MColors.primaryColor : Colors.green,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+          if (showFulfillButton) ...[
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: onFulfill,
+                style: FilledButton.styleFrom(
+                  backgroundColor: MColors.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('View'),
               ),
             ),
-          ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.message, required this.isDark});
+
+  final String message;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
       ),
     );
   }

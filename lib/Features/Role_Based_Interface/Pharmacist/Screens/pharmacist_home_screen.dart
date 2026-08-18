@@ -4,6 +4,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSear
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_log_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 
@@ -13,11 +14,13 @@ class PharmacistHomeScreen extends StatefulWidget {
     required this.account,
     required this.onOpenQueue,
     required this.onOpenScanner,
+    required this.onOpenInventory,
   });
 
   final AuthAccount account;
   final VoidCallback onOpenQueue;
   final VoidCallback onOpenScanner;
+  final VoidCallback onOpenInventory;
 
   @override
   State<PharmacistHomeScreen> createState() => PharmacistHomeScreenState();
@@ -40,14 +43,24 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
   }
 
   Future<_HomeQueueData> _loadQueueData() async {
-    final results = await Future.wait<List<PharmacyPrescriptionQueueItem>>([
+    final results = await (
       PharmacistService.instance.getPendingPrescriptions(),
       PharmacistService.instance.getDispensedPrescriptions(),
-    ]);
+      PharmacistService.instance.getLowStockItems(),
+      PharmacistService.instance.getInventoryLog(),
+    ).wait;
 
     return _HomeQueueData(
-      pending: results[0],
-      dispensed: results[1],
+      pending: results.$1,
+      dispensed: results.$2,
+      lowStock: results.$3,
+      logCount: results.$4.length,
+    );
+  }
+
+  Future<void> _openInventoryLog() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const InventoryLogScreen()),
     );
   }
 
@@ -68,6 +81,8 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
               <PharmacyPrescriptionQueueItem>[];
           final dispensedItems = snapshot.data?.dispensed ??
               <PharmacyPrescriptionQueueItem>[];
+          final lowStockItems = snapshot.data?.lowStock ??
+              <MedicineInventoryItem>[];
           final visiblePending = pendingItems.where((item) {
             final query = _query.trim().toLowerCase();
             if (query.isEmpty) {
@@ -84,11 +99,6 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
             return item.patientName.toLowerCase().contains(query) ||
                 item.id.toLowerCase().contains(query);
           }).toList();
-          final allItems = <PharmacyPrescriptionQueueItem>[
-            ...pendingItems,
-            ...dispensedItems,
-          ];
-
           return SingleChildScrollView(
             child: Column(
               children: [
@@ -97,7 +107,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                   child: Container(
                     color: MColors.primaryColor,
                     child: SizedBox(
-                      height: 420,
+                      height: 320,
                       child: Stack(
                         children: [
                           const Positioned(
@@ -120,7 +130,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    const SizedBox(height: 50),
+                                    const SizedBox(height: 36),
                                     Text(
                                       _greeting(),
                                       style: const TextStyle(
@@ -139,14 +149,14 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 28),
+                                    const SizedBox(height: 22),
                                     LiquidGlassSearchBar(
                                       hintText:
                                           'Search prescription or patient',
                                       onChanged: (value) =>
                                           setState(() => _query = value),
                                     ),
-                                    const SizedBox(height: 24),
+                                    const SizedBox(height: 18),
                                     Align(
                                       alignment: Alignment.center,
                                       child: IconButton(
@@ -159,7 +169,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                                         tooltip: 'Scan QR',
                                       ),
                                     ),
-                                    const SizedBox(height: 18),
+                                    const SizedBox(height: 10),
                                   ],
                                 ),
                               ),
@@ -175,6 +185,13 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (lowStockItems.isNotEmpty) ...[
+                        _LowStockAlert(
+                          items: lowStockItems,
+                          onTap: widget.onOpenInventory,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       StatCardRow(
                         onHighlightTap: widget.onOpenQueue,
                         highlightActionLabel: 'View queue',
@@ -192,9 +209,10 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                             icon: Icons.check_circle_outline,
                           ),
                           StatCardData(
-                            label: 'Queue Items',
-                            value: pendingItems.length,
-                            icon: Icons.inventory_2_outlined,
+                            label: 'Inventory Log',
+                            value: snapshot.data?.logCount ?? 0,
+                            icon: Icons.receipt_outlined,
+                            onTap: _openInventoryLog,
                           ),
                         ],
                       ),
@@ -241,10 +259,17 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
 }
 
 class _HomeQueueData {
-  const _HomeQueueData({required this.pending, required this.dispensed});
+  const _HomeQueueData({
+    required this.pending,
+    required this.dispensed,
+    required this.lowStock,
+    required this.logCount,
+  });
 
   final List<PharmacyPrescriptionQueueItem> pending;
   final List<PharmacyPrescriptionQueueItem> dispensed;
+  final List<MedicineInventoryItem> lowStock;
+  final int logCount;
 }
 
 class _QueuePreview extends StatelessWidget {
@@ -316,6 +341,66 @@ class _QueuePreview extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LowStockAlert extends StatelessWidget {
+  const _LowStockAlert({required this.items, required this.onTap});
+
+  final List<MedicineInventoryItem> items;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final String names = items.map((MedicineInventoryItem item) => item.name).join(', ');
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.red.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.red.shade200),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${items.length} ${items.length == 1 ? 'medicine is' : 'medicines are'} running low',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      names,
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: Colors.red.shade700),
+            ],
+          ),
+        ),
       ),
     );
   }

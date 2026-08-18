@@ -5,64 +5,10 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/home/pati
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/specialist_selection_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pharmacies/pharmacy_locator_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/profile/patient_profile_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Services/appointment_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Services/prescription_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
-
-// Mock data — replaced by a Firestore query (prescriptions collection for
-// this patient, ordered by date) once the data layer is wired up. Each
-// record mirrors what the doctor portal would save: an id, doctor, date,
-// and its medicines — shared between the Home timeline and the Records
-// screen so both reflect the same source of truth.
-final List<Prescription> _initialPrescriptions = [
-  Prescription(
-    id: 'RX-1001',
-    doctorName: 'Dr. Farhana Rahman',
-    date: DateTime.now().subtract(const Duration(days: 12)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Metformin 500mg',
-        dosage: '1 tablet, twice daily',
-        durationDays: 30,
-      ),
-    ],
-  ),
-  Prescription(
-    id: 'RX-1002',
-    doctorName: 'Dr. Kamrul Islam',
-    date: DateTime.now().subtract(const Duration(days: 5)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Amoxicillin 250mg',
-        dosage: '1 capsule, three times daily',
-        durationDays: 7,
-      ),
-    ],
-  ),
-  Prescription(
-    id: 'RX-1003',
-    doctorName: 'Dr. Nusrat Jahan',
-    date: DateTime.now().subtract(const Duration(days: 20)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Cetirizine 10mg',
-        dosage: '1 tablet, once daily',
-        durationDays: 5,
-      ),
-    ],
-  ),
-  Prescription(
-    id: 'RX-1004',
-    doctorName: 'Dr. Shafiul Alam',
-    date: DateTime.now().subtract(const Duration(days: 45)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Ibuprofen 400mg',
-        dosage: '1 tablet, as needed',
-        durationDays: 3,
-      ),
-    ],
-  ),
-];
 
 class PatientDashboardScreen extends StatelessWidget {
   const PatientDashboardScreen({super.key, required this.account});
@@ -86,8 +32,42 @@ class _PatientHomeShell extends StatefulWidget {
 
 class _PatientHomeShellState extends State<_PatientHomeShell> {
   int _index = 0;
-  final List<BookedAppointment> _appointments = [];
-  final List<Prescription> _prescriptions = List.of(_initialPrescriptions);
+  List<BookedAppointment> _appointments = [];
+  List<Prescription> _prescriptions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatientData();
+  }
+
+  Future<void> _loadPatientData() async {
+    List<BookedAppointment> appointments = const [];
+    List<Prescription> prescriptions = const [];
+
+    try {
+      appointments = await AppointmentService.instance.getUpcomingAppointments(
+        widget.account.userId,
+      );
+    } catch (error) {
+      debugPrint('Failed to load appointments: $error');
+    }
+
+    try {
+      prescriptions = await PrescriptionService.instance
+          .getPrescriptionsForPatient(widget.account.userId);
+    } catch (error) {
+      debugPrint('Failed to load prescriptions: $error');
+    }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appointments = appointments;
+      _prescriptions = prescriptions;
+    });
+  }
 
   final _items = const [
     LiquidNavItem(
@@ -125,11 +105,15 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
         prescriptions: _prescriptions,
       ),
       SpecialistSelectionScreen(
+        account: widget.account,
         appointments: _appointments,
         onBook: _addAppointment,
       ),
       PharmacyLocatorScreen(account: widget.account),
-      PatientProfileScreen(prescriptions: _prescriptions),
+      PatientProfileScreen(
+        account: widget.account,
+        prescriptions: _prescriptions,
+      ),
     ];
 
     return Scaffold(

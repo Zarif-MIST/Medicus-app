@@ -94,7 +94,9 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
 
     final DoctorPrescriptionModel prescription = DoctorPrescriptionModel(
       patientId: widget.patient.account.userId,
+      patientName: widget.patient.account.fullName,
       doctorId: widget.doctor.userId,
+      doctorName: widget.doctor.fullName,
       specialty: widget.doctor.specialty ?? 'General Physician',
       diagnosis: _diagnosisController.text.trim(),
       medicines: _medicines
@@ -104,6 +106,7 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
               name: medicine.name.text.trim(),
               dosage: medicine.dosage.text.trim(),
               instructions: medicine.instructions.text.trim(),
+              durationDays: _parseDurationDays(medicine.duration.text),
             ),
           )
           .toList(),
@@ -121,6 +124,11 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
       snackPosition: SnackPosition.BOTTOM,
     );
     Navigator.of(context).pop();
+  }
+
+  int _parseDurationDays(String text) {
+    final RegExpMatch? match = RegExp(r'\d+').firstMatch(text);
+    return match == null ? 0 : int.parse(match.group(0)!);
   }
 
   @override

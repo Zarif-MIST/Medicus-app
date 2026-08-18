@@ -84,10 +84,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
             return item.patientName.toLowerCase().contains(query) ||
                 item.id.toLowerCase().contains(query);
           }).toList();
-          final allItems = <PharmacyPrescriptionQueueItem>[
-            ...pendingItems,
-            ...dispensedItems,
-          ];
+          
 
           return SingleChildScrollView(
             child: Column(

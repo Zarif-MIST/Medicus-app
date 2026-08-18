@@ -5,6 +5,7 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 
 class DoctorSummary {
   const DoctorSummary({
+    required this.id,
     required this.name,
     required this.specialty,
     required this.hospital,
@@ -14,6 +15,7 @@ class DoctorSummary {
     required this.nextAvailable,
   });
 
+  final String id;
   final String name;
   final String specialty;
   final String hospital;

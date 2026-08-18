@@ -49,35 +49,32 @@ class DoctorService {
   Future<List<DoctorAppointmentModel>> getTodayAppointments(
     AuthAccount doctor,
   ) async {
-    // TODO(firebase): replace mock queue with Firestore appointments filtered by doctor and current day.
-    return <DoctorAppointmentModel>[
-      DoctorAppointmentModel(
-        id: 'APT-201',
-        patientId: '4821',
-        patientName: 'Tareq Hasan',
-        specialty: doctor.specialty ?? 'General Physician',
-        reason: 'Follow-up on fever and body ache',
-        timeLabel: '09:00 AM',
-        status: 'Confirmed',
-      ),
-      DoctorAppointmentModel(
-        id: 'APT-202',
-        patientId: '5634',
-        patientName: 'Sadia Rahman',
-        specialty: doctor.specialty ?? 'General Physician',
-        reason: 'Prescription review',
-        timeLabel: '10:30 AM',
-        status: 'Waiting',
-      ),
-      DoctorAppointmentModel(
-        id: 'APT-203',
-        patientId: '6108',
-        patientName: 'Nafis Ahmed',
-        specialty: doctor.specialty ?? 'General Physician',
-        reason: 'Routine consultation',
-        timeLabel: '01:15 PM',
-        status: 'Pending',
-      ),
+    final DateTime now = DateTime.now();
+    final DateTime startOfToday = DateTime(now.year, now.month, now.day);
+    final DateTime startOfTomorrow = startOfToday.add(const Duration(days: 1));
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('appointments')
+        .where('doctorId', isEqualTo: doctor.userId)
+        .where(
+          'date',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday),
+        )
+        .where('date', isLessThan: Timestamp.fromDate(startOfTomorrow))
+        .orderBy('date')
+        .get();
+
+    return [
+      for (final doc in snapshot.docs)
+        DoctorAppointmentModel(
+          id: doc.id,
+          patientId: (doc.data()['patientId'] ?? '') as String,
+          patientName: (doc.data()['patientName'] ?? '') as String,
+          specialty: (doc.data()['specialty'] ?? doctor.specialty ?? 'General Physician') as String,
+          reason: (doc.data()['reason'] ?? '') as String,
+          timeLabel: (doc.data()['time'] ?? '') as String,
+          status: (doc.data()['status'] ?? 'upcoming') as String,
+        ),
     ];
   }
 
@@ -174,7 +171,9 @@ class DoctorService {
 
     await _firestore.collection('prescriptions').add(<String, dynamic>{
       'patientId': prescription.patientId,
+      'patientName': prescription.patientName,
       'doctorId': prescription.doctorId,
+      'doctorName': prescription.doctorName,
       'specialty': prescription.specialty,
       'diagnosis': prescription.diagnosis,
       'additionalNotes': prescription.additionalNotes,
@@ -185,6 +184,7 @@ class DoctorService {
               'name': medicine.name,
               'dosage': medicine.dosage,
               'instructions': medicine.instructions,
+              'durationDays': medicine.durationDays,
             },
           )
           .toList(),

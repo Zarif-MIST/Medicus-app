@@ -77,6 +77,21 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       body: FutureBuilder<List<DoctorAppointmentModel>>(
         future: _appointmentsFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Could not load appointments.\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+              ),
+            );
+          }
+
           if (!snapshot.hasData) {
             return const Center(
               child: CircularProgressIndicator(color: MColors.primaryColor),

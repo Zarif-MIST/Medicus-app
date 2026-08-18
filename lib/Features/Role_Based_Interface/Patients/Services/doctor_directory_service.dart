@@ -9,6 +9,7 @@ class DoctorDirectoryService {
 
   static const List<DoctorSummary> _mockDoctors = [
     DoctorSummary(
+      id: 'mock-kamrul-islam',
       name: 'Dr. Kamrul Islam',
       specialty: 'General',
       hospital: 'United Hospital, Dhaka',
@@ -18,6 +19,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Tomorrow 10 AM',
     ),
     DoctorSummary(
+      id: 'mock-farhana-rahman',
       name: 'Dr. Farhana Rahman',
       specialty: 'Cardiologist',
       hospital: 'Square Hospital, Dhaka',
@@ -27,6 +29,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Today 5 PM',
     ),
     DoctorSummary(
+      id: 'mock-nusrat-jahan',
       name: 'Dr. Nusrat Jahan',
       specialty: 'Dermatologist',
       hospital: 'Apollo Hospital, Dhaka',
@@ -36,6 +39,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Today 7 PM',
     ),
     DoctorSummary(
+      id: 'mock-shafiul-alam',
       name: 'Dr. Shafiul Alam',
       specialty: 'Pediatrician',
       hospital: 'Dhaka Shishu Hospital',
@@ -45,6 +49,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Today 6 PM',
     ),
     DoctorSummary(
+      id: 'mock-mahbub-hasan',
       name: 'Dr. Mahbub Hasan',
       specialty: 'Orthopedic',
       hospital: 'Square Hospital, Dhaka',
@@ -54,6 +59,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Tomorrow 11 AM',
     ),
     DoctorSummary(
+      id: 'mock-sadia-afrin',
       name: 'Dr. Sadia Afrin',
       specialty: 'Dentist',
       hospital: 'Smile Dental Care',
@@ -63,6 +69,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Today 4 PM',
     ),
     DoctorSummary(
+      id: 'mock-rehana-begum',
       name: 'Dr. Rehana Begum',
       specialty: 'Gynecologist',
       hospital: 'LabAid Hospital, Dhaka',
@@ -72,6 +79,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Tomorrow 9 AM',
     ),
     DoctorSummary(
+      id: 'mock-anisur-rahman',
       name: 'Dr. Anisur Rahman',
       specialty: 'ENT',
       hospital: 'Apollo Hospital, Dhaka',
@@ -81,6 +89,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Today 3 PM',
     ),
     DoctorSummary(
+      id: 'mock-fahmida-sultana',
       name: 'Dr. Fahmida Sultana',
       specialty: 'Psychiatrist',
       hospital: 'United Hospital, Dhaka',
@@ -90,6 +99,7 @@ class DoctorDirectoryService {
       nextAvailable: 'Tomorrow 2 PM',
     ),
     DoctorSummary(
+      id: 'mock-zahidul-karim',
       name: 'Dr. Zahidul Karim',
       specialty: 'Neurologist',
       hospital: 'Square Hospital, Dhaka',
@@ -109,7 +119,7 @@ class DoctorDirectoryService {
           .get();
 
       final List<DoctorSummary> doctors = snapshot.docs
-          .map((doc) => _mapDoctor(doc.data()))
+          .map((doc) => _mapDoctor(doc.id, doc.data()))
           .whereType<DoctorSummary>()
           .toList();
 
@@ -123,7 +133,7 @@ class DoctorDirectoryService {
     return _mockDoctors;
   }
 
-  DoctorSummary? _mapDoctor(Map<String, dynamic> data) {
+  DoctorSummary? _mapDoctor(String docId, Map<String, dynamic> data) {
     final String firstName = (data['firstName'] ?? '').toString().trim();
     final String lastName = (data['lastName'] ?? '').toString().trim();
     final String fullName = '$firstName $lastName'.trim();
@@ -133,8 +143,10 @@ class DoctorDirectoryService {
     }
 
     final String specialty = (data['specialty'] ?? '').toString().trim();
+    final String userId = (data['userId'] ?? '').toString().trim();
 
     return DoctorSummary(
+      id: userId.isEmpty ? docId : userId,
       name: 'Dr. $fullName',
       specialty: specialty.isEmpty ? 'General' : specialty,
       hospital: (data['workplace'] ?? data['hospital'] ?? 'Medicus Partner Clinic')

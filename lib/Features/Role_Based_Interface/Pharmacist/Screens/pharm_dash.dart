@@ -70,6 +70,7 @@ class _PharmacistShellState extends State<_PharmacistShell> {
           _homeKey.currentState?.refreshQueueData();
         },
         onOpenScanner: () => setState(() => _index = 1),
+        onOpenInventory: () => setState(() => _index = 2),
       ),
       const Scanqr(),
       const InventoryScreen(),

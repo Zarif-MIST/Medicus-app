@@ -195,11 +195,37 @@ class _QueueCard extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
-            item.medicines.join(', '),
-            style: Theme.of(context).textTheme.bodyMedium,
+            '${item.medicines.length} ${item.medicines.length == 1 ? 'medicine' : 'medicines'}',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: MColors.primaryColor,
+              fontWeight: FontWeight.w700,
+            ),
           ),
+          const SizedBox(height: 6),
+          for (final medicine in item.medicines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: medicine.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextSpan(
+                      text: '  •  ${medicine.dosage}, ${medicine.frequency} • Qty ${medicine.quantity}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (showFulfillButton) ...[
             const SizedBox(height: 14),
             Align(

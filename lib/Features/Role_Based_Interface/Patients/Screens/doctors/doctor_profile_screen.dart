@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -17,8 +18,14 @@ const List<String> _mockTimeSlots = [
 ];
 
 class DoctorProfileScreen extends StatefulWidget {
-  const DoctorProfileScreen({super.key, required this.doctor, required this.onBooked});
+  const DoctorProfileScreen({
+    super.key,
+    required this.account,
+    required this.doctor,
+    required this.onBooked,
+  });
 
+  final AuthAccount account;
   final DoctorSummary doctor;
   final ValueChanged<BookedAppointment> onBooked;
 
@@ -51,6 +58,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AppointmentConfirmationScreen(
+          account: widget.account,
           doctor: widget.doctor,
           date: _dates[_selectedDateIndex],
           time: _selectedSlot!,

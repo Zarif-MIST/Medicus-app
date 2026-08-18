@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appointment_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
@@ -25,6 +26,8 @@ class DoctorHomeScreen extends StatefulWidget {
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   late Future<List<DoctorAppointmentModel>> _appointmentsFuture;
   String _searchQuery = '';
+  bool _isSearchingPatients = false;
+  List<PatientRecordModel> _searchedPatients = const <PatientRecordModel>[];
 
   @override
   void initState() {
@@ -32,6 +35,35 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     _appointmentsFuture = DoctorService.instance.getTodayAppointments(
       widget.account,
     );
+  }
+
+  Future<void> _runPatientSearch(String value) async {
+    final String query = value.trim();
+
+    setState(() {
+      _searchQuery = value;
+      if (query.isEmpty) {
+        _searchedPatients = const <PatientRecordModel>[];
+      } else {
+        _isSearchingPatients = true;
+      }
+    });
+
+    if (query.isEmpty) {
+      return;
+    }
+
+    final List<PatientRecordModel> results = await DoctorService.instance
+        .searchPatients(query);
+
+    if (!mounted || _searchQuery.trim() != query) {
+      return;
+    }
+
+    setState(() {
+      _searchedPatients = results;
+      _isSearchingPatients = false;
+    });
   }
 
   String _greeting() {
@@ -113,10 +145,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                     const SizedBox(height: 28),
                                     LiquidGlassSearchBar(
                                       hintText: 'Search patient ID',
-                                      onChanged: (value) =>
-                                          setState(() => _searchQuery = value),
-                                      onSubmitted: (value) =>
-                                          setState(() => _searchQuery = value),
+                                      onChanged: _runPatientSearch,
+                                      onSubmitted: _runPatientSearch,
                                     ),
                                     const SizedBox(height: 24),
                                     Align(
@@ -189,6 +219,31 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                           ),
                           const SizedBox(height: 12),
                         ],
+                      if (_searchQuery.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Patient Search Results',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        if (_isSearchingPatients)
+                          const Center(
+                            child: CircularProgressIndicator(
+                              color: MColors.primaryColor,
+                            ),
+                          )
+                        else if (_searchedPatients.isEmpty)
+                          Text(
+                            'No patient records matched your search.',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey),
+                          )
+                        else
+                          for (final patient in _searchedPatients) ...[
+                            _PatientSearchTile(record: patient),
+                            const SizedBox(height: 10),
+                          ],
+                      ],
                     ],
                   ),
                 ),
@@ -196,6 +251,71 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _PatientSearchTile extends StatelessWidget {
+  const _PatientSearchTile({required this.record});
+
+  final PatientRecordModel record;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1F1F1F)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.26
+                  : 0.05,
+            ),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: MColors.primaryColor.withValues(alpha: 0.12),
+            child: const Icon(Icons.person_outline, color: MColors.primaryColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(record.account.fullName, style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 2),
+                Text(
+                  'Patient ID: ${record.account.userId}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PatientDetailScreen(record: record),
+                ),
+              );
+            },
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
       ),
     );
   }
@@ -209,12 +329,6 @@ class _DoctorQueueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor = switch (appointment.status) {
-      'Confirmed' => Colors.green,
-      'Waiting' => Colors.orange,
-      _ => MColors.primaryColor,
-    };
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -261,21 +375,6 @@ class _DoctorQueueTile extends StatelessWidget {
                   ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(99),
-            ),
-            child: Text(
-              appointment.status,
-              style: TextStyle(
-                color: statusColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
             ),
           ),
           IconButton(

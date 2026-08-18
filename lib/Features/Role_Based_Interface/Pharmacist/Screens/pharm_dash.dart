@@ -60,7 +60,6 @@ class _PharmacistShellState extends State<_PharmacistShell> {
       PharmacistHomeScreen(
         key: _homeKey,
         account: widget.account,
-        onOpenScanner: () => setState(() => _index = 1),
         onOpenInventory: () => setState(() => _index = 2),
       ),
       Scanqr(account: widget.account),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
-import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_log_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_fulfillment_screen.dart';
@@ -14,12 +13,10 @@ class PharmacistHomeScreen extends StatefulWidget {
   const PharmacistHomeScreen({
     super.key,
     required this.account,
-    required this.onOpenScanner,
     required this.onOpenInventory,
   });
 
   final AuthAccount account;
-  final VoidCallback onOpenScanner;
   final VoidCallback onOpenInventory;
 
   @override
@@ -115,7 +112,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                   child: Container(
                     color: MColors.primaryColor,
                     child: SizedBox(
-                      height: 320,
+                      height: 240,
                       child: Stack(
                         children: [
                           const Positioned(
@@ -138,46 +135,33 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    const SizedBox(height: 36),
+                                    const SizedBox(height: 24),
                                     Text(
                                       _greeting(),
                                       style: const TextStyle(
                                         color: Colors.white70,
-                                        fontSize: 16,
+                                        fontSize: 15,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 3),
                                     Text(
                                       widget.account.fullName.isEmpty
                                           ? 'Pharmacist'
                                           : widget.account.fullName,
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 30,
+                                        fontSize: 26,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 22),
+                                    const SizedBox(height: 16),
                                     LiquidGlassSearchBar(
                                       hintText:
                                           'Search prescription or patient',
                                       onChanged: (value) =>
                                           setState(() => _query = value),
                                     ),
-                                    const SizedBox(height: 18),
-                                    Align(
-                                      alignment: Alignment.center,
-                                      child: IconButton(
-                                        onPressed: widget.onOpenScanner,
-                                        icon: const Icon(
-                                          Icons.qr_code_scanner,
-                                        ),
-                                        color: Colors.white,
-                                        iconSize: 30,
-                                        tooltip: 'Scan QR',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 24),
                                   ],
                                 ),
                               ),
@@ -189,7 +173,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 110),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -198,30 +182,39 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                           items: lowStockItems,
                           onTap: widget.onOpenInventory,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                       ],
-                      StatCardRow(
-                        onHighlightTap: _openInventoryLog,
-                        highlightActionLabel: 'View log',
-                        stats: [
-                          StatCardData(
-                            label: 'Inventory Log',
-                            value: snapshot.data?.logCount ?? 0,
-                            icon: Icons.receipt_outlined,
-                          ),
-                          StatCardData(
-                            label: 'Dispensed Today',
-                            value: dispensedItems.length,
-                            icon: Icons.check_circle_outline,
-                          ),
-                        ],
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _StatTile(
+                                icon: Icons.receipt_outlined,
+                                label: 'Inventory Log',
+                                value: snapshot.data?.logCount ?? 0,
+                                isDark: isDark,
+                                onTap: _openInventoryLog,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _StatTile(
+                                icon: Icons.check_circle_outline,
+                                label: 'Dispensed Today',
+                                value: dispensedItems.length,
+                                isDark: isDark,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 22),
-                      Text(
-                        'Pending Prescriptions',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      const SizedBox(height: 18),
+                      _SectionHeader(
+                        title: 'Pending Prescriptions',
+                        count: visiblePending.length,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       if (!snapshot.hasData)
                         const Center(
                           child: CircularProgressIndicator(
@@ -235,25 +228,27 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                             isDark: isDark,
                             onFulfill: () => _openFulfillment(item),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                         ],
                         if (visiblePending.isEmpty)
                           _EmptyState(
                             message: 'No pending prescriptions right now.',
+                            icon: Icons.inbox_outlined,
                             isDark: isDark,
                           ),
                       ],
-                      const SizedBox(height: 18),
-                      Text(
-                        'Dispensed Log',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      const SizedBox(height: 14),
+                      _SectionHeader(
+                        title: 'Dispensed Log',
+                        count: visibleDispensed.length,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       if (!snapshot.hasData)
                         const SizedBox.shrink()
                       else if (visibleDispensed.isEmpty)
                         _EmptyState(
                           message: 'No dispensed prescriptions yet.',
+                          icon: Icons.history,
                           isDark: isDark,
                         )
                       else
@@ -264,7 +259,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                             showFulfillButton: false,
                             trailingColor: Colors.green,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                         ],
                     ],
                   ),
@@ -292,6 +287,124 @@ class _HomeQueueData {
   final int logCount;
 }
 
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.isDark,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: MColors.primaryColor, size: 18),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '$value',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (onTap != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View log',
+                      style: TextStyle(
+                        color: MColors.primaryColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.arrow_forward_rounded, color: MColors.primaryColor, size: 12),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.count});
+
+  final String title;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: MColors.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Text(
+            '$count',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: MColors.primaryColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _QueueCard extends StatelessWidget {
   const _QueueCard({
     required this.item,
@@ -310,15 +423,15 @@ class _QueueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -327,71 +440,130 @@ class _QueueCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: trailingColor.withValues(alpha: 0.12),
+                child: Icon(Icons.medication_outlined, color: trailingColor, size: 18),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  item.patientName,
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.patientName,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${item.id} • Dr. ${item.doctorName}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                item.status,
-                style: TextStyle(
-                  color: trailingColor,
-                  fontWeight: FontWeight.w700,
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: trailingColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  item.status,
+                  style: TextStyle(
+                    color: trailingColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Prescription: ${item.id} • Doctor: ${item.doctorName}',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${item.medicines.length} ${item.medicines.length == 1 ? 'medicine' : 'medicines'}',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: MColors.primaryColor,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          for (final medicine in item.medicines)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text.rich(
-                TextSpan(
+          if (showFulfillButton) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            for (final medicine in item.medicines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextSpan(
-                      text: medicine.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    Icon(Icons.circle, size: 5, color: Colors.grey.shade400),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: medicine.name,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '  ${medicine.dosage} • ${medicine.frequency}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    TextSpan(
-                      text: '  •  ${medicine.dosage}, ${medicine.frequency} • Qty ${medicine.quantity}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: MColors.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '×${medicine.quantity}',
+                        style: TextStyle(
+                          color: MColors.primaryColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          if (showFulfillButton) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton(
+              child: FilledButton.icon(
                 onPressed: onFulfill,
                 style: FilledButton.styleFrom(
                   backgroundColor: MColors.primaryColor,
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  minimumSize: const Size(0, 34),
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
-                child: const Text('View'),
+                icon: const Icon(Icons.arrow_forward, size: 15),
+                label: const Text('Review'),
               ),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.check_circle, size: 14, color: trailingColor),
+                const SizedBox(width: 6),
+                Text(
+                  '${item.medicines.length} ${item.medicines.length == 1 ? 'medicine' : 'medicines'} dispensed',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+              ],
             ),
           ],
         ],
@@ -401,23 +573,31 @@ class _QueueCard extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.message, required this.isDark});
+  const _EmptyState({required this.message, required this.icon, required this.isDark});
 
   final String message;
+  final IconData icon;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(
-        message,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+      child: Column(
+        children: [
+          Icon(icon, size: 26, color: Colors.grey.shade400),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ],
       ),
     );
   }

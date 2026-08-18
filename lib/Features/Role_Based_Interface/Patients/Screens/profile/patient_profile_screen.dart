@@ -1,16 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Authentication/Screens/on_board.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/records_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/qr/my_qr_screen.dart';
-
-// TODO: replace with the logged-in patient's AuthAccount once this screen
-// receives it from PatientDashboardScreen (same mock pattern as
-// patient_home_screen.dart).
-const String _mockPatientId = '4821';
-const String _mockPatientName = 'Tareq';
 
 enum _ProfileTab { personal, medical, emergency }
 
@@ -29,8 +27,13 @@ BoxDecoration _cardDecoration(bool isDark) {
 }
 
 class PatientProfileScreen extends StatefulWidget {
-  const PatientProfileScreen({super.key, required this.prescriptions});
+  const PatientProfileScreen({
+    super.key,
+    required this.account,
+    required this.prescriptions,
+  });
 
+  final AuthAccount account;
   final List<Prescription> prescriptions;
 
   @override
@@ -169,6 +172,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) {
+      return;
+    }
+    Get.offAll(() => const OnBoardingScreen());
+  }
+
   void _openAccountSheet() {
     final bool isDark = MHelperFunctions.isDarkMode(context);
     showModalBottomSheet(
@@ -206,7 +217,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 _ActionRow(
                   icon: Icons.logout,
                   label: 'Logout',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _logout();
+                  },
                   isDestructive: true,
                   showDivider: false,
                 ),
@@ -262,6 +276,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   Widget build(BuildContext context) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
     final double pad = Sizes.responsivePadding(context);
+    final String patientName = widget.account.fullName.isEmpty
+        ? 'Patient'
+        : widget.account.fullName;
+    final String patientId = widget.account.userId;
 
     return Container(
       color: isDark ? const Color(0xFF181818) : Colors.white,
@@ -271,13 +289,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           padding: EdgeInsets.fromLTRB(pad, pad * 0.8, pad, 120),
           children: [
             _ProfileHero(
-              patientName: _mockPatientName,
-              patientId: _mockPatientId,
+              patientName: patientName,
+              patientId: patientId,
               onQrTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const MyQrScreen(
-                    patientId: _mockPatientId,
-                    patientName: _mockPatientName,
+                  builder: (_) => MyQrScreen(
+                    patientId: patientId,
+                    patientName: patientName,
                   ),
                 ),
               ),
@@ -304,7 +322,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               subtitle: 'View ongoing & previous prescriptions',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => RecordsScreen(prescriptions: widget.prescriptions),
+                  builder: (_) => RecordsScreen(
+                    account: widget.account,
+                    prescriptions: widget.prescriptions,
+                  ),
                 ),
               ),
             ),

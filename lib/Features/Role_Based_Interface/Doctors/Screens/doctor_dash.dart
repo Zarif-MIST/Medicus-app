@@ -4,7 +4,7 @@ import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_appointments_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
-import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/profile/patient_profile_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
 
 class DoctorDash extends StatelessWidget {
   const DoctorDash({required this.account, super.key});
@@ -60,7 +60,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
       DoctorAppointmentsScreen(account: widget.account),
       Scanqr(account: widget.account),
-      PatientProfileScreen(prescriptions: const []),
+      ProfileScreen(account: widget.account),
     ];
 
     return Scaffold(

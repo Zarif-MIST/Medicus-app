@@ -1,48 +1,60 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
 
 class PharmacistService {
   PharmacistService._();
 
   static final PharmacistService instance = PharmacistService._();
-
-  static final List<_PharmacyPrescriptionRecord> _records = <_PharmacyPrescriptionRecord>[
-    _PharmacyPrescriptionRecord(
-      id: 'RX-1001',
-      patientId: '4821',
-      patientName: 'Tareq Hasan',
-      doctorName: 'Dr. Farhana Rahman',
-      status: 'Pending',
-      medicines: <String>['Metformin 500mg', 'Vitamin B Complex'],
-    ),
-    _PharmacyPrescriptionRecord(
-      id: 'RX-1002',
-      patientId: '5634',
-      patientName: 'Sadia Rahman',
-      doctorName: 'Dr. Kamrul Islam',
-      status: 'Pending',
-      medicines: <String>['Amoxicillin 250mg'],
-    ),
-  ];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptions() async {
-    // TODO(firebase): replace mock queue with Firestore prescriptions filtered by pending pharmacy fulfillment.
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('prescriptions')
+        .where('status', isEqualTo: 'pendingPharmacy')
+        .get();
+
     return [
-      for (final record in _records)
-        if (record.status == 'Pending')
-          record.toItem(),
+      for (final doc in snapshot.docs)
+        _fromFirestore(doc.id, doc.data(), status: 'Pending'),
     ];
   }
 
   Future<List<PharmacyPrescriptionQueueItem>> getDispensedPrescriptions() async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('prescriptions')
+        .where('status', isEqualTo: 'dispensed')
+        .get();
+
     return [
-      for (final record in _records)
-        if (record.status == 'Dispensed')
-          record.toItem(),
+      for (final doc in snapshot.docs)
+        _fromFirestore(doc.id, doc.data(), status: 'Dispensed'),
     ];
   }
 
   Future<int> getDispensedTodayCount() async {
-    return _records.where((record) => record.status == 'Dispensed').length;
+    final List<PharmacyPrescriptionQueueItem> dispensed =
+        await getDispensedPrescriptions();
+    return dispensed.length;
+  }
+
+  PharmacyPrescriptionQueueItem _fromFirestore(
+    String id,
+    Map<String, dynamic> data, {
+    required String status,
+  }) {
+    final List<dynamic> rawMedicines =
+        (data['medicines'] as List<dynamic>?) ?? const <dynamic>[];
+
+    return PharmacyPrescriptionQueueItem(
+      id: id,
+      patientId: (data['patientId'] ?? '') as String,
+      patientName: (data['patientName'] ?? '') as String,
+      doctorName: (data['doctorName'] ?? '') as String,
+      status: status,
+      medicines: [
+        for (final rawMedicine in rawMedicines) (rawMedicine['name'] ?? '') as String,
+      ],
+    );
   }
 
   Future<List<MedicineInventoryItem>> getInventory() async {
@@ -67,45 +79,13 @@ class PharmacistService {
   }
 
   Future<void> markDispensed(String prescriptionId) async {
-    // TODO(firebase): update prescription fulfillment status in Firestore.
-    if (prescriptionId.trim().isEmpty) {
+    final String id = prescriptionId.trim();
+    if (id.isEmpty) {
       throw ArgumentError('Prescription ID is required.');
     }
 
-    for (final record in _records) {
-      if (record.id == prescriptionId.trim()) {
-        record.status = 'Dispensed';
-        return;
-      }
-    }
-  }
-}
-
-class _PharmacyPrescriptionRecord {
-  _PharmacyPrescriptionRecord({
-    required this.id,
-    required this.patientId,
-    required this.patientName,
-    required this.doctorName,
-    required this.status,
-    required this.medicines,
-  });
-
-  final String id;
-  final String patientId;
-  final String patientName;
-  final String doctorName;
-  String status;
-  final List<String> medicines;
-
-  PharmacyPrescriptionQueueItem toItem() {
-    return PharmacyPrescriptionQueueItem(
-      id: id,
-      patientId: patientId,
-      patientName: patientName,
-      doctorName: doctorName,
-      status: status,
-      medicines: medicines,
-    );
+    await _firestore.collection('prescriptions').doc(id).update(<String, dynamic>{
+      'status': 'dispensed',
+    });
   }
 }

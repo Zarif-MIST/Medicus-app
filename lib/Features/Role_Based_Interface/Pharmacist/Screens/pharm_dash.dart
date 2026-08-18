@@ -63,7 +63,7 @@ class _PharmacistShellState extends State<_PharmacistShell> {
         onOpenScanner: () => setState(() => _index = 1),
         onOpenInventory: () => setState(() => _index = 2),
       ),
-      const Scanqr(),
+      Scanqr(account: widget.account),
       const InventoryScreen(),
       ProfileScreen(account: widget.account),
     ];

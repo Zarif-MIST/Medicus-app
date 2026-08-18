@@ -7,6 +7,56 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_se
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
+const List<String> _commonMedicineNames = [
+  'Metformin 500mg',
+  'Amoxicillin 250mg',
+  'Cetirizine 10mg',
+  'Ibuprofen 400mg',
+  'Vitamin B Complex',
+  'Omeprazole 20mg',
+  'Paracetamol 500mg',
+  'Salbutamol Inhaler',
+  'Amlodipine 5mg',
+];
+
+const List<String> _commonDosages = [
+  '1 tablet',
+  '1 capsule',
+  '2 tablets',
+  '500mg',
+  '250mg',
+  '10ml',
+  '5ml',
+];
+
+const List<String> _commonFrequencies = [
+  'Once daily',
+  'Twice daily',
+  'Three times daily',
+  'At bedtime',
+  'After meals',
+  'Before meals',
+  'As needed',
+];
+
+const List<String> _commonDurations = [
+  '3 days',
+  '5 days',
+  '7 days',
+  '10 days',
+  '14 days',
+  '30 days',
+];
+
+const List<String> _commonInstructions = [
+  'Take after meals',
+  'Take before meals',
+  'Take with water',
+  'Take at bedtime',
+  'Avoid driving',
+  'Take as directed',
+];
+
 class PrescriptionFormScreen extends StatefulWidget {
   const PrescriptionFormScreen({
     super.key,
@@ -44,7 +94,9 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
 
     final DoctorPrescriptionModel prescription = DoctorPrescriptionModel(
       patientId: widget.patient.account.userId,
+      patientName: widget.patient.account.fullName,
       doctorId: widget.doctor.userId,
+      doctorName: widget.doctor.fullName,
       specialty: widget.doctor.specialty ?? 'General Physician',
       diagnosis: _diagnosisController.text.trim(),
       medicines: _medicines
@@ -53,7 +105,10 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
             (medicine) => DoctorPrescriptionMedicine(
               name: medicine.name.text.trim(),
               dosage: medicine.dosage.text.trim(),
+              frequency: medicine.frequency.text.trim(),
               instructions: medicine.instructions.text.trim(),
+              durationDays: _parseDurationDays(medicine.duration.text),
+              quantity: int.tryParse(medicine.quantity.text.trim()) ?? 0,
             ),
           )
           .toList(),
@@ -71,6 +126,11 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
       snackPosition: SnackPosition.BOTTOM,
     );
     Navigator.of(context).pop();
+  }
+
+  int _parseDurationDays(String text) {
+    final RegExpMatch? match = RegExp(r'\d+').firstMatch(text);
+    return match == null ? 0 : int.parse(match.group(0)!);
   }
 
   @override
@@ -233,16 +293,98 @@ class _MedicineDraft {
   _MedicineDraft()
     : name = TextEditingController(),
       dosage = TextEditingController(),
-      instructions = TextEditingController();
+      frequency = TextEditingController(text: 'Once daily'),
+      duration = TextEditingController(text: '7 days'),
+      instructions = TextEditingController(text: 'Take after meals'),
+      quantity = TextEditingController();
 
   final TextEditingController name;
   final TextEditingController dosage;
+  final TextEditingController frequency;
+  final TextEditingController duration;
   final TextEditingController instructions;
+  final TextEditingController quantity;
 
   void dispose() {
     name.dispose();
     dosage.dispose();
+    frequency.dispose();
+    duration.dispose();
     instructions.dispose();
+    quantity.dispose();
+  }
+}
+
+class _PrescriptionAutocompleteField extends StatelessWidget {
+  const _PrescriptionAutocompleteField({
+    required this.controller,
+    required this.label,
+    required this.options,
+    this.validator,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final List<String> options;
+  final String? Function(String?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Autocomplete<String>(
+      optionsBuilder: (textEditingValue) {
+        final query = textEditingValue.text.toLowerCase();
+        if (query.isEmpty) {
+          return options;
+        }
+        return options.where(
+          (option) => option.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (selection) {
+        controller.text = selection;
+      },
+      fieldViewBuilder: (context, fieldController, focusNode, onFieldSubmitted) {
+        fieldController.text = controller.text;
+        fieldController.selection = controller.selection;
+        fieldController.addListener(() {
+          if (fieldController.text != controller.text) {
+            controller.text = fieldController.text;
+            controller.selection = fieldController.selection;
+          }
+        });
+
+        return TextFormField(
+          controller: fieldController,
+          focusNode: focusNode,
+          validator: validator,
+          decoration: _inputDecoration(context, label),
+          textInputAction: TextInputAction.next,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -287,27 +429,79 @@ class _MedicineFields extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          TextFormField(
+          _PrescriptionAutocompleteField(
             controller: draft.name,
+            label: 'Medicine name',
+            options: _commonMedicineNames,
             validator: (value) => value == null || value.trim().isEmpty
                 ? 'Enter medicine name'
                 : null,
-            decoration: _inputDecoration(context, 'Medicine name'),
           ),
           const SizedBox(height: 10),
-          TextFormField(
-            controller: draft.dosage,
-            validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Enter dosage' : null,
-            decoration: _inputDecoration(context, 'Dosage'),
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: draft.instructions,
-            validator: (value) => value == null || value.trim().isEmpty
-                ? 'Enter instructions'
-                : null,
-            decoration: _inputDecoration(context, 'Instructions'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.42,
+                child: _PrescriptionAutocompleteField(
+                  controller: draft.dosage,
+                  label: 'Dosage',
+                  options: _commonDosages,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter dosage'
+                      : null,
+                ),
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.42,
+                child: _PrescriptionAutocompleteField(
+                  controller: draft.frequency,
+                  label: 'Frequency',
+                  options: _commonFrequencies,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter frequency'
+                      : null,
+                ),
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.42,
+                child: _PrescriptionAutocompleteField(
+                  controller: draft.duration,
+                  label: 'Duration',
+                  options: _commonDurations,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter duration'
+                      : null,
+                ),
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.42,
+                child: _PrescriptionAutocompleteField(
+                  controller: draft.instructions,
+                  label: 'Instructions',
+                  options: _commonInstructions,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter instructions'
+                      : null,
+                ),
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.42,
+                child: TextFormField(
+                  controller: draft.quantity,
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final int? parsed = int.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed <= 0) {
+                      return 'Enter quantity to dispense';
+                    }
+                    return null;
+                  },
+                  decoration: _inputDecoration(context, 'Quantity to dispense'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

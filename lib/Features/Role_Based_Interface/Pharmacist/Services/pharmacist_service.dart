@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/inventory_transaction.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/medicine_shortfall.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
@@ -6,70 +7,71 @@ class PharmacistService {
   PharmacistService._();
 
   static final PharmacistService instance = PharmacistService._();
-
-  static final List<_PharmacyPrescriptionRecord> _records = <_PharmacyPrescriptionRecord>[
-    _PharmacyPrescriptionRecord(
-      id: 'RX-1001',
-      patientId: '4821',
-      patientName: 'Tareq Hasan',
-      doctorName: 'Dr. Farhana Rahman',
-      status: 'Pending',
-      medicines: <PrescribedMedicine>[
-        const PrescribedMedicine(
-          name: 'Metformin 500mg',
-          dosage: '1 tablet',
-          frequency: 'Twice daily',
-          duration: '30 days',
-          quantity: 60,
-          instructions: 'Take after meals',
-        ),
-        const PrescribedMedicine(
-          name: 'Vitamin B Complex',
-          dosage: '1 capsule',
-          frequency: 'Once daily',
-          duration: '30 days',
-          quantity: 30,
-        ),
-      ],
-    ),
-    _PharmacyPrescriptionRecord(
-      id: 'RX-1002',
-      patientId: '5634',
-      patientName: 'Sadia Rahman',
-      doctorName: 'Dr. Kamrul Islam',
-      status: 'Pending',
-      medicines: <PrescribedMedicine>[
-        const PrescribedMedicine(
-          name: 'Amoxicillin 250mg',
-          dosage: '1 capsule',
-          frequency: 'Three times daily',
-          duration: '7 days',
-          quantity: 21,
-          instructions: 'Complete the full course even if symptoms improve',
-        ),
-      ],
-    ),
-  ];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptions() async {
-    // TODO(firebase): replace mock queue with Firestore prescriptions filtered by pending pharmacy fulfillment.
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('prescriptions')
+        .where('status', isEqualTo: 'pendingPharmacy')
+        .get();
+
     return [
-      for (final record in _records)
-        if (record.status == 'Pending')
-          record.toItem(),
+      for (final doc in snapshot.docs)
+        _fromFirestore(doc.id, doc.data(), status: 'Pending'),
     ];
   }
 
   Future<List<PharmacyPrescriptionQueueItem>> getDispensedPrescriptions() async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('prescriptions')
+        .where('status', isEqualTo: 'dispensed')
+        .get();
+
     return [
-      for (final record in _records)
-        if (record.status == 'Dispensed')
-          record.toItem(),
+      for (final doc in snapshot.docs)
+        _fromFirestore(doc.id, doc.data(), status: 'Dispensed'),
     ];
   }
 
   Future<int> getDispensedTodayCount() async {
-    return _records.where((record) => record.status == 'Dispensed').length;
+    final List<PharmacyPrescriptionQueueItem> dispensed =
+        await getDispensedPrescriptions();
+    return dispensed.length;
+  }
+
+  PharmacyPrescriptionQueueItem _fromFirestore(
+    String id,
+    Map<String, dynamic> data, {
+    required String status,
+  }) {
+    final List<dynamic> rawMedicines =
+        (data['medicines'] as List<dynamic>?) ?? const <dynamic>[];
+
+    return PharmacyPrescriptionQueueItem(
+      id: id,
+      patientId: (data['patientId'] ?? '') as String,
+      patientName: (data['patientName'] ?? '') as String,
+      doctorName: (data['doctorName'] ?? '') as String,
+      status: status,
+      medicines: [
+        for (final rawMedicine in rawMedicines) _medicineFromFirestore(rawMedicine as Map<String, dynamic>),
+      ],
+    );
+  }
+
+  PrescribedMedicine _medicineFromFirestore(Map<String, dynamic> data) {
+    final String frequency = (data['frequency'] ?? '').toString().trim();
+    final int? durationDays = (data['durationDays'] as num?)?.toInt();
+    final String instructions = (data['instructions'] ?? '').toString().trim();
+
+    return PrescribedMedicine(
+      name: (data['name'] ?? '').toString(),
+      dosage: (data['dosage'] ?? '').toString(),
+      frequency: frequency.isEmpty ? 'As directed' : frequency,
+      duration: durationDays == null ? 'Not specified' : '$durationDays days',
+      quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+      instructions: instructions.isEmpty ? null : instructions,
+    );
   }
 
   static final List<MedicineInventoryItem> _inventory = <MedicineInventoryItem>[
@@ -209,58 +211,36 @@ class PharmacistService {
   }
 
   Future<void> markDispensed(String prescriptionId) async {
-    // TODO(firebase): update prescription fulfillment status in Firestore.
-    if (prescriptionId.trim().isEmpty) {
+    final String id = prescriptionId.trim();
+    if (id.isEmpty) {
       throw ArgumentError('Prescription ID is required.');
     }
 
-    for (final record in _records) {
-      if (record.id == prescriptionId.trim()) {
-        final List<MedicineShortfall> shortfalls = checkStockAvailability(record.medicines);
-        if (shortfalls.isNotEmpty) {
-          throw InsufficientStockException(shortfalls);
-        }
-
-        record.status = 'Dispensed';
-        for (final PrescribedMedicine medicine in record.medicines) {
-          await changeInventoryStock(
-            medicine.name,
-            -medicine.quantity,
-            type: InventoryTransactionType.dispensed,
-            reason: 'Dispensed for prescription ${record.id}',
-          );
-        }
-        return;
-      }
+    final DocumentSnapshot<Map<String, dynamic>> doc =
+        await _firestore.collection('prescriptions').doc(id).get();
+    final Map<String, dynamic>? data = doc.data();
+    if (!doc.exists || data == null) {
+      throw ArgumentError('Prescription $id was not found.');
     }
-  }
-}
 
-class _PharmacyPrescriptionRecord {
-  _PharmacyPrescriptionRecord({
-    required this.id,
-    required this.patientId,
-    required this.patientName,
-    required this.doctorName,
-    required this.status,
-    required this.medicines,
-  });
+    final PharmacyPrescriptionQueueItem item = _fromFirestore(doc.id, data, status: 'Pending');
 
-  final String id;
-  final String patientId;
-  final String patientName;
-  final String doctorName;
-  String status;
-  final List<PrescribedMedicine> medicines;
+    final List<MedicineShortfall> shortfalls = checkStockAvailability(item.medicines);
+    if (shortfalls.isNotEmpty) {
+      throw InsufficientStockException(shortfalls);
+    }
 
-  PharmacyPrescriptionQueueItem toItem() {
-    return PharmacyPrescriptionQueueItem(
-      id: id,
-      patientId: patientId,
-      patientName: patientName,
-      doctorName: doctorName,
-      status: status,
-      medicines: medicines,
-    );
+    for (final PrescribedMedicine medicine in item.medicines) {
+      await changeInventoryStock(
+        medicine.name,
+        -medicine.quantity,
+        type: InventoryTransactionType.dispensed,
+        reason: 'Dispensed for prescription $id',
+      );
+    }
+
+    await _firestore.collection('prescriptions').doc(id).update(<String, dynamic>{
+      'status': 'dispensed',
+    });
   }
 }

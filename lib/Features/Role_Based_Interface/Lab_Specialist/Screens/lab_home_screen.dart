@@ -150,9 +150,11 @@ class _LabHomeScreenState extends State<LabHomeScreen> {
                             icon: Icons.pending_actions_outlined,
                           ),
                           StatCardData(
-                            label: 'Imaging Queue',
-                            value: 4,
-                            icon: Icons.monitor_heart_outlined,
+                            label: 'Completed Orders',
+                            value: orders
+                                .where((order) => order.status == 'Completed')
+                                .length,
+                            icon: Icons.check_circle_outline,
                           ),
                           StatCardData(
                             label: 'Reports Today',

@@ -23,9 +23,12 @@ class PharmacistHomeScreen extends StatefulWidget {
   State<PharmacistHomeScreen> createState() => PharmacistHomeScreenState();
 }
 
+enum _HomeSection { pending, dispensed }
+
 class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
   late Future<_HomeQueueData> _queueFuture;
   String _query = '';
+  _HomeSection _selectedSection = _HomeSection.pending;
 
   String get _pharmacistId => widget.account.firebaseUid ?? widget.account.userId;
 
@@ -214,18 +217,20 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 18),
-                      _SectionHeader(
-                        title: 'Pending Prescriptions',
-                        count: visiblePending.length,
+                      _SectionToggle(
+                        selected: _selectedSection,
+                        pendingCount: visiblePending.length,
+                        dispensedCount: visibleDispensed.length,
+                        onChanged: (section) => setState(() => _selectedSection = section),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
                       if (!snapshot.hasData)
                         const Center(
                           child: CircularProgressIndicator(
                             color: MColors.primaryColor,
                           ),
                         )
-                      else ...[
+                      else if (_selectedSection == _HomeSection.pending) ...[
                         for (final item in visiblePending) ...[
                           _QueueCard(
                             item: item,
@@ -240,31 +245,24 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                             icon: Icons.inbox_outlined,
                             isDark: isDark,
                           ),
-                      ],
-                      const SizedBox(height: 14),
-                      _SectionHeader(
-                        title: 'Dispensed Log',
-                        count: visibleDispensed.length,
-                      ),
-                      const SizedBox(height: 10),
-                      if (!snapshot.hasData)
-                        const SizedBox.shrink()
-                      else if (visibleDispensed.isEmpty)
-                        _EmptyState(
-                          message: 'No dispensed prescriptions yet.',
-                          icon: Icons.history,
-                          isDark: isDark,
-                        )
-                      else
-                        for (final item in visibleDispensed) ...[
-                          _QueueCard(
-                            item: item,
+                      ] else ...[
+                        if (visibleDispensed.isEmpty)
+                          _EmptyState(
+                            message: 'No dispensed prescriptions yet.',
+                            icon: Icons.history,
                             isDark: isDark,
-                            showFulfillButton: false,
-                            trailingColor: Colors.green,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                          )
+                        else
+                          for (final item in visibleDispensed) ...[
+                            _QueueCard(
+                              item: item,
+                              isDark: isDark,
+                              showFulfillButton: false,
+                              trailingColor: Colors.green,
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                      ],
                     ],
                   ),
                 ),
@@ -378,33 +376,115 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.count});
+class _SectionToggle extends StatelessWidget {
+  const _SectionToggle({
+    required this.selected,
+    required this.pendingCount,
+    required this.dispensedCount,
+    required this.onChanged,
+  });
 
-  final String title;
-  final int count;
+  final _HomeSection selected;
+  final int pendingCount;
+  final int dispensedCount;
+  final ValueChanged<_HomeSection> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: MColors.primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(99),
+    final bool isDark = MHelperFunctions.isDarkMode(context);
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-          child: Text(
-            '$count',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: MColors.primaryColor,
-              fontWeight: FontWeight.w700,
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SectionToggleSegment(
+              label: 'Pending',
+              count: pendingCount,
+              isSelected: selected == _HomeSection.pending,
+              onTap: () => onChanged(_HomeSection.pending),
             ),
           ),
+          Expanded(
+            child: _SectionToggleSegment(
+              label: 'Dispensed',
+              count: dispensedCount,
+              isSelected: selected == _HomeSection.dispensed,
+              onTap: () => onChanged(_HomeSection.dispensed),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionToggleSegment extends StatelessWidget {
+  const _SectionToggleSegment({
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? MColors.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
         ),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.22) : Colors.grey.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -462,7 +542,7 @@ class _QueueCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${item.id} • Dr. ${item.doctorName}',
+                      'Patient ID: ${item.patientId} • Dr. ${item.doctorName}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey,
                       ),
@@ -490,57 +570,61 @@ class _QueueCard extends StatelessWidget {
               ),
             ],
           ),
-          if (showFulfillButton) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            for (final medicine in item.medicines)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.circle, size: 5, color: Colors.grey.shade400),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: medicine.name,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          for (final medicine in item.medicines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    showFulfillButton ? Icons.circle : Icons.check_circle,
+                    size: showFulfillButton ? 5 : 13,
+                    color: showFulfillButton ? Colors.grey.shade400 : trailingColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: medicine.name,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
-                            TextSpan(
-                              text: '  ${medicine.dosage} • ${medicine.frequency}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey,
-                              ),
+                          ),
+                          TextSpan(
+                            text: '  ${medicine.dosage} • ${medicine.frequency}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: MColors.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '×${medicine.quantity}',
-                        style: TextStyle(
-                          color: MColors.primaryColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: MColors.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '×${medicine.quantity}',
+                      style: TextStyle(
+                        color: MColors.primaryColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
+          if (showFulfillButton) ...[
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,
@@ -556,18 +640,6 @@ class _QueueCard extends StatelessWidget {
                 icon: const Icon(Icons.arrow_forward, size: 15),
                 label: const Text('Review'),
               ),
-            ),
-          ] else ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.check_circle, size: 14, color: trailingColor),
-                const SizedBox(width: 6),
-                Text(
-                  '${item.medicines.length} ${item.medicines.length == 1 ? 'medicine' : 'medicines'} dispensed',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                ),
-              ],
             ),
           ],
         ],

@@ -30,6 +30,8 @@ class _PharmacistShellState extends State<_PharmacistShell> {
   int _index = 0;
   final GlobalKey<PharmacistHomeScreenState> _homeKey =
       GlobalKey<PharmacistHomeScreenState>();
+  final GlobalKey<InventoryScreenState> _inventoryKey =
+      GlobalKey<InventoryScreenState>();
 
   final List<LiquidNavItem> _items = const [
     LiquidNavItem(
@@ -54,16 +56,29 @@ class _PharmacistShellState extends State<_PharmacistShell> {
     ),
   ];
 
+  void _onNavTap(int index) {
+    setState(() => _index = index);
+    if (index == 0) {
+      _homeKey.currentState?.refreshQueueData();
+    } else if (index == 2) {
+      _inventoryKey.currentState?.refreshInventory();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       PharmacistHomeScreen(
         key: _homeKey,
         account: widget.account,
-        onOpenInventory: () => setState(() => _index = 2),
+        onOpenInventory: () {
+          setState(() => _index = 2);
+          _inventoryKey.currentState?.showLowStockOnly();
+        },
       ),
       _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
       InventoryScreen(
+        key: _inventoryKey,
         pharmacistId: widget.account.firebaseUid ?? widget.account.userId,
       ),
       ProfileScreen(account: widget.account),
@@ -81,7 +96,7 @@ class _PharmacistShellState extends State<_PharmacistShell> {
             child: LiquidGlassNavBar(
               items: _items,
               selectedIndex: _index,
-              onTap: (index) => setState(() => _index = index),
+              onTap: _onNavTap,
             ),
           ),
         ],

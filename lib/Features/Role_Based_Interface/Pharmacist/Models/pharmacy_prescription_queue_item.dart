@@ -36,6 +36,7 @@ class PharmacyPrescriptionQueueItem {
     required this.doctorName,
     required this.status,
     required this.medicines,
+    this.dispensedAt,
   });
 
   final String id;
@@ -44,6 +45,9 @@ class PharmacyPrescriptionQueueItem {
   final String doctorName;
   final String status;
   final List<PrescribedMedicine> medicines;
+
+  /// When this prescription was marked dispensed — null while still pending.
+  final DateTime? dispensedAt;
 }
 
 class MedicineInventoryItem {

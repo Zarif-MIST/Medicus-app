@@ -74,66 +74,92 @@ class PharmacistService {
     );
   }
 
-  static final List<MedicineInventoryItem> _inventory = <MedicineInventoryItem>[
-    const MedicineInventoryItem(
-      name: 'Metformin 500mg',
-      stock: 120,
-      supplier: 'Square Pharma',
-      lowStockThreshold: 30,
-    ),
-    const MedicineInventoryItem(
-      name: 'Amoxicillin 250mg',
-      stock: 60,
-      supplier: 'Beximco Pharma',
-      lowStockThreshold: 25,
-    ),
-    const MedicineInventoryItem(
-      name: 'Cetirizine 10mg',
-      stock: 80,
-      supplier: 'Incepta',
-      lowStockThreshold: 20,
-    ),
-  ];
+  /// Inventory is scoped per pharmacist: each pharmacist manages their own
+  /// stock, so every inventory/log operation requires their [pharmacistId]
+  /// (their Firebase Auth UID).
+  Future<List<MedicineInventoryItem>> getInventory(String pharmacistId) async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('inventory')
+        .where('pharmacistId', isEqualTo: pharmacistId)
+        .get();
 
-  Future<List<MedicineInventoryItem>> getInventory() async {
-    // TODO(firebase): replace mock inventory with Firestore or supplier-backed medicine inventory data.
-    return List<MedicineInventoryItem>.unmodifiable(_inventory);
+    return [
+      for (final doc in snapshot.docs) _inventoryItemFromFirestore(doc.data()),
+    ];
   }
 
-  Future<List<MedicineInventoryItem>> getLowStockItems() async {
-    return _inventory.where((MedicineInventoryItem item) => item.isLowStock).toList();
+  MedicineInventoryItem _inventoryItemFromFirestore(Map<String, dynamic> data) {
+    return MedicineInventoryItem(
+      name: (data['name'] ?? '').toString(),
+      stock: (data['stock'] as num?)?.toInt() ?? 0,
+      supplier: (data['supplier'] ?? '').toString(),
+      lowStockThreshold: (data['lowStockThreshold'] as num?)?.toInt() ?? 20,
+    );
   }
 
-  static final List<InventoryTransaction> _transactions = <InventoryTransaction>[];
+  Future<List<MedicineInventoryItem>> getLowStockItems(String pharmacistId) async {
+    final List<MedicineInventoryItem> inventory = await getInventory(pharmacistId);
+    return inventory.where((MedicineInventoryItem item) => item.isLowStock).toList();
+  }
 
-  void _logTransaction({
+  Future<void> _logTransaction({
+    required String pharmacistId,
     required String medicineName,
     required InventoryTransactionType type,
     required int delta,
     required int resultingStock,
     required String reason,
-  }) {
-    _transactions.insert(
-      0,
-      InventoryTransaction(
-        medicineName: medicineName,
-        type: type,
-        delta: delta,
-        resultingStock: resultingStock,
-        reason: reason,
-        timestamp: DateTime.now(),
+  }) async {
+    await _firestore.collection('inventory_transactions').add(<String, dynamic>{
+      'pharmacistId': pharmacistId,
+      'medicineName': medicineName,
+      'type': type.name,
+      'delta': delta,
+      'resultingStock': resultingStock,
+      'reason': reason,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<List<InventoryTransaction>> getInventoryLog(String pharmacistId) async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('inventory_transactions')
+        .where('pharmacistId', isEqualTo: pharmacistId)
+        .get();
+
+    final List<InventoryTransaction> transactions = [
+      for (final doc in snapshot.docs) _transactionFromFirestore(doc.data()),
+    ];
+    transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return transactions;
+  }
+
+  InventoryTransaction _transactionFromFirestore(Map<String, dynamic> data) {
+    final Object? rawTimestamp = data['timestamp'];
+    return InventoryTransaction(
+      medicineName: (data['medicineName'] ?? '').toString(),
+      type: InventoryTransactionType.values.firstWhere(
+        (InventoryTransactionType t) => t.name == data['type'],
+        orElse: () => InventoryTransactionType.adjustment,
       ),
+      delta: (data['delta'] as num?)?.toInt() ?? 0,
+      resultingStock: (data['resultingStock'] as num?)?.toInt() ?? 0,
+      reason: (data['reason'] ?? '').toString(),
+      timestamp: rawTimestamp is Timestamp ? rawTimestamp.toDate() : DateTime.now(),
     );
   }
 
-  Future<List<InventoryTransaction>> getInventoryLog() async {
-    // TODO(firebase): replace mock log with a Firestore-backed inventory ledger.
-    return List<InventoryTransaction>.unmodifiable(_transactions);
-  }
+  Future<void> addInventoryItem(String pharmacistId, MedicineInventoryItem item) async {
+    await _firestore.collection('inventory').add(<String, dynamic>{
+      'pharmacistId': pharmacistId,
+      'name': item.name,
+      'stock': item.stock,
+      'supplier': item.supplier,
+      'lowStockThreshold': item.lowStockThreshold,
+    });
 
-  Future<void> addInventoryItem(MedicineInventoryItem item) async {
-    _inventory.add(item);
-    _logTransaction(
+    await _logTransaction(
+      pharmacistId: pharmacistId,
       medicineName: item.name,
       type: InventoryTransactionType.added,
       delta: item.stock,
@@ -142,48 +168,61 @@ class PharmacistService {
     );
   }
 
-  Future<void> removeInventoryItem(String name) async {
-    final int index = _inventory.indexWhere((MedicineInventoryItem item) => item.name == name);
-    if (index == -1) {
+  Future<QueryDocumentSnapshot<Map<String, dynamic>>?> _findInventoryDoc(
+    String pharmacistId,
+    String name,
+  ) async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('inventory')
+        .where('pharmacistId', isEqualTo: pharmacistId)
+        .where('name', isEqualTo: name)
+        .limit(1)
+        .get();
+    return snapshot.docs.isEmpty ? null : snapshot.docs.first;
+  }
+
+  Future<void> removeInventoryItem(String pharmacistId, String name) async {
+    final QueryDocumentSnapshot<Map<String, dynamic>>? doc = await _findInventoryDoc(pharmacistId, name);
+    if (doc == null) {
       return;
     }
 
-    final MedicineInventoryItem removed = _inventory.removeAt(index);
-    _logTransaction(
-      medicineName: removed.name,
+    final int stock = (doc.data()['stock'] as num?)?.toInt() ?? 0;
+    await doc.reference.delete();
+
+    await _logTransaction(
+      pharmacistId: pharmacistId,
+      medicineName: name,
       type: InventoryTransactionType.removed,
-      delta: -removed.stock,
+      delta: -stock,
       resultingStock: 0,
       reason: 'Removed from inventory',
     );
   }
 
   Future<void> changeInventoryStock(
+    String pharmacistId,
     String name,
     int delta, {
     InventoryTransactionType type = InventoryTransactionType.adjustment,
     String? reason,
   }) async {
-    final int index = _inventory.indexWhere((MedicineInventoryItem item) => item.name == name);
-    if (index == -1) {
+    final QueryDocumentSnapshot<Map<String, dynamic>>? doc = await _findInventoryDoc(pharmacistId, name);
+    if (doc == null) {
       return;
     }
 
-    final MedicineInventoryItem current = _inventory[index];
-    final int updatedStock = current.stock + delta;
+    final int currentStock = (doc.data()['stock'] as num?)?.toInt() ?? 0;
+    final int updatedStock = currentStock + delta;
     if (updatedStock < 0) {
       return;
     }
 
-    _inventory[index] = MedicineInventoryItem(
-      name: current.name,
-      stock: updatedStock,
-      supplier: current.supplier,
-      lowStockThreshold: current.lowStockThreshold,
-    );
+    await doc.reference.update(<String, dynamic>{'stock': updatedStock});
 
-    _logTransaction(
-      medicineName: current.name,
+    await _logTransaction(
+      pharmacistId: pharmacistId,
+      medicineName: name,
       type: type,
       delta: delta,
       resultingStock: updatedStock,
@@ -191,26 +230,34 @@ class PharmacistService {
     );
   }
 
-  int _availableStockOf(String medicineName) {
-    final int index = _inventory.indexWhere((MedicineInventoryItem item) => item.name == medicineName);
-    return index == -1 ? 0 : _inventory[index].stock;
-  }
-
   /// Returns the medicines that don't have enough stock to fulfil [medicines],
   /// empty if everything required is available.
-  List<MedicineShortfall> checkStockAvailability(List<PrescribedMedicine> medicines) {
+  Future<List<MedicineShortfall>> checkStockAvailability(
+    String pharmacistId,
+    List<PrescribedMedicine> medicines,
+  ) async {
+    final List<MedicineInventoryItem> inventory = await getInventory(pharmacistId);
+    int availableStockOf(String name) {
+      for (final MedicineInventoryItem item in inventory) {
+        if (item.name == name) {
+          return item.stock;
+        }
+      }
+      return 0;
+    }
+
     return [
       for (final PrescribedMedicine medicine in medicines)
-        if (_availableStockOf(medicine.name) < medicine.quantity)
+        if (availableStockOf(medicine.name) < medicine.quantity)
           MedicineShortfall(
             medicineName: medicine.name,
             requiredQuantity: medicine.quantity,
-            availableStock: _availableStockOf(medicine.name),
+            availableStock: availableStockOf(medicine.name),
           ),
     ];
   }
 
-  Future<void> markDispensed(String prescriptionId) async {
+  Future<void> markDispensed(String prescriptionId, String pharmacistId) async {
     final String id = prescriptionId.trim();
     if (id.isEmpty) {
       throw ArgumentError('Prescription ID is required.');
@@ -225,13 +272,14 @@ class PharmacistService {
 
     final PharmacyPrescriptionQueueItem item = _fromFirestore(doc.id, data, status: 'Pending');
 
-    final List<MedicineShortfall> shortfalls = checkStockAvailability(item.medicines);
+    final List<MedicineShortfall> shortfalls = await checkStockAvailability(pharmacistId, item.medicines);
     if (shortfalls.isNotEmpty) {
       throw InsufficientStockException(shortfalls);
     }
 
     for (final PrescribedMedicine medicine in item.medicines) {
       await changeInventoryStock(
+        pharmacistId,
         medicine.name,
         -medicine.quantity,
         type: InventoryTransactionType.dispensed,

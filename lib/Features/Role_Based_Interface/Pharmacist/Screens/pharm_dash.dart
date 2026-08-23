@@ -63,7 +63,7 @@ class _PharmacistShellState extends State<_PharmacistShell> {
         onOpenInventory: () => setState(() => _index = 2),
       ),
       Scanqr(account: widget.account),
-      const InventoryScreen(),
+      InventoryScreen(pharmacistId: widget.account.firebaseUid ?? widget.account.userId),
       ProfileScreen(account: widget.account),
     ];
 

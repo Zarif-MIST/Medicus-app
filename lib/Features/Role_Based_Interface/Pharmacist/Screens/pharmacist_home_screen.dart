@@ -27,6 +27,8 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
   late Future<_HomeQueueData> _queueFuture;
   String _query = '';
 
+  String get _pharmacistId => widget.account.firebaseUid ?? widget.account.userId;
+
   @override
   void initState() {
     super.initState();
@@ -43,8 +45,8 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
     final results = await (
       PharmacistService.instance.getPendingPrescriptions(),
       PharmacistService.instance.getDispensedPrescriptions(),
-      PharmacistService.instance.getLowStockItems(),
-      PharmacistService.instance.getInventoryLog(),
+      PharmacistService.instance.getLowStockItems(_pharmacistId),
+      PharmacistService.instance.getInventoryLog(_pharmacistId),
     ).wait;
 
     return _HomeQueueData(
@@ -57,13 +59,15 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
 
   Future<void> _openInventoryLog() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const InventoryLogScreen()),
+      MaterialPageRoute(builder: (_) => InventoryLogScreen(pharmacistId: _pharmacistId)),
     );
   }
 
   Future<void> _openFulfillment(PharmacyPrescriptionQueueItem item) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PrescriptionFulfillmentScreen(item: item)),
+      MaterialPageRoute(
+        builder: (_) => PrescriptionFulfillmentScreen(item: item, pharmacistId: _pharmacistId),
+      ),
     );
     refreshQueueData();
   }

@@ -5,7 +5,9 @@ import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class InventoryLogScreen extends StatefulWidget {
-  const InventoryLogScreen({super.key});
+  const InventoryLogScreen({super.key, required this.pharmacistId});
+
+  final String pharmacistId;
 
   @override
   State<InventoryLogScreen> createState() => _InventoryLogScreenState();
@@ -17,7 +19,7 @@ class _InventoryLogScreenState extends State<InventoryLogScreen> {
   @override
   void initState() {
     super.initState();
-    _logFuture = PharmacistService.instance.getInventoryLog();
+    _logFuture = PharmacistService.instance.getInventoryLog(widget.pharmacistId);
   }
 
   @override

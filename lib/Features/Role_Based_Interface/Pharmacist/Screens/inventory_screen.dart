@@ -7,7 +7,9 @@ import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  const InventoryScreen({super.key, required this.pharmacistId});
+
+  final String pharmacistId;
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -26,7 +28,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadInventory() async {
-    final List<MedicineInventoryItem> items = await PharmacistService.instance.getInventory();
+    final List<MedicineInventoryItem> items =
+        await PharmacistService.instance.getInventory(widget.pharmacistId);
     if (!mounted) {
       return;
     }
@@ -114,6 +117,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
 
     await PharmacistService.instance.addInventoryItem(
+      widget.pharmacistId,
       MedicineInventoryItem(
         name: name,
         supplier: supplier,
@@ -136,6 +140,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       return;
     }
     await PharmacistService.instance.changeInventoryStock(
+      widget.pharmacistId,
       item.name,
       delta,
       type: delta >= 0 ? InventoryTransactionType.restock : InventoryTransactionType.adjustment,
@@ -167,7 +172,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _removeMedicine(MedicineInventoryItem item) async {
-    await PharmacistService.instance.removeInventoryItem(item.name);
+    await PharmacistService.instance.removeInventoryItem(widget.pharmacistId, item.name);
     _expandedMedicines.remove(item.name);
     _stockControllers.remove(item.name);
     await _loadInventory();

@@ -17,8 +17,11 @@ class InventoryScreen extends StatefulWidget {
 
 class _InventoryScreenState extends State<InventoryScreen> {
   final Set<String> _expandedMedicines = <String>{};
-  final Map<String, TextEditingController> _stockControllers = <String, TextEditingController>{};
+  final Map<String, TextEditingController> _stockControllers =
+      <String, TextEditingController>{};
+  final TextEditingController _searchController = TextEditingController();
   List<MedicineInventoryItem> _inventoryItems = <MedicineInventoryItem>[];
+  String _searchQuery = '';
   bool _isLoading = true;
 
   @override
@@ -28,8 +31,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadInventory() async {
-    final List<MedicineInventoryItem> items =
-        await PharmacistService.instance.getInventory(widget.pharmacistId);
+    final List<MedicineInventoryItem> items = await PharmacistService.instance
+        .getInventory(widget.pharmacistId);
     if (!mounted) {
       return;
     }
@@ -143,7 +146,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       widget.pharmacistId,
       item.name,
       delta,
-      type: delta >= 0 ? InventoryTransactionType.restock : InventoryTransactionType.adjustment,
+      type: delta >= 0
+          ? InventoryTransactionType.restock
+          : InventoryTransactionType.adjustment,
       reason: delta >= 0 ? 'Restocked' : 'Manual stock adjustment',
     );
     await _loadInventory();
@@ -162,7 +167,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid number greater than 0.')),
+        const SnackBar(
+          content: Text('Please enter a valid number greater than 0.'),
+        ),
       );
       return;
     }
@@ -172,7 +179,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _removeMedicine(MedicineInventoryItem item) async {
-    await PharmacistService.instance.removeInventoryItem(widget.pharmacistId, item.name);
+    await PharmacistService.instance.removeInventoryItem(
+      widget.pharmacistId,
+      item.name,
+    );
     _expandedMedicines.remove(item.name);
     _stockControllers.remove(item.name);
     await _loadInventory();
@@ -193,6 +203,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     for (final TextEditingController controller in _stockControllers.values) {
       controller.dispose();
     }
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -202,6 +213,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final List<MedicineInventoryItem> lowStockItems = _inventoryItems
         .where((MedicineInventoryItem item) => item.isLowStock)
         .toList();
+    final String query = _searchQuery.trim().toLowerCase();
+    final List<MedicineInventoryItem> visibleItems = query.isEmpty
+        ? _inventoryItems
+        : _inventoryItems
+              .where(
+                (MedicineInventoryItem item) =>
+                    item.name.toLowerCase().contains(query),
+              )
+              .toList();
 
     return Scaffold(
       backgroundColor: isDark
@@ -221,7 +241,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: MColors.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 minimumSize: const Size(0, 36),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -235,11 +258,42 @@ class _InventoryScreenState extends State<InventoryScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (String value) => setState(() => _searchQuery = value),
+              decoration: InputDecoration(
+                hintText: 'Search medicines',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Row(
               children: [
                 Text(
-                  'Total medicines: ${_inventoryItems.length}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  query.isEmpty
+                      ? 'Total medicines: ${_inventoryItems.length}'
+                      : 'Showing ${visibleItems.length} of ${_inventoryItems.length}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -252,147 +306,212 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-              itemCount: _inventoryItems.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = _inventoryItems[index];
-                final bool expanded = _expandedMedicines.contains(item.name);
-
-                return GestureDetector(
-                  onTap: () => _toggleExpanded(item),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: item.isLowStock
-                          ? Border.all(color: Colors.red.shade300, width: 1.2)
-                          : null,
+                : visibleItems.isEmpty
+                ? Center(
+                    child: Text(
+                      query.isEmpty
+                          ? 'No medicines in inventory yet.'
+                          : 'No medicines match "$_searchQuery".',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.medication_outlined,
-                              color: item.isLowStock ? Colors.red.shade700 : MColors.primaryColor,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                    itemCount: visibleItems.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final item = visibleItems[index];
+                      final bool expanded = _expandedMedicines.contains(
+                        item.name,
+                      );
+
+                      return GestureDetector(
+                        onTap: () => _toggleExpanded(item),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF1F1F1F)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: item.isLowStock
+                                ? Border.all(
+                                    color: Colors.red.shade300,
+                                    width: 1.2,
+                                  )
+                                : null,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    item.name,
-                                    style: Theme.of(context).textTheme.titleSmall,
+                                  Icon(
+                                    Icons.medication_outlined,
+                                    color: item.isLowStock
+                                        ? Colors.red.shade700
+                                        : MColors.primaryColor,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.supplier,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleSmall,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item.supplier,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${item.stock} pcs',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              color: item.isLowStock
+                                                  ? Colors.red.shade700
+                                                  : MColors.primaryColor,
+                                            ),
+                                      ),
+                                      if (item.isLowStock) ...[
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              99,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Restock',
+                                            style: TextStyle(
+                                              color: Colors.red.shade700,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${item.stock} pcs',
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: item.isLowStock ? Colors.red.shade700 : MColors.primaryColor,
-                                  ),
-                                ),
-                                if (item.isLowStock) ...[
-                                  const SizedBox(height: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade50,
-                                      borderRadius: BorderRadius.circular(99),
+                              if (expanded) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: MColors.primaryColor.withValues(
+                                      alpha: 0.08,
                                     ),
-                                    child: Text(
-                                      'Restock',
-                                      style: TextStyle(
-                                        color: Colors.red.shade700,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 10,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _controllerFor(item),
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter
+                                                .digitsOnly,
+                                          ],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Quantity',
+                                            hintText: 'Enter number',
+                                            isDense: true,
+                                            border: OutlineInputBorder(),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                        if (expanded) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: MColors.primaryColor.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _controllerFor(item),
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
+                                      const SizedBox(width: 8),
+                                      IconButton.filled(
+                                        onPressed: () =>
+                                            _applyStockChange(item, add: true),
+                                        icon: const Icon(
+                                          Icons.add_circle_outline,
+                                        ),
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: const Color.fromARGB(
+                                            255,
+                                            255,
+                                            255,
+                                            255,
+                                          ),
+                                          foregroundColor: const Color.fromARGB(
+                                            255,
+                                            66,
+                                            237,
+                                            31,
+                                          ),
+                                        ),
+                                        tooltip: 'Add stock',
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton.filled(
+                                        onPressed: () =>
+                                            _applyStockChange(item, add: false),
+                                        icon: const Icon(
+                                          Icons.remove_circle_outline,
+                                        ),
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: const Color.fromARGB(
+                                            255,
+                                            255,
+                                            255,
+                                            255,
+                                          ),
+                                          foregroundColor: const Color.fromARGB(
+                                            255,
+                                            200,
+                                            39,
+                                            39,
+                                          ),
+                                        ),
+                                        tooltip: 'Subtract stock',
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton.filled(
+                                        onPressed: () => _removeMedicine(item),
+                                        icon: const Icon(Icons.delete_outline),
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: Colors.red.shade700,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        tooltip: 'Delete medicine',
+                                      ),
                                     ],
-                                    decoration: const InputDecoration(
-                                      labelText: 'Quantity',
-                                      hintText: 'Enter number',
-                                      isDense: true,
-                                      border: OutlineInputBorder(),
-                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton.filled(
-                                  onPressed: () => _applyStockChange(item, add: true),
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-                                    foregroundColor: const Color.fromARGB(255, 66, 237, 31),
-                                  ),
-                                  tooltip: 'Add stock',
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton.filled(
-                                  onPressed: () => _applyStockChange(item, add: false),
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-                                    foregroundColor: const Color.fromARGB(255, 200, 39, 39),
-                                  ),
-                                  tooltip: 'Subtract stock',
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton.filled(
-                                  onPressed: () => _removeMedicine(item),
-                                  icon: const Icon(Icons.delete_outline),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.red.shade700,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  tooltip: 'Delete medicine',
                                 ),
                               ],
-                            ),
+                            ],
                           ),
-                        ],
-                      ],
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -407,7 +526,9 @@ class _LowStockBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String names = items.map((MedicineInventoryItem item) => item.name).join(', ');
+    final String names = items
+        .map((MedicineInventoryItem item) => item.name)
+        .join(', ');
 
     return Container(
       width: double.infinity,
@@ -420,7 +541,11 @@ class _LowStockBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 20),
+          Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.red.shade700,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

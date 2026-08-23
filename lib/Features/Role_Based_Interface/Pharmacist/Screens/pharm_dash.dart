@@ -62,8 +62,10 @@ class _PharmacistShellState extends State<_PharmacistShell> {
         account: widget.account,
         onOpenInventory: () => setState(() => _index = 2),
       ),
-      Scanqr(account: widget.account),
-      InventoryScreen(pharmacistId: widget.account.firebaseUid ?? widget.account.userId),
+      _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
+      InventoryScreen(
+        pharmacistId: widget.account.firebaseUid ?? widget.account.userId,
+      ),
       ProfileScreen(account: widget.account),
     ];
 
@@ -71,7 +73,7 @@ class _PharmacistShellState extends State<_PharmacistShell> {
       extendBody: true,
       body: Stack(
         children: [
-          pages[_index],
+          IndexedStack(index: _index, children: pages),
           Positioned(
             left: 0,
             right: 0,

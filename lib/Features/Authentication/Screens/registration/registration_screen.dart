@@ -15,10 +15,7 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/auth_validators.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({
-    super.key,
-    this.selectedRole,
-  });
+  const RegistrationScreen({super.key, this.selectedRole});
 
   final AuthRole? selectedRole;
 
@@ -34,12 +31,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _licenseController = TextEditingController();
+  final TextEditingController _pharmacistRegistrationController =
+      TextEditingController();
   final TextEditingController _pharmacyNameController = TextEditingController();
   final TextEditingController _tradeLicenseController = TextEditingController();
   final TextEditingController _nidController = TextEditingController();
-  final TextEditingController _pharmacyAddressController = TextEditingController();
+  final TextEditingController _pharmacyAddressController =
+      TextEditingController();
 
   LatLng? _pharmacyLatLng;
   AuthRole? _selectedRole;
@@ -49,7 +50,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   AuthAccount? _registeredAccount;
-  final TextEditingController _verificationCodeController = TextEditingController();
+  final TextEditingController _verificationCodeController =
+      TextEditingController();
 
   static const List<String> _doctorSpecialties = <String>[
     'Dentist',
@@ -69,7 +71,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   void didUpdateWidget(covariant RegistrationScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedRole != oldWidget.selectedRole && _registeredAccount == null) {
+    if (widget.selectedRole != oldWidget.selectedRole &&
+        _registeredAccount == null) {
       _selectedRole = widget.selectedRole;
     }
   }
@@ -83,6 +86,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _licenseController.dispose();
+    _pharmacistRegistrationController.dispose();
     _pharmacyNameController.dispose();
     _tradeLicenseController.dispose();
     _nidController.dispose();
@@ -104,17 +108,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         decoration: BoxDecoration(
           color: dark ? const Color(0xFF181818) : Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: MColors.primaryColor.withValues(alpha: 0.10)),
+          border: Border.all(
+            color: MColors.primaryColor.withValues(alpha: 0.10),
+          ),
         ),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 240),
           child: _verificationCompleted
               ? _buildCompletedView(context, dark, _registeredAccount!)
               : _showVerificationStep && _registeredAccount != null
-                  ? _buildVerificationView(context, dark, _registeredAccount!)
-                  : _registeredAccount != null
-                      ? _buildSuccessView(context, dark, _registeredAccount!)
-                      : _buildForm(context, dark),
+              ? _buildVerificationView(context, dark, _registeredAccount!)
+              : _registeredAccount != null
+              ? _buildSuccessView(context, dark, _registeredAccount!)
+              : _buildForm(context, dark),
         ),
       ),
     );
@@ -130,9 +136,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Text(
             'Create account',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
@@ -143,9 +149,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           const SizedBox(height: 18),
           Text(
             'Choose your role',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           AuthRoleSelector(
@@ -183,8 +189,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                     )
                     .toList(),
-                onChanged: (String? value) => setState(() => _selectedSpecialty = value),
-                validator: (String? value) => value == null ? 'Select your specialty' : null,
+                onChanged: (String? value) =>
+                    setState(() => _selectedSpecialty = value),
+                validator: (String? value) =>
+                    value == null ? 'Select your specialty' : null,
                 decoration: _fieldDecoration('Area of specialty'),
               ),
               const SizedBox(height: 12),
@@ -207,6 +215,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               const SizedBox(height: 12),
               AuthTextField(
+                controller: _pharmacistRegistrationController,
+                label: 'Pharmacy Council registration number',
+                helperText:
+                    'Your personal registration with the Pharmacy Council of Bangladesh.',
+                validator: AuthValidators.requiredField,
+              ),
+              const SizedBox(height: 12),
+              AuthTextField(
                 controller: _pharmacyNameController,
                 label: 'Pharmacy name',
                 validator: AuthValidators.requiredField,
@@ -221,11 +237,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               AuthTextField(
                 controller: _pharmacyAddressController,
                 label: 'Pharmacy address',
-                helperText: 'A short address patients will see on your pharmacy listing.',
+                helperText:
+                    'A short address patients will see on your pharmacy listing.',
                 validator: AuthValidators.requiredField,
               ),
               const SizedBox(height: 12),
-              _PharmacyMapPinField(picked: _pharmacyLatLng, onTap: _pickPharmacyLocation),
+              _PharmacyMapPinField(
+                picked: _pharmacyLatLng,
+                onTap: _pickPharmacyLocation,
+              ),
             ] else if (_selectedRole == AuthRole.patient) ...[
               AuthTextField(
                 controller: _firstNameController,
@@ -272,8 +292,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               prefixText: '+88 ',
               keyboardType: TextInputType.phone,
               maxLength: 11,
-              helperText: 'Enter the 11 digits after the Bangladeshi country code.',
-              inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+              helperText:
+                  'Enter the 11 digits after the Bangladeshi country code.',
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
               validator: AuthValidators.bangladeshPhone,
             ),
             const SizedBox(height: 12),
@@ -282,7 +305,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               label: 'Password',
               obscureText: _obscurePassword,
               validator: AuthValidators.password,
-              helperText: 'Use 8+ characters with upper, lower, number, and symbol.',
+              helperText:
+                  'Use 8+ characters with upper, lower, number, and symbol.',
               suffixIcon: IconButton(
                 onPressed: () {
                   setState(() {
@@ -290,7 +314,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   });
                 },
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                 ),
                 tooltip: _obscurePassword ? 'Show password' : 'Hide password',
               ),
@@ -311,9 +337,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   });
                 },
                 icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                 ),
-                tooltip: _obscureConfirmPassword ? 'Show password' : 'Hide password',
+                tooltip: _obscureConfirmPassword
+                    ? 'Show password'
+                    : 'Hide password',
               ),
             ),
             const SizedBox(height: 20),
@@ -325,7 +355,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   backgroundColor: MColors.primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 child: const Text('Register'),
               ),
@@ -354,7 +386,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildSuccessView(BuildContext context, bool dark, AuthAccount account) {
+  Widget _buildSuccessView(
+    BuildContext context,
+    bool dark,
+    AuthAccount account,
+  ) {
     return Column(
       key: const ValueKey('registration-success'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -363,9 +399,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'Registration successful',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: dark ? Colors.white : Colors.black87,
-              ),
+            fontWeight: FontWeight.w700,
+            color: dark ? Colors.white : Colors.black87,
+          ),
         ),
         const SizedBox(height: 10),
         Container(
@@ -376,11 +412,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
           child: Column(
             children: [
-              const Icon(Icons.verified_rounded, color: MColors.primaryColor, size: 54),
+              const Icon(
+                Icons.verified_rounded,
+                color: MColors.primaryColor,
+                size: 54,
+              ),
               const SizedBox(height: 12),
               Text(
                 'User ID: ${account.userId}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
@@ -406,7 +448,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 backgroundColor: MColors.primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               child: const Text('Continue To Email Verification'),
             ),
@@ -422,7 +466,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildVerificationView(BuildContext context, bool dark, AuthAccount account) {
+  Widget _buildVerificationView(
+    BuildContext context,
+    bool dark,
+    AuthAccount account,
+  ) {
     return Column(
       key: const ValueKey('registration-verification'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -431,9 +479,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'Email verification',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: dark ? Colors.white : Colors.black87,
-              ),
+            fontWeight: FontWeight.w700,
+            color: dark ? Colors.white : Colors.black87,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
@@ -447,8 +495,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           label: 'Verification code',
           keyboardType: TextInputType.number,
           maxLength: 4,
-          inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-          validator: (String? value) => AuthValidators.numericCode(value, length: 4),
+          inputFormatters: <TextInputFormatter>[
+            FilteringTextInputFormatter.digitsOnly,
+          ],
+          validator: (String? value) =>
+              AuthValidators.numericCode(value, length: 4),
         ),
         const SizedBox(height: 14),
         SizedBox(
@@ -459,7 +510,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               backgroundColor: MColors.primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             child: const Text('Complete Verification'),
           ),
@@ -468,7 +521,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildCompletedView(BuildContext context, bool dark, AuthAccount account) {
+  Widget _buildCompletedView(
+    BuildContext context,
+    bool dark,
+    AuthAccount account,
+  ) {
     return Column(
       key: const ValueKey('registration-complete'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -477,9 +534,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'All done',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: dark ? Colors.white : Colors.black87,
-              ),
+            fontWeight: FontWeight.w700,
+            color: dark ? Colors.white : Colors.black87,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -490,9 +547,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
           child: Column(
             children: [
-              const Icon(Icons.verified_user, color: MColors.primaryColor, size: 48),
+              const Icon(
+                Icons.verified_user,
+                color: MColors.primaryColor,
+                size: 48,
+              ),
               const SizedBox(height: 10),
-              Text('User ID: ${account.userId}', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'User ID: ${account.userId}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               Text(
                 'Email verified. Swipe the sheet down and login with your role.',
@@ -568,18 +632,36 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       password: _passwordController.text,
       phoneNumber: '+88${_phoneController.text.trim()}',
       verificationCode: '',
-      specialty: _selectedSpecialty,
-      licenseNumber: _licenseController.text.trim(),
-      pharmacyName: _pharmacyNameController.text.trim(),
-      tradeLicense: _tradeLicenseController.text.trim(),
-      nidNumber: _nidController.text.trim(),
-      pharmacyLocation: _pharmacyAddressController.text.trim(),
-      pharmacyLat: _pharmacyLatLng?.latitude,
-      pharmacyLng: _pharmacyLatLng?.longitude,
+      specialty: _selectedRole == AuthRole.doctor ? _selectedSpecialty : null,
+      licenseNumber: _selectedRole == AuthRole.doctor
+          ? _licenseController.text.trim()
+          : null,
+      pharmacistRegistrationNumber: _selectedRole == AuthRole.pharmacist
+          ? _pharmacistRegistrationController.text.trim()
+          : null,
+      pharmacyName: _selectedRole == AuthRole.pharmacist
+          ? _pharmacyNameController.text.trim()
+          : null,
+      tradeLicense: _selectedRole == AuthRole.pharmacist
+          ? _tradeLicenseController.text.trim()
+          : null,
+      nidNumber: _selectedRole == AuthRole.patient
+          ? _nidController.text.trim()
+          : null,
+      pharmacyLocation: _selectedRole == AuthRole.pharmacist
+          ? _pharmacyAddressController.text.trim()
+          : null,
+      pharmacyLat: _selectedRole == AuthRole.pharmacist
+          ? _pharmacyLatLng?.latitude
+          : null,
+      pharmacyLng: _selectedRole == AuthRole.pharmacist
+          ? _pharmacyLatLng?.longitude
+          : null,
     );
 
     try {
-      final AuthAccount registeredAccount = await AuthRegistry.instance.register(account);
+      final AuthAccount registeredAccount = await AuthRegistry.instance
+          .register(account);
       if (!mounted) {
         return;
       }
@@ -655,7 +737,9 @@ class _PharmacyMapPinField extends StatelessWidget {
     final bool isPicked = picked != null;
 
     return Material(
-      color: isPicked ? Colors.green.withValues(alpha: 0.08) : MColors.primaryColor.withValues(alpha: 0.06),
+      color: isPicked
+          ? Colors.green.withValues(alpha: 0.08)
+          : MColors.primaryColor.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -664,12 +748,17 @@ class _PharmacyMapPinField extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: isPicked ? Colors.green : MColors.primaryColor, width: 1),
+            border: Border.all(
+              color: isPicked ? Colors.green : MColors.primaryColor,
+              width: 1,
+            ),
           ),
           child: Row(
             children: [
               Icon(
-                isPicked ? Icons.check_circle_rounded : Icons.location_on_outlined,
+                isPicked
+                    ? Icons.check_circle_rounded
+                    : Icons.location_on_outlined,
                 color: isPicked ? Colors.green : MColors.primaryColor,
               ),
               const SizedBox(width: 12),
@@ -680,7 +769,9 @@ class _PharmacyMapPinField extends StatelessWidget {
                       : 'Pin your pharmacy on the map',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isPicked ? Colors.green.shade700 : MColors.primaryColor,
+                    color: isPicked
+                        ? Colors.green.shade700
+                        : MColors.primaryColor,
                   ),
                 ),
               ),
@@ -689,7 +780,9 @@ class _PharmacyMapPinField extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isPicked ? Colors.green.shade700 : MColors.primaryColor,
+                  color: isPicked
+                      ? Colors.green.shade700
+                      : MColors.primaryColor,
                 ),
               ),
             ],

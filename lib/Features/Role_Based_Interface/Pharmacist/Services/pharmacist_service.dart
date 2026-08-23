@@ -21,7 +21,31 @@ class PharmacistService {
     ];
   }
 
-  Future<List<PharmacyPrescriptionQueueItem>> getDispensedPrescriptions() async {
+  /// Used for the pharmacist's QR scan flow: only the scanned patient's own
+  /// pending prescription(s) are returned — nothing else about the patient
+  /// or any other patient's data is exposed.
+  Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptionsForPatient(
+    String patientId,
+  ) async {
+    final String id = patientId.trim();
+    if (id.isEmpty) {
+      return const [];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('prescriptions')
+        .where('status', isEqualTo: 'pendingPharmacy')
+        .where('patientId', isEqualTo: id)
+        .get();
+
+    return [
+      for (final doc in snapshot.docs)
+        _fromFirestore(doc.id, doc.data(), status: 'Pending'),
+    ];
+  }
+
+  Future<List<PharmacyPrescriptionQueueItem>>
+  getDispensedPrescriptions() async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('prescriptions')
         .where('status', isEqualTo: 'dispensed')
@@ -54,7 +78,8 @@ class PharmacistService {
       doctorName: (data['doctorName'] ?? '') as String,
       status: status,
       medicines: [
-        for (final rawMedicine in rawMedicines) _medicineFromFirestore(rawMedicine as Map<String, dynamic>),
+        for (final rawMedicine in rawMedicines)
+          _medicineFromFirestore(rawMedicine as Map<String, dynamic>),
       ],
     );
   }
@@ -97,9 +122,15 @@ class PharmacistService {
     );
   }
 
-  Future<List<MedicineInventoryItem>> getLowStockItems(String pharmacistId) async {
-    final List<MedicineInventoryItem> inventory = await getInventory(pharmacistId);
-    return inventory.where((MedicineInventoryItem item) => item.isLowStock).toList();
+  Future<List<MedicineInventoryItem>> getLowStockItems(
+    String pharmacistId,
+  ) async {
+    final List<MedicineInventoryItem> inventory = await getInventory(
+      pharmacistId,
+    );
+    return inventory
+        .where((MedicineInventoryItem item) => item.isLowStock)
+        .toList();
   }
 
   Future<void> _logTransaction({
@@ -121,7 +152,9 @@ class PharmacistService {
     });
   }
 
-  Future<List<InventoryTransaction>> getInventoryLog(String pharmacistId) async {
+  Future<List<InventoryTransaction>> getInventoryLog(
+    String pharmacistId,
+  ) async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('inventory_transactions')
         .where('pharmacistId', isEqualTo: pharmacistId)
@@ -145,11 +178,16 @@ class PharmacistService {
       delta: (data['delta'] as num?)?.toInt() ?? 0,
       resultingStock: (data['resultingStock'] as num?)?.toInt() ?? 0,
       reason: (data['reason'] ?? '').toString(),
-      timestamp: rawTimestamp is Timestamp ? rawTimestamp.toDate() : DateTime.now(),
+      timestamp: rawTimestamp is Timestamp
+          ? rawTimestamp.toDate()
+          : DateTime.now(),
     );
   }
 
-  Future<void> addInventoryItem(String pharmacistId, MedicineInventoryItem item) async {
+  Future<void> addInventoryItem(
+    String pharmacistId,
+    MedicineInventoryItem item,
+  ) async {
     await _firestore.collection('inventory').add(<String, dynamic>{
       'pharmacistId': pharmacistId,
       'name': item.name,
@@ -182,7 +220,8 @@ class PharmacistService {
   }
 
   Future<void> removeInventoryItem(String pharmacistId, String name) async {
-    final QueryDocumentSnapshot<Map<String, dynamic>>? doc = await _findInventoryDoc(pharmacistId, name);
+    final QueryDocumentSnapshot<Map<String, dynamic>>? doc =
+        await _findInventoryDoc(pharmacistId, name);
     if (doc == null) {
       return;
     }
@@ -207,7 +246,8 @@ class PharmacistService {
     InventoryTransactionType type = InventoryTransactionType.adjustment,
     String? reason,
   }) async {
-    final QueryDocumentSnapshot<Map<String, dynamic>>? doc = await _findInventoryDoc(pharmacistId, name);
+    final QueryDocumentSnapshot<Map<String, dynamic>>? doc =
+        await _findInventoryDoc(pharmacistId, name);
     if (doc == null) {
       return;
     }
@@ -236,7 +276,9 @@ class PharmacistService {
     String pharmacistId,
     List<PrescribedMedicine> medicines,
   ) async {
-    final List<MedicineInventoryItem> inventory = await getInventory(pharmacistId);
+    final List<MedicineInventoryItem> inventory = await getInventory(
+      pharmacistId,
+    );
     int availableStockOf(String name) {
       for (final MedicineInventoryItem item in inventory) {
         if (item.name == name) {
@@ -263,16 +305,25 @@ class PharmacistService {
       throw ArgumentError('Prescription ID is required.');
     }
 
-    final DocumentSnapshot<Map<String, dynamic>> doc =
-        await _firestore.collection('prescriptions').doc(id).get();
+    final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
+        .collection('prescriptions')
+        .doc(id)
+        .get();
     final Map<String, dynamic>? data = doc.data();
     if (!doc.exists || data == null) {
       throw ArgumentError('Prescription $id was not found.');
     }
 
-    final PharmacyPrescriptionQueueItem item = _fromFirestore(doc.id, data, status: 'Pending');
+    final PharmacyPrescriptionQueueItem item = _fromFirestore(
+      doc.id,
+      data,
+      status: 'Pending',
+    );
 
-    final List<MedicineShortfall> shortfalls = await checkStockAvailability(pharmacistId, item.medicines);
+    final List<MedicineShortfall> shortfalls = await checkStockAvailability(
+      pharmacistId,
+      item.medicines,
+    );
     if (shortfalls.isNotEmpty) {
       throw InsufficientStockException(shortfalls);
     }
@@ -287,8 +338,8 @@ class PharmacistService {
       );
     }
 
-    await _firestore.collection('prescriptions').doc(id).update(<String, dynamic>{
-      'status': 'dispensed',
-    });
+    await _firestore.collection('prescriptions').doc(id).update(
+      <String, dynamic>{'status': 'dispensed'},
+    );
   }
 }

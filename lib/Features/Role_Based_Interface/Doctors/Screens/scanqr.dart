@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Authentication/Models/auth_role.dart';
+import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/scanned_patient_queue_screen.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -47,12 +50,14 @@ class _ScanqrState extends State<Scanqr> {
                 ),
                 const SizedBox(height: 8),
                 ListTile(
-                  onTap: () => Navigator.of(sheetContext).pop(_ScanAction.record),
+                  onTap: () =>
+                      Navigator.of(sheetContext).pop(_ScanAction.record),
                   leading: const Icon(Icons.folder_shared_outlined),
                   title: const Text('Open Patient Record'),
                 ),
                 ListTile(
-                  onTap: () => Navigator.of(sheetContext).pop(_ScanAction.prescription),
+                  onTap: () =>
+                      Navigator.of(sheetContext).pop(_ScanAction.prescription),
                   leading: const Icon(Icons.edit_note_outlined),
                   title: const Text('Go To Prescription Form'),
                 ),
@@ -76,10 +81,8 @@ class _ScanqrState extends State<Scanqr> {
 
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PrescriptionFormScreen(
-          doctor: widget.account,
-          patient: record,
-        ),
+        builder: (_) =>
+            PrescriptionFormScreen(doctor: widget.account, patient: record),
       ),
     );
   }
@@ -97,17 +100,60 @@ class _ScanqrState extends State<Scanqr> {
     setState(() => _isHandlingScan = true);
     await _controller.stop();
 
+    if (widget.account.role == AuthRole.pharmacist) {
+      await _handlePharmacistScan(rawValue);
+    } else {
+      await _handleDoctorScan(rawValue);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isHandlingScan = false);
+    await _controller.start();
+  }
+
+  /// Pharmacists never get patient record or prescription-authoring access —
+  /// a scan only ever resolves to that one patient's own pending
+  /// prescription(s).
+  Future<void> _handlePharmacistScan(String rawValue) async {
+    final AuthAccount? patientAccount = await AuthRegistry.instance
+        .accountForUserId(rawValue);
+    if (!mounted) {
+      return;
+    }
+
+    if (patientAccount == null || patientAccount.role != AuthRole.patient) {
+      Get.snackbar(
+        'Patient not found',
+        'No patient record matched ID $rawValue.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final String pharmacistId =
+        widget.account.firebaseUid ?? widget.account.userId;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ScannedPatientQueueScreen(
+          patientId: rawValue,
+          patientName: patientAccount.fullName,
+          pharmacistId: pharmacistId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDoctorScan(String rawValue) async {
     final record = await DoctorService.instance.getPatientRecordById(rawValue);
     if (!mounted) {
       return;
     }
 
     if (record == null) {
-      setState(() => _isHandlingScan = false);
-      await _controller.start();
-      if (!mounted) {
-        return;
-      }
       Get.snackbar(
         'Patient not found',
         'No patient record matched ID $rawValue.',
@@ -117,13 +163,6 @@ class _ScanqrState extends State<Scanqr> {
     }
 
     await _openScanAction(record);
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() => _isHandlingScan = false);
-    await _controller.start();
   }
 
   @override
@@ -175,7 +214,9 @@ class _ScanqrState extends State<Scanqr> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Align the QR code inside the camera frame to open the patient record.',
+                          widget.account.role == AuthRole.pharmacist
+                              ? 'Align the QR code inside the camera frame to view this patient\'s pending prescription.'
+                              : 'Align the QR code inside the camera frame to open the patient record.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: isDark ? Colors.white70 : Colors.black54,

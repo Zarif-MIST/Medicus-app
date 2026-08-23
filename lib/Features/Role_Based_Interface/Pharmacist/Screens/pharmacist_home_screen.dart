@@ -3,6 +3,7 @@ import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/dispensed_today_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_log_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_fulfillment_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
@@ -30,7 +31,8 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
   String _query = '';
   _HomeSection _selectedSection = _HomeSection.pending;
 
-  String get _pharmacistId => widget.account.firebaseUid ?? widget.account.userId;
+  String get _pharmacistId =>
+      widget.account.firebaseUid ?? widget.account.userId;
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
       PharmacistService.instance.getDispensedPrescriptions(),
       PharmacistService.instance.getLowStockItems(_pharmacistId),
       PharmacistService.instance.getInventoryLog(_pharmacistId),
+      PharmacistService.instance.getDispensedToday(),
     ).wait;
 
     return _HomeQueueData(
@@ -57,19 +60,50 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
       dispensed: results.$2,
       lowStock: results.$3,
       logCount: results.$4.length,
+      dispensedTodayCount: results.$5.length,
     );
   }
 
   Future<void> _openInventoryLog() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => InventoryLogScreen(pharmacistId: _pharmacistId)),
+      MaterialPageRoute(
+        builder: (_) => InventoryLogScreen(pharmacistId: _pharmacistId),
+      ),
     );
+  }
+
+  Future<void> _openDispensedToday() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const DispensedTodayScreen()));
+  }
+
+  String get _todayLabel {
+    final DateTime now = DateTime.now();
+    const List<String> months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
 
   Future<void> _openFulfillment(PharmacyPrescriptionQueueItem item) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PrescriptionFulfillmentScreen(item: item, pharmacistId: _pharmacistId),
+        builder: (_) => PrescriptionFulfillmentScreen(
+          item: item,
+          pharmacistId: _pharmacistId,
+        ),
       ),
     );
     refreshQueueData();
@@ -89,12 +123,12 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
         future: _queueFuture,
         builder: (context, snapshot) {
           final bool isDark = MHelperFunctions.isDarkMode(context);
-          final pendingItems = snapshot.data?.pending ??
-              <PharmacyPrescriptionQueueItem>[];
-          final dispensedItems = snapshot.data?.dispensed ??
-              <PharmacyPrescriptionQueueItem>[];
-          final lowStockItems = snapshot.data?.lowStock ??
-              <MedicineInventoryItem>[];
+          final pendingItems =
+              snapshot.data?.pending ?? <PharmacyPrescriptionQueueItem>[];
+          final dispensedItems =
+              snapshot.data?.dispensed ?? <PharmacyPrescriptionQueueItem>[];
+          final lowStockItems =
+              snapshot.data?.lowStock ?? <MedicineInventoryItem>[];
           final visiblePending = pendingItems.where((item) {
             final query = _query.trim().toLowerCase();
             if (query.isEmpty) {
@@ -209,8 +243,11 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                               child: _StatTile(
                                 icon: Icons.check_circle_outline,
                                 label: 'Dispensed Today',
-                                value: dispensedItems.length,
+                                subtitle: _todayLabel,
+                                value: snapshot.data?.dispensedTodayCount ?? 0,
                                 isDark: isDark,
+                                onTap: _openDispensedToday,
+                                actionLabel: 'View list',
                               ),
                             ),
                           ],
@@ -221,7 +258,8 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
                         selected: _selectedSection,
                         pendingCount: visiblePending.length,
                         dispensedCount: visibleDispensed.length,
-                        onChanged: (section) => setState(() => _selectedSection = section),
+                        onChanged: (section) =>
+                            setState(() => _selectedSection = section),
                       ),
                       const SizedBox(height: 14),
                       if (!snapshot.hasData)
@@ -281,12 +319,14 @@ class _HomeQueueData {
     required this.dispensed,
     required this.lowStock,
     required this.logCount,
+    required this.dispensedTodayCount,
   });
 
   final List<PharmacyPrescriptionQueueItem> pending;
   final List<PharmacyPrescriptionQueueItem> dispensed;
   final List<MedicineInventoryItem> lowStock;
   final int logCount;
+  final int dispensedTodayCount;
 }
 
 class _StatTile extends StatelessWidget {
@@ -296,6 +336,8 @@ class _StatTile extends StatelessWidget {
     required this.value,
     required this.isDark,
     this.onTap,
+    this.subtitle,
+    this.actionLabel = 'View log',
   });
 
   final IconData icon;
@@ -303,6 +345,10 @@ class _StatTile extends StatelessWidget {
   final int value;
   final bool isDark;
   final VoidCallback? onTap;
+
+  /// Small grey line under the label — used to show today's date.
+  final String? subtitle;
+  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +379,9 @@ class _StatTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  color: MColors.primaryColor.withValues(
+                    alpha: isDark ? 0.18 : 0.1,
+                  ),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: MColors.primaryColor, size: 18),
@@ -341,12 +389,16 @@ class _StatTile extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 '$value',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 2),
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -356,7 +408,7 @@ class _StatTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'View log',
+                      actionLabel,
                       style: TextStyle(
                         color: MColors.primaryColor,
                         fontWeight: FontWeight.w700,
@@ -364,8 +416,24 @@ class _StatTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 2),
-                    Icon(Icons.arrow_forward_rounded, color: MColors.primaryColor, size: 12),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: MColors.primaryColor,
+                      size: 12,
+                    ),
                   ],
+                ),
+              ],
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade400,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -470,7 +538,9 @@ class _SectionToggleSegment extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withValues(alpha: 0.22) : Colors.grey.withValues(alpha: 0.15),
+                color: isSelected
+                    ? Colors.white.withValues(alpha: 0.22)
+                    : Colors.grey.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(99),
               ),
               child: Text(
@@ -527,7 +597,11 @@ class _QueueCard extends StatelessWidget {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: trailingColor.withValues(alpha: 0.12),
-                child: Icon(Icons.medication_outlined, color: trailingColor, size: 18),
+                child: Icon(
+                  Icons.medication_outlined,
+                  color: trailingColor,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -543,9 +617,9 @@ class _QueueCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Patient ID: ${item.patientId} • Dr. ${item.doctorName}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -582,7 +656,9 @@ class _QueueCard extends StatelessWidget {
                   Icon(
                     showFulfillButton ? Icons.circle : Icons.check_circle,
                     size: showFulfillButton ? 5 : 13,
-                    color: showFulfillButton ? Colors.grey.shade400 : trailingColor,
+                    color: showFulfillButton
+                        ? Colors.grey.shade400
+                        : trailingColor,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -591,15 +667,15 @@ class _QueueCard extends StatelessWidget {
                         children: [
                           TextSpan(
                             text: medicine.name,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           TextSpan(
-                            text: '  ${medicine.dosage} • ${medicine.frequency}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey,
-                            ),
+                            text:
+                                '  ${medicine.dosage} • ${medicine.frequency}',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                           ),
                         ],
                       ),
@@ -607,7 +683,10 @@ class _QueueCard extends StatelessWidget {
                   ),
                   Container(
                     margin: const EdgeInsets.only(left: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: MColors.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -633,9 +712,15 @@ class _QueueCard extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: MColors.primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   minimumSize: const Size(0, 34),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 icon: const Icon(Icons.arrow_forward, size: 15),
                 label: const Text('Review'),
@@ -649,7 +734,11 @@ class _QueueCard extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.message, required this.icon, required this.isDark});
+  const _EmptyState({
+    required this.message,
+    required this.icon,
+    required this.isDark,
+  });
 
   final String message;
   final IconData icon;
@@ -671,7 +760,9 @@ class _EmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
         ],
       ),
@@ -687,7 +778,9 @@ class _LowStockAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String names = items.map((MedicineInventoryItem item) => item.name).join(', ');
+    final String names = items
+        .map((MedicineInventoryItem item) => item.name)
+        .join(', ');
 
     return Material(
       color: Colors.transparent,
@@ -706,7 +799,11 @@ class _LowStockAlert extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 22),
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red.shade700,
+                size: 22,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -722,7 +819,10 @@ class _LowStockAlert extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       names,
-                      style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 12,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

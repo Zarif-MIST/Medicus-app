@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Screens/login/login.dart';
+import 'package:medicus/Features/Authentication/Screens/registration/pharmacy_location_picker_screen.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
@@ -52,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _pharmacyLocation = 'Not provided';
   String _nidNumber = 'Not provided';
   String _pharmacistRegistrationNumber = 'Not provided';
+  double? _pharmacyLat;
+  double? _pharmacyLng;
 
   late String _staffId;
   String _department = 'Lab Specialist';
@@ -82,6 +86,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _nidNumber = account.nidNumber ?? _nidNumber;
       _pharmacistRegistrationNumber =
           account.pharmacistRegistrationNumber ?? _pharmacistRegistrationNumber;
+      _pharmacyLat = account.pharmacyLat;
+      _pharmacyLng = account.pharmacyLng;
     } else {
       _role = _StakeholderRole.labSpecialist;
       _department = account.specialty ?? _department;
@@ -352,6 +358,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Lets the pharmacist drop/move the map pin patients use to find them —
+  /// separate from the plain address text, since that alone never touches
+  /// the coordinates the patient-facing pharmacy map actually reads.
+  Future<void> _pickPharmacyMapLocation() async {
+    final LatLng? picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => PharmacyLocationPickerScreen(
+          initial: _pharmacyLat != null && _pharmacyLng != null
+              ? LatLng(_pharmacyLat!, _pharmacyLng!)
+              : null,
+        ),
+      ),
+    );
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      _pharmacyLat = picked.latitude;
+      _pharmacyLng = picked.longitude;
+    });
+
+    await _persistToFirestore(<String, dynamic>{
+      'pharmacyLat': picked.latitude,
+      'pharmacyLng': picked.longitude,
+    });
+
+    if (!mounted) {
+      return;
+    }
+    Get.snackbar(
+      'Location updated',
+      'Your pharmacy pin is now visible to patients.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
   void _openAccountSheet() {
     final bool isDark = MHelperFunctions.isDarkMode(context);
     showModalBottomSheet(
@@ -499,6 +542,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.location_on_outlined,
                   label: 'Pharmacy Location',
                   value: _pharmacyLocation,
+                ),
+                _TappableInfoRow(
+                  icon: Icons.map_outlined,
+                  label: 'Map Pin',
+                  value: _pharmacyLat != null && _pharmacyLng != null
+                      ? 'Set — tap to update'
+                      : 'Not set — tap to pin',
+                  onTap: _pickPharmacyMapLocation,
                   showDivider: false,
                 ),
               ],
@@ -904,6 +955,69 @@ class _InfoRow extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        if (showDivider) const Divider(height: 1),
+      ],
+    );
+  }
+}
+
+class _TappableInfoRow extends StatelessWidget {
+  const _TappableInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.showDivider = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: MColors.primaryColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: MColors.primaryColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
           ),
         ),
         if (showDivider) const Divider(height: 1),

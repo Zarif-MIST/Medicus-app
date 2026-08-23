@@ -57,10 +57,25 @@ class PharmacistService {
     ];
   }
 
-  Future<int> getDispensedTodayCount() async {
+  /// Prescriptions dispensed today, newest first — filtered client-side
+  /// against [dispensedAt] to avoid a composite Firestore index.
+  Future<List<PharmacyPrescriptionQueueItem>> getDispensedToday() async {
     final List<PharmacyPrescriptionQueueItem> dispensed =
         await getDispensedPrescriptions();
-    return dispensed.length;
+    final DateTime now = DateTime.now();
+
+    final List<PharmacyPrescriptionQueueItem> today = dispensed.where((
+      PharmacyPrescriptionQueueItem item,
+    ) {
+      final DateTime? dispensedAt = item.dispensedAt;
+      return dispensedAt != null &&
+          dispensedAt.year == now.year &&
+          dispensedAt.month == now.month &&
+          dispensedAt.day == now.day;
+    }).toList();
+
+    today.sort((a, b) => b.dispensedAt!.compareTo(a.dispensedAt!));
+    return today;
   }
 
   PharmacyPrescriptionQueueItem _fromFirestore(
@@ -70,6 +85,7 @@ class PharmacistService {
   }) {
     final List<dynamic> rawMedicines =
         (data['medicines'] as List<dynamic>?) ?? const <dynamic>[];
+    final Object? rawDispensedAt = data['dispensedAt'];
 
     return PharmacyPrescriptionQueueItem(
       id: id,
@@ -81,6 +97,7 @@ class PharmacistService {
         for (final rawMedicine in rawMedicines)
           _medicineFromFirestore(rawMedicine as Map<String, dynamic>),
       ],
+      dispensedAt: rawDispensedAt is Timestamp ? rawDispensedAt.toDate() : null,
     );
   }
 
@@ -339,7 +356,10 @@ class PharmacistService {
     }
 
     await _firestore.collection('prescriptions').doc(id).update(
-      <String, dynamic>{'status': 'dispensed'},
+      <String, dynamic>{
+        'status': 'dispensed',
+        'dispensedAt': FieldValue.serverTimestamp(),
+      },
     );
   }
 }

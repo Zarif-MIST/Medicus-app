@@ -12,10 +12,10 @@ class InventoryScreen extends StatefulWidget {
   final String pharmacistId;
 
   @override
-  State<InventoryScreen> createState() => _InventoryScreenState();
+  State<InventoryScreen> createState() => InventoryScreenState();
 }
 
-class _InventoryScreenState extends State<InventoryScreen> {
+class InventoryScreenState extends State<InventoryScreen> {
   final Set<String> _expandedMedicines = <String>{};
   final Map<String, TextEditingController> _stockControllers =
       <String, TextEditingController>{};
@@ -23,6 +23,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
   List<MedicineInventoryItem> _inventoryItems = <MedicineInventoryItem>[];
   String _searchQuery = '';
   bool _isLoading = true;
+  bool _lowStockOnly = false;
+
+  /// Re-fetches stock levels without disturbing the current search or
+  /// low-stock filter — called whenever this tab regains focus, since the
+  /// screen stays mounted in the background and won't otherwise notice
+  /// stock changes made elsewhere (e.g. a prescription dispensed on Home).
+  Future<void> refreshInventory() => _loadInventory();
+
+  /// Jumps straight to the medicines that need restocking, with their
+  /// quantity controls already expanded — called when the low-stock warning
+  /// is tapped, whether from this screen or the home screen's alert.
+  Future<void> showLowStockOnly() async {
+    await _loadInventory();
+    if (!mounted) {
+      return;
+    }
+
+    final List<MedicineInventoryItem> lowStock = _inventoryItems
+        .where((MedicineInventoryItem item) => item.isLowStock)
+        .toList();
+    setState(() {
+      _lowStockOnly = true;
+      _searchQuery = '';
+      _searchController.clear();
+      _expandedMedicines
+        ..clear()
+        ..addAll(lowStock.map((MedicineInventoryItem item) => item.name));
+    });
+  }
 
   @override
   void initState() {
@@ -214,14 +243,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
         .where((MedicineInventoryItem item) => item.isLowStock)
         .toList();
     final String query = _searchQuery.trim().toLowerCase();
-    final List<MedicineInventoryItem> visibleItems = query.isEmpty
-        ? _inventoryItems
-        : _inventoryItems
-              .where(
-                (MedicineInventoryItem item) =>
-                    item.name.toLowerCase().contains(query),
-              )
-              .toList();
+    List<MedicineInventoryItem> visibleItems = _lowStockOnly
+        ? lowStockItems
+        : _inventoryItems;
+    if (query.isNotEmpty) {
+      visibleItems = visibleItems
+          .where(
+            (MedicineInventoryItem item) =>
+                item.name.toLowerCase().contains(query),
+          )
+          .toList();
+    }
+
+    final String countLabel;
+    if (_lowStockOnly) {
+      countLabel = query.isEmpty
+          ? '${visibleItems.length} need${visibleItems.length == 1 ? 's' : ''} restocking'
+          : 'Showing ${visibleItems.length} low-stock match(es)';
+    } else if (query.isNotEmpty) {
+      countLabel =
+          'Showing ${visibleItems.length} of ${_inventoryItems.length}';
+    } else {
+      countLabel = 'Total medicines: ${_inventoryItems.length}';
+    }
 
     return Scaffold(
       backgroundColor: isDark
@@ -287,21 +331,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Row(
               children: [
-                Text(
-                  query.isEmpty
-                      ? 'Total medicines: ${_inventoryItems.length}'
-                      : 'Showing ${visibleItems.length} of ${_inventoryItems.length}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    countLabel,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+                if (_lowStockOnly)
+                  ActionChip(
+                    avatar: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.red.shade700,
+                    ),
+                    label: const Text('Clear'),
+                    backgroundColor: Colors.red.shade50,
+                    labelStyle: TextStyle(color: Colors.red.shade700),
+                    onPressed: () => setState(() => _lowStockOnly = false),
+                  ),
               ],
             ),
           ),
-          if (lowStockItems.isNotEmpty)
+          if (lowStockItems.isNotEmpty && !_lowStockOnly)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: _LowStockBanner(items: lowStockItems),
+              child: _LowStockBanner(
+                items: lowStockItems,
+                onTap: showLowStockOnly,
+              ),
             ),
           Expanded(
             child: _isLoading
@@ -520,9 +579,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
 }
 
 class _LowStockBanner extends StatelessWidget {
-  const _LowStockBanner({required this.items});
+  const _LowStockBanner({required this.items, required this.onTap});
 
   final List<MedicineInventoryItem> items;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -530,45 +590,66 @@ class _LowStockBanner extends StatelessWidget {
         .map((MedicineInventoryItem item) => item.name)
         .join(', ');
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: Colors.red.shade700,
-            size: 20,
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.red.shade50,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.red.shade200),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${items.length} ${items.length == 1 ? 'medicine needs' : 'medicines need'} restocking',
-                  style: TextStyle(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.w700,
-                  ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red.shade700,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${items.length} ${items.length == 1 ? 'medicine needs' : 'medicines need'} restocking',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      names,
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap to view and restock',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  names,
-                  style: TextStyle(color: Colors.red.shade700, fontSize: 12),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.red.shade700),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -13,6 +13,7 @@ class DoctorSummary {
     required this.experienceYears,
     required this.fee,
     required this.nextAvailable,
+    this.avgConsultationMinutes = 5,
   });
 
   final String id;
@@ -23,6 +24,10 @@ class DoctorSummary {
   final int experienceYears;
   final int fee;
   final String nextAvailable;
+
+  /// Minutes this doctor typically spends per patient — drives how many
+  /// bookable slots fit between their 8:00 AM–2:00 PM clinic hours.
+  final int avgConsultationMinutes;
 }
 
 class DoctorResultCard extends StatelessWidget {

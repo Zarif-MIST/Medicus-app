@@ -78,6 +78,32 @@ class DoctorService {
     ];
   }
 
+  /// IDs of patients this doctor has already written a prescription for
+  /// today — used to derive "Patients Seen" / "Pending Cases" stats.
+  Future<Set<String>> getPatientsSeenTodayIds(String doctorId) async {
+    final DateTime now = DateTime.now();
+    final DateTime startOfToday = DateTime(now.year, now.month, now.day);
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('prescriptions')
+        .where('doctorId', isEqualTo: doctorId)
+        .get();
+
+    final Set<String> patientIds = <String>{};
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final Timestamp? createdAt = data['createdAt'] as Timestamp?;
+      if (createdAt == null || createdAt.toDate().isBefore(startOfToday)) {
+        continue;
+      }
+      final String patientId = (data['patientId'] ?? '') as String;
+      if (patientId.isNotEmpty) {
+        patientIds.add(patientId);
+      }
+    }
+    return patientIds;
+  }
+
   Future<PatientRecordModel?> getPatientRecordById(String patientId) async {
     final String normalizedId = patientId.trim();
     if (normalizedId.isEmpty) {

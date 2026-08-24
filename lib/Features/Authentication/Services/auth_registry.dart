@@ -262,6 +262,7 @@ class AuthRegistry {
       'pharmacyLat': account.pharmacyLat,
       'pharmacyLng': account.pharmacyLng,
       'isVerified': account.isVerified,
+      'avgConsultationMinutes': account.avgConsultationMinutes,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -289,6 +290,8 @@ class AuthRegistry {
       pharmacyLat: (data['pharmacyLat'] as num?)?.toDouble(),
       pharmacyLng: (data['pharmacyLng'] as num?)?.toDouble(),
       isVerified: (data['isVerified'] ?? false) as bool,
+      avgConsultationMinutes: (data['avgConsultationMinutes'] as num?)
+          ?.toInt(),
     );
   }
 

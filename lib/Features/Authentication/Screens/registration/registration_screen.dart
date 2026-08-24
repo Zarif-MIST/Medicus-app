@@ -34,6 +34,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final TextEditingController _licenseController = TextEditingController();
+  final TextEditingController _avgConsultationMinutesController =
+      TextEditingController();
   final TextEditingController _pharmacistRegistrationController =
       TextEditingController();
   final TextEditingController _pharmacyNameController = TextEditingController();
@@ -86,6 +88,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _licenseController.dispose();
+    _avgConsultationMinutesController.dispose();
     _pharmacistRegistrationController.dispose();
     _pharmacyNameController.dispose();
     _tradeLicenseController.dispose();
@@ -200,6 +203,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 controller: _licenseController,
                 label: 'BMDC license number',
                 validator: AuthValidators.requiredField,
+              ),
+              const SizedBox(height: 12),
+              AuthTextField(
+                controller: _avgConsultationMinutesController,
+                label: 'Average time per patient (minutes)',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: AuthValidators.consultationMinutes,
+                helperText:
+                    'Used to schedule patient slots from 8:00 AM–2:00 PM. Leave blank for 5 minutes.',
               ),
             ] else if (_selectedRole == AuthRole.pharmacist) ...[
               AuthTextField(
@@ -635,6 +648,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       specialty: _selectedRole == AuthRole.doctor ? _selectedSpecialty : null,
       licenseNumber: _selectedRole == AuthRole.doctor
           ? _licenseController.text.trim()
+          : null,
+      avgConsultationMinutes: _selectedRole == AuthRole.doctor
+          ? int.tryParse(_avgConsultationMinutesController.text.trim())
           : null,
       pharmacistRegistrationNumber: _selectedRole == AuthRole.pharmacist
           ? _pharmacistRegistrationController.text.trim()

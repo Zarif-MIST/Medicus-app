@@ -144,6 +144,8 @@ class DoctorDirectoryService {
 
     final String specialty = (data['specialty'] ?? '').toString().trim();
     final String userId = (data['userId'] ?? '').toString().trim();
+    final int avgConsultationMinutes =
+        (data['avgConsultationMinutes'] as num?)?.toInt() ?? 5;
 
     return DoctorSummary(
       id: userId.isEmpty ? docId : userId,
@@ -155,6 +157,7 @@ class DoctorDirectoryService {
       experienceYears: 8,
       fee: 700,
       nextAvailable: 'Available today',
+      avgConsultationMinutes: avgConsultationMinutes,
     );
   }
 }

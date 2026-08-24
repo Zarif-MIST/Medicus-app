@@ -101,6 +101,20 @@ class AuthValidators {
     return null;
   }
 
+  /// Optional — an empty value is allowed (callers fall back to a default
+  /// consultation time), but a filled-in value must be a sane minute count.
+  static String? consultationMinutes(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    final int? minutes = int.tryParse(value.trim());
+    if (minutes == null || minutes < 1 || minutes > 120) {
+      return 'Enter minutes between 1 and 120';
+    }
+    return null;
+  }
+
   static String? nid(String? value) {
     final String? requiredResult = requiredField(value);
     if (requiredResult != null) {

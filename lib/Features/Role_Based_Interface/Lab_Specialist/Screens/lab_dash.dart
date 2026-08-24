@@ -68,7 +68,7 @@ class _LabShellState extends State<_LabShell> {
       extendBody: true,
       body: Stack(
         children: [
-          pages[_index],
+          IndexedStack(index: _index, children: pages),
           Positioned(
             left: 0,
             right: 0,

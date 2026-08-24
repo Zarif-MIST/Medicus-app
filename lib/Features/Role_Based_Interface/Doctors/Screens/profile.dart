@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Screens/login/login.dart';
+import 'package:medicus/Features/Authentication/Screens/registration/pharmacy_location_picker_screen.dart';
+import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -36,6 +40,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late final _StakeholderRole _role;
 
+  late String _firstName;
+  late String _lastName;
   late String _phone;
   late String _email;
   String _gender = 'Not provided';
@@ -47,6 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _tradeLicense = 'Not provided';
   String _pharmacyLocation = 'Not provided';
   String _nidNumber = 'Not provided';
+  String _pharmacistRegistrationNumber = 'Not provided';
+  double? _pharmacyLat;
+  double? _pharmacyLng;
 
   late String _staffId;
   String _department = 'Lab Specialist';
@@ -58,27 +67,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     final AuthAccount account = widget.account;
+    _firstName = account.firstName;
+    _lastName = account.lastName;
     _phone = account.phoneNumber;
     _email = account.email;
     _staffId = account.userId;
 
-    if (account.licenseNumber != null || account.specialty != null) {
+    if (account.role == AuthRole.doctor) {
       _role = _StakeholderRole.doctor;
       _specialty = account.specialty ?? _specialty;
       _licenseNumber = account.licenseNumber ?? _licenseNumber;
       _gender = account.gender ?? _gender;
-    } else if (account.pharmacyName != null || account.tradeLicense != null) {
+    } else if (account.role == AuthRole.pharmacist) {
       _role = _StakeholderRole.pharmacist;
       _pharmacyName = account.pharmacyName ?? _pharmacyName;
       _tradeLicense = account.tradeLicense ?? _tradeLicense;
       _pharmacyLocation = account.pharmacyLocation ?? _pharmacyLocation;
       _nidNumber = account.nidNumber ?? _nidNumber;
+      _pharmacistRegistrationNumber =
+          account.pharmacistRegistrationNumber ?? _pharmacistRegistrationNumber;
+      _pharmacyLat = account.pharmacyLat;
+      _pharmacyLng = account.pharmacyLng;
     } else {
       _role = _StakeholderRole.labSpecialist;
       _department = account.specialty ?? _department;
       _labLocation = account.pharmacyLocation ?? _labLocation;
     }
   }
+
+  String get _fullName => '$_firstName $_lastName'.trim();
 
   String get _secondaryTabLabel {
     switch (_role) {
@@ -96,30 +113,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       case _StakeholderRole.doctor:
         return 'BMDC License · $_licenseNumber';
       case _StakeholderRole.pharmacist:
-        return 'Trade License · $_tradeLicense';
+        return 'PCB Reg · $_pharmacistRegistrationNumber';
       case _StakeholderRole.labSpecialist:
         return 'Staff ID · $_staffId';
     }
   }
 
-  List<(IconData, String, String)> get _factChips {
-    switch (_role) {
-      case _StakeholderRole.doctor:
-        return [
-          (Icons.medical_services_outlined, 'Specialty', _specialty),
-          (Icons.wc_outlined, 'Gender', _gender),
-          (Icons.badge_outlined, 'BMDC License', _licenseNumber),
-        ];
-      case _StakeholderRole.pharmacist:
-        return [
-          (Icons.local_pharmacy_outlined, 'Pharmacy Name', _pharmacyName),
-          (Icons.credit_card_outlined, 'NID Number', _nidNumber),
-        ];
-      case _StakeholderRole.labSpecialist:
-        return [
-          (Icons.badge_outlined, 'Staff ID', _staffId),
-          (Icons.apartment_outlined, 'Department', _department),
-        ];
+  Future<void> _persistToFirestore(Map<String, dynamic> fields) async {
+    final String? uid = widget.account.firebaseUid;
+    if (uid == null || uid.isEmpty || fields.isEmpty) {
+      return;
+    }
+
+    try {
+      await AuthRegistry.instance.updateProfileFields(uid, fields);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      Get.snackbar(
+        'Update failed',
+        'Could not save your changes. Check your connection and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -127,6 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required List<String> labels,
     required List<String> values,
+    required List<String?> firestoreKeys,
     required void Function(List<String> newValues) onSave,
   }) async {
     final bool isDark = MHelperFunctions.isDarkMode(context);
@@ -175,8 +192,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    onSave([for (final c in controllers) c.text.trim()]);
+                    final List<String> newValues = [
+                      for (final c in controllers) c.text.trim(),
+                    ];
+                    onSave(newValues);
                     Navigator.of(sheetContext).pop();
+
+                    final Map<String, dynamic> fields = <String, dynamic>{
+                      for (int i = 0; i < firestoreKeys.length; i++)
+                        if (firestoreKeys[i] != null)
+                          firestoreKeys[i]!: newValues[i],
+                    };
+                    _persistToFirestore(fields);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: MColors.primaryColor,
@@ -202,29 +229,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _editPersonalInfo() {
-    if (_role == _StakeholderRole.doctor) {
-      _editSection(
-        title: 'Personal Info',
-        labels: const ['Phone', 'Email', 'Gender'],
-        values: [_phone, _email, _gender],
-        onSave: (v) => setState(() {
-          _phone = v[0];
-          _email = v[1];
-          _gender = v[2];
-        }),
-      );
-      return;
+    switch (_role) {
+      case _StakeholderRole.doctor:
+        _editSection(
+          title: 'Personal Info',
+          labels: const ['First Name', 'Last Name', 'Phone', 'Email', 'Gender'],
+          values: [_firstName, _lastName, _phone, _email, _gender],
+          firestoreKeys: const [
+            'firstName',
+            'lastName',
+            'phoneNumber',
+            'email',
+            'gender',
+          ],
+          onSave: (v) => setState(() {
+            _firstName = v[0];
+            _lastName = v[1];
+            _phone = v[2];
+            _email = v[3];
+            _gender = v[4];
+          }),
+        );
+        break;
+      case _StakeholderRole.pharmacist:
+        _editSection(
+          title: 'Personal Info',
+          labels: const [
+            'First Name',
+            'Last Name',
+            'Phone',
+            'Email',
+            'NID Number',
+          ],
+          values: [_firstName, _lastName, _phone, _email, _nidNumber],
+          firestoreKeys: const [
+            'firstName',
+            'lastName',
+            'phoneNumber',
+            'email',
+            'nidNumber',
+          ],
+          onSave: (v) => setState(() {
+            _firstName = v[0];
+            _lastName = v[1];
+            _phone = v[2];
+            _email = v[3];
+            _nidNumber = v[4];
+          }),
+        );
+        break;
+      case _StakeholderRole.labSpecialist:
+        _editSection(
+          title: 'Personal Info',
+          labels: const ['First Name', 'Last Name', 'Phone', 'Email'],
+          values: [_firstName, _lastName, _phone, _email],
+          firestoreKeys: const [
+            'firstName',
+            'lastName',
+            'phoneNumber',
+            'email',
+          ],
+          onSave: (v) => setState(() {
+            _firstName = v[0];
+            _lastName = v[1];
+            _phone = v[2];
+            _email = v[3];
+          }),
+        );
+        break;
     }
-
-    _editSection(
-      title: 'Personal Info',
-      labels: const ['Phone', 'Email'],
-      values: [_phone, _email],
-      onSave: (v) => setState(() {
-        _phone = v[0];
-        _email = v[1];
-      }),
-    );
   }
 
   void _editSecondaryInfo() {
@@ -234,6 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           title: 'Professional Info',
           labels: const ['Specialty', 'BMDC License Number'],
           values: [_specialty, _licenseNumber],
+          firestoreKeys: const ['specialty', 'licenseNumber'],
           onSave: (v) => setState(() {
             _specialty = v[0];
             _licenseNumber = v[1];
@@ -244,33 +318,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _editSection(
           title: 'Business Info',
           labels: const [
+            'Pharmacy Council Registration Number',
             'Pharmacy Name',
             'Trade License',
             'Pharmacy Location',
-            'NID Number',
           ],
-          values: [_pharmacyName, _tradeLicense, _pharmacyLocation, _nidNumber],
+          values: [
+            _pharmacistRegistrationNumber,
+            _pharmacyName,
+            _tradeLicense,
+            _pharmacyLocation,
+          ],
+          firestoreKeys: const [
+            'pharmacistRegistrationNumber',
+            'pharmacyName',
+            'tradeLicense',
+            'pharmacyLocation',
+          ],
           onSave: (v) => setState(() {
-            _pharmacyName = v[0];
-            _tradeLicense = v[1];
-            _pharmacyLocation = v[2];
-            _nidNumber = v[3];
+            _pharmacistRegistrationNumber = v[0];
+            _pharmacyName = v[1];
+            _tradeLicense = v[2];
+            _pharmacyLocation = v[3];
           }),
         );
         break;
       case _StakeholderRole.labSpecialist:
         _editSection(
           title: 'Work Info',
-          labels: const ['Staff ID', 'Department', 'Location'],
-          values: [_staffId, _department, _labLocation],
+          labels: const ['Department', 'Location'],
+          values: [_department, _labLocation],
+          firestoreKeys: const ['specialty', 'pharmacyLocation'],
           onSave: (v) => setState(() {
-            _staffId = v[0];
-            _department = v[1];
-            _labLocation = v[2];
+            _department = v[0];
+            _labLocation = v[1];
           }),
         );
         break;
     }
+  }
+
+  /// Lets the pharmacist drop/move the map pin patients use to find them —
+  /// separate from the plain address text, since that alone never touches
+  /// the coordinates the patient-facing pharmacy map actually reads.
+  Future<void> _pickPharmacyMapLocation() async {
+    final LatLng? picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => PharmacyLocationPickerScreen(
+          initial: _pharmacyLat != null && _pharmacyLng != null
+              ? LatLng(_pharmacyLat!, _pharmacyLng!)
+              : null,
+        ),
+      ),
+    );
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      _pharmacyLat = picked.latitude;
+      _pharmacyLng = picked.longitude;
+    });
+
+    await _persistToFirestore(<String, dynamic>{
+      'pharmacyLat': picked.latitude,
+      'pharmacyLng': picked.longitude,
+    });
+
+    if (!mounted) {
+      return;
+    }
+    Get.snackbar(
+      'Location updated',
+      'Your pharmacy pin is now visible to patients.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   void _openAccountSheet() {
@@ -345,26 +467,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return _TabSectionCard(
           key: const ValueKey(_ProfileTab.personal),
           onEdit: _editPersonalInfo,
-          children: _role == _StakeholderRole.doctor
-              ? [
-                  _InfoRow(icon: Icons.phone_outlined, label: 'Phone', value: _phone),
-                  _InfoRow(icon: Icons.email_outlined, label: 'Email', value: _email),
-                  _InfoRow(
-                    icon: Icons.wc_outlined,
-                    label: 'Gender',
-                    value: _gender,
-                    showDivider: false,
-                  ),
-                ]
-              : [
-                  _InfoRow(icon: Icons.phone_outlined, label: 'Phone', value: _phone),
-                  _InfoRow(
-                    icon: Icons.email_outlined,
-                    label: 'Email',
-                    value: _email,
-                    showDivider: false,
-                  ),
-                ],
+          children: [
+            _InfoRow(
+              icon: Icons.badge_outlined,
+              label: 'Name',
+              value: _fullName,
+            ),
+            _InfoRow(icon: Icons.phone_outlined, label: 'Phone', value: _phone),
+            _InfoRow(
+              icon: Icons.email_outlined,
+              label: 'Email',
+              value: _email,
+              showDivider:
+                  _role == _StakeholderRole.doctor ||
+                  _role == _StakeholderRole.pharmacist,
+            ),
+            if (_role == _StakeholderRole.doctor)
+              _InfoRow(
+                icon: Icons.wc_outlined,
+                label: 'Gender',
+                value: _gender,
+                showDivider: false,
+              ),
+            if (_role == _StakeholderRole.pharmacist)
+              _InfoRow(
+                icon: Icons.credit_card_outlined,
+                label: 'NID Number',
+                value: _nidNumber,
+                showDivider: false,
+              ),
+          ],
         );
       case _ProfileTab.secondary:
         switch (_role) {
@@ -392,6 +524,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onEdit: _editSecondaryInfo,
               children: [
                 _InfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Pharmacy Council Registration',
+                  value: _pharmacistRegistrationNumber,
+                ),
+                _InfoRow(
                   icon: Icons.local_pharmacy_outlined,
                   label: 'Pharmacy Name',
                   value: _pharmacyName,
@@ -406,10 +543,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Pharmacy Location',
                   value: _pharmacyLocation,
                 ),
-                _InfoRow(
-                  icon: Icons.credit_card_outlined,
-                  label: 'NID Number',
-                  value: _nidNumber,
+                _TappableInfoRow(
+                  icon: Icons.map_outlined,
+                  label: 'Map Pin',
+                  value: _pharmacyLat != null && _pharmacyLng != null
+                      ? 'Set — tap to update'
+                      : 'Not set — tap to pin',
+                  onTap: _pickPharmacyMapLocation,
                   showDivider: false,
                 ),
               ],
@@ -419,7 +559,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               key: const ValueKey('secondary-lab'),
               onEdit: _editSecondaryInfo,
               children: [
-                _InfoRow(icon: Icons.badge_outlined, label: 'Staff ID', value: _staffId),
+                _InfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Staff ID',
+                  value: _staffId,
+                ),
                 _InfoRow(
                   icon: Icons.apartment_outlined,
                   label: 'Department',
@@ -450,12 +594,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: EdgeInsets.fromLTRB(pad, pad * 0.8, pad, 120),
           children: [
             _ProfileHero(
-              name: widget.account.fullName,
+              name: _fullName,
               idPillLabel: _idPillLabel,
               onSettingsTap: _openAccountSheet,
             ),
-            SizedBox(height: pad),
-            _FactChipsRow(items: _factChips),
             SizedBox(height: pad),
             _ProfileTabBar(
               active: _activeTab,
@@ -608,7 +750,10 @@ class _ProfileHero extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  _HeroIconButton(icon: Icons.settings_outlined, onTap: onSettingsTap),
+                  _HeroIconButton(
+                    icon: Icons.settings_outlined,
+                    onTap: onSettingsTap,
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
@@ -623,7 +768,10 @@ class _ProfileHero extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(20),
@@ -638,66 +786,6 @@ class _ProfileHero extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FactChipsRow extends StatelessWidget {
-  const _FactChipsRow({required this.items});
-
-  final List<(IconData, String, String)> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 88,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, i) {
-          final (icon, label, value) = items[i];
-          return _FactChip(icon: icon, label: label, value: value);
-        },
-      ),
-    );
-  }
-}
-
-class _FactChip extends StatelessWidget {
-  const _FactChip({required this.icon, required this.label, required this.value});
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isDark = MHelperFunctions.isDarkMode(context);
-
-    return Container(
-      width: 132,
-      padding: const EdgeInsets.all(12),
-      decoration: _cardDecoration(isDark),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: MColors.primaryColor, size: 18),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -723,7 +811,9 @@ class _ProfileTabBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F1F1F) : Colors.black.withValues(alpha: 0.05),
+        color: isDark
+            ? const Color(0xFF1F1F1F)
+            : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -731,7 +821,9 @@ class _ProfileTabBar extends StatelessWidget {
           for (final _ProfileTab tab in _ProfileTab.values)
             Expanded(
               child: _ProfileTabChip(
-                label: tab == _ProfileTab.personal ? 'Personal' : secondaryLabel,
+                label: tab == _ProfileTab.personal
+                    ? 'Personal'
+                    : secondaryLabel,
                 selected: tab == active,
                 onTap: () => onChanged(tab),
               ),
@@ -807,7 +899,10 @@ class _TabSectionCard extends StatelessWidget {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: const Icon(Icons.edit_outlined, size: 15),
-                label: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Edit',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ...children,
@@ -845,17 +940,84 @@ class _InfoRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey,
+                  ),
                 ),
               ),
               Flexible(
                 child: Text(
                   value,
                   textAlign: TextAlign.right,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
+          ),
+        ),
+        if (showDivider) const Divider(height: 1),
+      ],
+    );
+  }
+}
+
+class _TappableInfoRow extends StatelessWidget {
+  const _TappableInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.showDivider = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: MColors.primaryColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: MColors.primaryColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
           ),
         ),
         if (showDivider) const Divider(height: 1),

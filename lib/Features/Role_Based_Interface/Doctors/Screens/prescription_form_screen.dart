@@ -105,8 +105,10 @@ class _PrescriptionFormScreenState extends State<PrescriptionFormScreen> {
             (medicine) => DoctorPrescriptionMedicine(
               name: medicine.name.text.trim(),
               dosage: medicine.dosage.text.trim(),
+              frequency: medicine.frequency.text.trim(),
               instructions: medicine.instructions.text.trim(),
               durationDays: _parseDurationDays(medicine.duration.text),
+              quantity: int.tryParse(medicine.quantity.text.trim()) ?? 0,
             ),
           )
           .toList(),
@@ -293,13 +295,15 @@ class _MedicineDraft {
       dosage = TextEditingController(),
       frequency = TextEditingController(text: 'Once daily'),
       duration = TextEditingController(text: '7 days'),
-      instructions = TextEditingController(text: 'Take after meals');
+      instructions = TextEditingController(text: 'Take after meals'),
+      quantity = TextEditingController();
 
   final TextEditingController name;
   final TextEditingController dosage;
   final TextEditingController frequency;
   final TextEditingController duration;
   final TextEditingController instructions;
+  final TextEditingController quantity;
 
   void dispose() {
     name.dispose();
@@ -307,6 +311,7 @@ class _MedicineDraft {
     frequency.dispose();
     duration.dispose();
     instructions.dispose();
+    quantity.dispose();
   }
 }
 
@@ -479,6 +484,21 @@ class _MedicineFields extends StatelessWidget {
                   validator: (value) => value == null || value.trim().isEmpty
                       ? 'Enter instructions'
                       : null,
+                ),
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.42,
+                child: TextFormField(
+                  controller: draft.quantity,
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final int? parsed = int.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed <= 0) {
+                      return 'Enter quantity to dispense';
+                    }
+                    return null;
+                  },
+                  decoration: _inputDecoration(context, 'Quantity to dispense'),
                 ),
               ),
             ],

@@ -23,6 +23,7 @@ class AuthRegistry {
     verificationCode: '2468',
     pharmacyName: 'Medicus Demo Pharmacy',
     tradeLicense: 'DL-0002468',
+    pharmacistRegistrationNumber: 'PCB-A-00248',
     isVerified: true,
   );
 
@@ -35,10 +36,11 @@ class AuthRegistry {
     final String userId = await _generateUniqueUserId();
     final String verificationCode = _generateVerificationCode();
 
-    final UserCredential credential = await _auth.createUserWithEmailAndPassword(
-      email: account.email,
-      password: account.password,
-    );
+    final UserCredential credential = await _auth
+        .createUserWithEmailAndPassword(
+          email: account.email,
+          password: account.password,
+        );
 
     final AuthAccount stored = account.copyWith(
       userId: userId,
@@ -52,7 +54,7 @@ class AuthRegistry {
     );
 
     await _firestore.collection('users').doc(credential.user!.uid).set(payload);
-    
+
     await _queueVerificationEmail(stored);
     await _auth.signOut();
 
@@ -134,15 +136,25 @@ class AuthRegistry {
       return false;
     }
 
-    await _firestore.collection('users').doc(account.firebaseUid).update(<String, dynamic>{
-      'isVerified': true,
-    });
+    await _firestore.collection('users').doc(account.firebaseUid).update(
+      <String, dynamic>{'isVerified': true},
+    );
     return true;
   }
 
-  Future<void> updateVerificationCode({
-    required String userId,
-  }) async {
+  /// Persists profile-screen edits straight to the account's `users` doc.
+  Future<void> updateProfileFields(
+    String firebaseUid,
+    Map<String, dynamic> fields,
+  ) async {
+    if (firebaseUid.trim().isEmpty || fields.isEmpty) {
+      return;
+    }
+
+    await _firestore.collection('users').doc(firebaseUid).update(fields);
+  }
+
+  Future<void> updateVerificationCode({required String userId}) async {
     final AuthAccount? account = await accountForUserId(userId);
     if (account == null) {
       return;
@@ -150,13 +162,11 @@ class AuthRegistry {
 
     final String newCode = _generateVerificationCode();
 
-    await _firestore.collection('users').doc(account.firebaseUid).update(<String, dynamic>{
-      'verificationCode': newCode,
-    });
-
-    await _queueVerificationEmail(
-      account.copyWith(verificationCode: newCode),
+    await _firestore.collection('users').doc(account.firebaseUid).update(
+      <String, dynamic>{'verificationCode': newCode},
     );
+
+    await _queueVerificationEmail(account.copyWith(verificationCode: newCode));
   }
 
   Future<String> _generateUniqueUserId() async {
@@ -181,50 +191,57 @@ class AuthRegistry {
     return (1000 + _random.nextInt(9000)).toString();
   }
 
-Future<void> _queueVerificationEmail(AuthAccount account) async {
-  final String mailerSendApiKey = 'mlsn.5656c50b5c64daf8fd5607bceb60aa4c745c804f3407df1ea21a205503e54822';
-  final String fromEmail = 'your@test-3m5jgrop7yogdpyo.mlsender.net';
-  const String fromName = 'Medicus';
+  Future<void> _queueVerificationEmail(AuthAccount account) async {
+    final String mailerSendApiKey =
+        'mlsn.5656c50b5c64daf8fd5607bceb60aa4c745c804f3407df1ea21a205503e54822';
+    final String fromEmail = 'your@test-3m5jgrop7yogdpyo.mlsender.net';
+    const String fromName = 'Medicus';
 
-  if (mailerSendApiKey.isEmpty || fromEmail.isEmpty) {
-    throw StateError('Missing MAILERSEND_API_KEY or MAILERSEND_FROM_EMAIL dart-define values.');
-  }
+    if (mailerSendApiKey.isEmpty || fromEmail.isEmpty) {
+      throw StateError(
+        'Missing MAILERSEND_API_KEY or MAILERSEND_FROM_EMAIL dart-define values.',
+      );
+    }
 
-  final Map<String, String> headers = {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer $mailerSendApiKey',
-  };
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $mailerSendApiKey',
+    };
 
-  final Map<String, dynamic> body = {
-    'from': {
-      'email': fromEmail,
-      'name': fromName,
-    },
-    'to': [
-      {'email': account.email}
-    ],
-    'subject': 'Your Medicus verification code',
-    'html': '''
+    final Map<String, dynamic> body = {
+      'from': {'email': fromEmail, 'name': fromName},
+      'to': [
+        {'email': account.email},
+      ],
+      'subject': 'Your Medicus verification code',
+      'html':
+          '''
       <p>Welcome to <strong>Medicus</strong>!</p>
       <p><strong>User ID:</strong> ${account.userId}<br/>
       <strong>Verification code:</strong> ${account.verificationCode}</p>
       <p>Enter this code in the app to verify your account.</p>
     ''',
-    'text': 'Welcome to Medicus!\n\nUser ID: ${account.userId}\nVerification code: ${account.verificationCode}\n\nEnter this code in the app to verify your account.',
-  };
+      'text':
+          'Welcome to Medicus!\n\nUser ID: ${account.userId}\nVerification code: ${account.verificationCode}\n\nEnter this code in the app to verify your account.',
+    };
 
-  final response = await http.post(
-    Uri.parse('https://api.mailersend.com/v1/email'),
-    headers: headers,
-    body: jsonEncode(body),
-  );
+    final response = await http.post(
+      Uri.parse('https://api.mailersend.com/v1/email'),
+      headers: headers,
+      body: jsonEncode(body),
+    );
 
-  if (response.statusCode != 202) {
-    throw StateError('MailerSend rejected email with status ${response.statusCode}: ${response.body}');
+    if (response.statusCode != 202) {
+      throw StateError(
+        'MailerSend rejected email with status ${response.statusCode}: ${response.body}',
+      );
+    }
   }
-}
 
-  Map<String, dynamic> _toFirestoreMap(AuthAccount account, {required String firebaseUid}) {
+  Map<String, dynamic> _toFirestoreMap(
+    AuthAccount account, {
+    required String firebaseUid,
+  }) {
     return <String, dynamic>{
       'firebaseUid': firebaseUid,
       'userId': account.userId,
@@ -237,6 +254,7 @@ Future<void> _queueVerificationEmail(AuthAccount account) async {
       'specialty': account.specialty,
       'gender': account.gender,
       'licenseNumber': account.licenseNumber,
+      'pharmacistRegistrationNumber': account.pharmacistRegistrationNumber,
       'pharmacyName': account.pharmacyName,
       'tradeLicense': account.tradeLicense,
       'nidNumber': account.nidNumber,
@@ -262,6 +280,8 @@ Future<void> _queueVerificationEmail(AuthAccount account) async {
       specialty: data['specialty'] as String?,
       gender: data['gender'] as String?,
       licenseNumber: data['licenseNumber'] as String?,
+      pharmacistRegistrationNumber:
+          data['pharmacistRegistrationNumber'] as String?,
       pharmacyName: data['pharmacyName'] as String?,
       tradeLicense: data['tradeLicense'] as String?,
       nidNumber: data['nidNumber'] as String?,

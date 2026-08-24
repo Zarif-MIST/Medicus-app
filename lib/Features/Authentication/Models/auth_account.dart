@@ -15,6 +15,7 @@ class AuthAccount {
     this.gender,
     this.dateOfBirth,
     this.licenseNumber,
+    this.pharmacistRegistrationNumber,
     this.pharmacyName,
     this.tradeLicense,
     this.nidNumber,
@@ -37,6 +38,7 @@ class AuthAccount {
   final String? gender;
   final DateTime? dateOfBirth;
   final String? licenseNumber;
+  final String? pharmacistRegistrationNumber;
   final String? pharmacyName;
   final String? tradeLicense;
   final String? nidNumber;
@@ -70,6 +72,7 @@ class AuthAccount {
     String? gender,
     DateTime? dateOfBirth,
     String? licenseNumber,
+    String? pharmacistRegistrationNumber,
     String? pharmacyName,
     String? tradeLicense,
     String? nidNumber,
@@ -92,6 +95,8 @@ class AuthAccount {
       gender: gender ?? this.gender,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       licenseNumber: licenseNumber ?? this.licenseNumber,
+      pharmacistRegistrationNumber:
+          pharmacistRegistrationNumber ?? this.pharmacistRegistrationNumber,
       pharmacyName: pharmacyName ?? this.pharmacyName,
       tradeLicense: tradeLicense ?? this.tradeLicense,
       nidNumber: nidNumber ?? this.nidNumber,

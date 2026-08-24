@@ -2,14 +2,20 @@ class DoctorPrescriptionMedicine {
   const DoctorPrescriptionMedicine({
     required this.name,
     required this.dosage,
+    required this.frequency,
     required this.instructions,
     required this.durationDays,
+    required this.quantity,
   });
 
   final String name;
   final String dosage;
+  final String frequency;
   final String instructions;
   final int durationDays;
+
+  /// Total units the pharmacist should dispense for this course.
+  final int quantity;
 }
 
 class DoctorPrescriptionModel {

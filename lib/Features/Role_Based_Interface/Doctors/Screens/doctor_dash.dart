@@ -59,7 +59,7 @@ class _HomeShellState extends State<HomeShell> {
         onOpenScanner: () => setState(() => _index = 2),
       ),
       DoctorAppointmentsScreen(account: widget.account),
-      Scanqr(account: widget.account),
+      _index == 2 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
       ProfileScreen(account: widget.account),
     ];
 
@@ -67,7 +67,7 @@ class _HomeShellState extends State<HomeShell> {
       extendBody: true,
       body: Stack(
         children: [
-          pages[_index],
+          IndexedStack(index: _index, children: pages),
           Positioned(
             left: 0,
             right: 0,
@@ -83,4 +83,3 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 }
-

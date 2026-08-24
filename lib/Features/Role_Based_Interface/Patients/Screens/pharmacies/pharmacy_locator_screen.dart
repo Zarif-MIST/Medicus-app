@@ -31,7 +31,8 @@ class PharmacyLocatorScreen extends StatefulWidget {
 }
 
 class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
-  static const PharmacyRegistryService _registryService = PharmacyRegistryService();
+  static const PharmacyRegistryService _registryService =
+      PharmacyRegistryService();
   static const PharmacyReviewService _reviewService = PharmacyReviewService();
   static const PharmacyVisitService _visitService = PharmacyVisitService();
 
@@ -43,8 +44,11 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
   Map<String, List<PharmacyReview>> _reviewsByPharmacy = {};
   GoogleMapController? _mapController;
 
-  String get _patientId => widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
-  String get _patientName => widget.account.firstName.isEmpty ? _mockPatientName : widget.account.firstName;
+  String get _patientId =>
+      widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
+  String get _patientName => widget.account.firstName.isEmpty
+      ? _mockPatientName
+      : widget.account.firstName;
 
   @override
   void initState() {
@@ -69,7 +73,8 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       if (!mounted) return;
       setState(() => _state = _LoadState.permissionDenied);
       return;
@@ -77,21 +82,31 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
 
     try {
       final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
-      final List<RegisteredPharmacy> pharmacies = await _registryService.fetchAllPharmacies();
-      final Set<String> visitedIds = await _visitService.fetchVisitedPharmacyIds(_patientId);
+      final List<RegisteredPharmacy> pharmacies = await _registryService
+          .fetchAllPharmacies();
+      final Set<String> visitedIds = await _visitService
+          .fetchVisitedPharmacyIds(_patientId);
 
-      final List<NearbyPharmacy> withDistance = pharmacies
-          .map(
-            (p) => NearbyPharmacy(
-              pharmacy: p,
-              distanceMeters: Geolocator.distanceBetween(position.latitude, position.longitude, p.lat, p.lng),
-            ),
-          )
-          .toList()
-        ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+      final List<NearbyPharmacy> withDistance =
+          pharmacies
+              .map(
+                (p) => NearbyPharmacy(
+                  pharmacy: p,
+                  distanceMeters: Geolocator.distanceBetween(
+                    position.latitude,
+                    position.longitude,
+                    p.lat,
+                    p.lng,
+                  ),
+                ),
+              )
+              .toList()
+            ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
 
       final Map<String, List<PharmacyReview>> reviewsByPharmacy = {
         for (final id in visitedIds) id: await _reviewService.fetchReviews(id),
@@ -115,26 +130,38 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
   }
 
   Future<void> _refreshPharmacyReviews(String pharmacyId) async {
-    final List<PharmacyReview> reviews = await _reviewService.fetchReviews(pharmacyId);
+    final List<PharmacyReview> reviews = await _reviewService.fetchReviews(
+      pharmacyId,
+    );
     if (!mounted) return;
-    setState(() => _reviewsByPharmacy = {..._reviewsByPharmacy, pharmacyId: reviews});
+    setState(
+      () => _reviewsByPharmacy = {..._reviewsByPharmacy, pharmacyId: reviews},
+    );
   }
 
   Future<void> _visitAndGetDirections(RegisteredPharmacy pharmacy) async {
     final Uri uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=${pharmacy.lat},${pharmacy.lng}',
     );
-    final bool launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final bool launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
     if (!launched) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't open Google Maps for directions.")),
+          const SnackBar(
+            content: Text("Couldn't open Google Maps for directions."),
+          ),
         );
       }
       return;
     }
 
-    await _visitService.markVisited(patientId: _patientId, pharmacyId: pharmacy.id);
+    await _visitService.markVisited(
+      patientId: _patientId,
+      pharmacyId: pharmacy.id,
+    );
     if (!mounted) return;
     if (!_visitedIds.contains(pharmacy.id)) {
       setState(() => _visitedIds = {..._visitedIds, pharmacy.id});
@@ -144,11 +171,15 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
 
   void _showPharmacyPreview(RegisteredPharmacy pharmacy) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
-    _mapController?.animateCamera(CameraUpdate.newLatLng(LatLng(pharmacy.lat, pharmacy.lng)));
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(LatLng(pharmacy.lat, pharmacy.lng)),
+    );
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
@@ -156,14 +187,27 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(pharmacy.name, style: Theme.of(sheetContext).textTheme.titleMedium),
+              Text(
+                pharmacy.name,
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
               if (pharmacy.address.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(pharmacy.address, style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                Text(
+                  pharmacy.address,
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
               ],
               if (pharmacy.phone.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(pharmacy.phone, style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                Text(
+                  pharmacy.phone,
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
               ],
               const SizedBox(height: 16),
               SizedBox(
@@ -176,7 +220,9 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: MColors.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   icon: const Icon(Icons.directions_rounded),
                   label: const Text('Get Directions'),
@@ -220,7 +266,12 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
               padding: EdgeInsets.fromLTRB(pad, 16, pad, 10),
               child: Row(
                 children: [
-                  Expanded(child: Text('Pharmacies', style: Theme.of(context).textTheme.titleLarge)),
+                  Expanded(
+                    child: Text(
+                      'Pharmacies',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -242,7 +293,8 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
       case _LoadState.serviceDisabled:
         return _CenteredMessage(
           icon: Icons.location_off_outlined,
-          message: 'Location services are turned off. Enable them to find pharmacies.',
+          message:
+              'Location services are turned off. Enable them to find pharmacies.',
           actionLabel: 'Open Location Settings',
           onAction: Geolocator.openLocationSettings,
         );
@@ -267,7 +319,9 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
 
   Widget _buildSuccess(BuildContext context, double pad) {
     final Position position = _position!;
-    final List<NearbyPharmacy> visited = _allPharmacies.where((p) => _visitedIds.contains(p.pharmacy.id)).toList();
+    final List<NearbyPharmacy> visited = _allPharmacies
+        .where((p) => _visitedIds.contains(p.pharmacy.id))
+        .toList();
 
     return Column(
       children: [
@@ -306,18 +360,28 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
           padding: EdgeInsets.symmetric(horizontal: pad),
           child: Row(
             children: [
-              Text('My Pharmacies', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'My Pharmacies',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(width: 8),
               if (visited.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: MColors.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '${visited.length}',
-                    style: const TextStyle(color: MColors.primaryColor, fontSize: 11, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      color: MColors.primaryColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
             ],
@@ -328,7 +392,8 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
           child: visited.isEmpty
               ? const _CenteredMessage(
                   icon: Icons.explore_outlined,
-                  message: "You haven't visited any pharmacies yet.\nTap a pin on the map and get directions to add it here.",
+                  message:
+                      "You haven't visited any pharmacies yet.\nTap a pin on the map and get directions to add it here.",
                 )
               : RefreshIndicator(
                   onRefresh: _load,
@@ -338,10 +403,13 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, i) {
                       final NearbyPharmacy item = visited[i];
-                      final List<PharmacyReview> reviews = _reviewsByPharmacy[item.pharmacy.id] ?? const [];
+                      final List<PharmacyReview> reviews =
+                          _reviewsByPharmacy[item.pharmacy.id] ?? const [];
                       return PharmacyCard(
                         item: item,
-                        averageRating: PharmacyReviewService.averageRating(reviews),
+                        averageRating: PharmacyReviewService.averageRating(
+                          reviews,
+                        ),
                         reviewCount: reviews.length,
                         onTap: () => _openPharmacyDetail(item.pharmacy),
                       );
@@ -381,17 +449,30 @@ class _CenteredMessage extends StatelessWidget {
               const SizedBox(
                 width: 36,
                 height: 36,
-                child: CircularProgressIndicator(strokeWidth: 3, color: MColors.primaryColor),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: MColors.primaryColor,
+                ),
               )
             else
-              Icon(icon, size: 38, color: MColors.primaryColor.withValues(alpha: 0.7)),
+              Icon(
+                icon,
+                size: 38,
+                color: MColors.primaryColor.withValues(alpha: 0.7),
+              ),
             const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: onAction,
-                style: FilledButton.styleFrom(backgroundColor: MColors.primaryColor),
+                style: FilledButton.styleFrom(
+                  backgroundColor: MColors.primaryColor,
+                ),
                 child: Text(actionLabel!),
               ),
             ],
@@ -495,26 +576,53 @@ class _PharmacyDetailSheetState extends State<_PharmacyDetailSheet> {
                 ),
               ),
               const SizedBox(height: 18),
-              Text(widget.pharmacy.name, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                widget.pharmacy.name,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               if (widget.pharmacy.address.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(widget.pharmacy.address, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                Text(
+                  widget.pharmacy.address,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
               ],
               const SizedBox(height: 10),
               Row(
                 children: [
                   if (_reviews.isNotEmpty) ...[
-                    const Icon(Icons.star_rounded, size: 18, color: Color(0xFFF5A623)),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 18,
+                      color: Color(0xFFF5A623),
+                    ),
                     const SizedBox(width: 4),
-                    Text(avg.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(' (${_reviews.length} review${_reviews.length == 1 ? '' : 's'})',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                    Text(
+                      avg.toStringAsFixed(1),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      ' (${_reviews.length} review${_reviews.length == 1 ? '' : 's'})',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
                   ] else
-                    Text('No reviews yet', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                    Text(
+                      'No reviews yet',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
                 ],
               ),
               const SizedBox(height: 20),
-              Text('Your rating', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Your rating',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -522,7 +630,9 @@ class _PharmacyDetailSheetState extends State<_PharmacyDetailSheet> {
                     IconButton(
                       onPressed: () => setState(() => _myRating = i),
                       icon: Icon(
-                        i <= _myRating ? Icons.star_rounded : Icons.star_border_rounded,
+                        i <= _myRating
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
                         color: const Color(0xFFF5A623),
                         size: 28,
                       ),
@@ -539,7 +649,9 @@ class _PharmacyDetailSheetState extends State<_PharmacyDetailSheet> {
                 maxLines: 3,
                 decoration: InputDecoration(
                   hintText: 'Share your experience (optional)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   contentPadding: const EdgeInsets.all(12),
                 ),
               ),
@@ -551,7 +663,9 @@ class _PharmacyDetailSheetState extends State<_PharmacyDetailSheet> {
                   style: FilledButton.styleFrom(
                     backgroundColor: MColors.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Text(_submitting ? 'Submitting…' : 'Submit Review'),
                 ),
@@ -562,7 +676,9 @@ class _PharmacyDetailSheetState extends State<_PharmacyDetailSheet> {
               if (_reviews.isEmpty)
                 Text(
                   'Be the first to review this pharmacy.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 )
               else
                 for (final PharmacyReview review in _reviews) ...[
@@ -598,13 +714,18 @@ class _ReviewTile extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(review.patientName, style: Theme.of(context).textTheme.titleSmall),
+                child: Text(
+                  review.patientName,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ),
               Row(
                 children: List.generate(
                   5,
                   (i) => Icon(
-                    i < review.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
                     size: 14,
                     color: const Color(0xFFF5A623),
                   ),

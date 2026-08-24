@@ -183,8 +183,10 @@ class DoctorService {
             (medicine) => <String, dynamic>{
               'name': medicine.name,
               'dosage': medicine.dosage,
+              'frequency': medicine.frequency,
               'instructions': medicine.instructions,
               'durationDays': medicine.durationDays,
+              'quantity': medicine.quantity,
             },
           )
           .toList(),

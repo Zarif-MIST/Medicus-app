@@ -11,6 +11,8 @@ class PrescriptionTimelineEntry {
     required this.dayCurrent,
     required this.dayTotal,
     required this.prescribedOn,
+    required this.doctorName,
+    required this.prescriptionId,
   });
 
   final String medicineName;
@@ -18,34 +20,65 @@ class PrescriptionTimelineEntry {
   final int dayCurrent;
   final int dayTotal;
   final DateTime prescribedOn;
+  final String doctorName;
+  final String prescriptionId;
 
   bool get isCompleted => dayCurrent >= dayTotal;
   double get progress => dayTotal == 0 ? 0 : (dayCurrent / dayTotal).clamp(0, 1);
 }
 
+/// Medicine names shared by more than one currently-active (not yet
+/// completed) entry among [entries] — a likely sign of overlapping courses
+/// from a follow-up visit or a different doctor, surfaced as a warning
+/// rather than silently merged, since the two courses may genuinely be
+/// separate and both need to be taken.
+Set<String> overlappingMedicineNames(List<PrescriptionTimelineEntry> entries) {
+  final Map<String, int> activeCountByName = {};
+  for (final PrescriptionTimelineEntry entry in entries) {
+    if (entry.isCompleted) continue;
+    final String key = entry.medicineName.trim().toLowerCase();
+    activeCountByName[key] = (activeCountByName[key] ?? 0) + 1;
+  }
+  return {
+    for (final MapEntry<String, int> entry in activeCountByName.entries)
+      if (entry.value > 1) entry.key,
+  };
+}
+
 /// Renders [entries] as a connected vertical timeline — a dot-and-line
 /// rail on the left with each prescription's progress card on the right.
+/// Pass [overlapNamesOverride] when [entries] is a truncated slice of a
+/// larger list (e.g. the home screen's "top 4" preview) so overlap
+/// detection still sees every active prescription, not just the visible
+/// ones — otherwise a duplicate sitting just past the cap would go unflagged.
 class PrescriptionTimeline extends StatelessWidget {
-  const PrescriptionTimeline({super.key, required this.entries});
+  const PrescriptionTimeline({super.key, required this.entries, this.overlapNamesOverride});
 
   final List<PrescriptionTimelineEntry> entries;
+  final Set<String>? overlapNamesOverride;
 
   @override
   Widget build(BuildContext context) {
+    final Set<String> overlapNames = overlapNamesOverride ?? overlappingMedicineNames(entries);
     return Column(
       children: [
         for (int i = 0; i < entries.length; i++)
-          _PrescriptionTimelineRow(entry: entries[i], isLast: i == entries.length - 1),
+          _PrescriptionTimelineRow(
+            entry: entries[i],
+            isLast: i == entries.length - 1,
+            isOverlapping: overlapNames.contains(entries[i].medicineName.trim().toLowerCase()),
+          ),
       ],
     );
   }
 }
 
 class _PrescriptionTimelineRow extends StatelessWidget {
-  const _PrescriptionTimelineRow({required this.entry, required this.isLast});
+  const _PrescriptionTimelineRow({required this.entry, required this.isLast, required this.isOverlapping});
 
   final PrescriptionTimelineEntry entry;
   final bool isLast;
+  final bool isOverlapping;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +150,19 @@ class _PrescriptionTimelineRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(entry.dosage, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                    if (entry.doctorName.isNotEmpty)
+                      Text(
+                        'Prescribed by ${entry.doctorName}',
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      ),
+                    if (isOverlapping)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '⚠ Also prescribed elsewhere — confirm with your doctor or pharmacist',
+                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     const SizedBox(height: 10),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),

@@ -12,18 +12,6 @@ class PatientVital {
   final String unit;
 }
 
-class PatientHistoryEntry {
-  const PatientHistoryEntry({
-    required this.title,
-    required this.subtitle,
-    required this.dateLabel,
-  });
-
-  final String title;
-  final String subtitle;
-  final String dateLabel;
-}
-
 class PatientRecordModel {
   const PatientRecordModel({
     required this.account,
@@ -31,7 +19,6 @@ class PatientRecordModel {
     required this.allergies,
     required this.chronicConditions,
     required this.vitals,
-    required this.history,
   });
 
   final AuthAccount account;
@@ -39,5 +26,4 @@ class PatientRecordModel {
   final String allergies;
   final String chronicConditions;
   final List<PatientVital> vitals;
-  final List<PatientHistoryEntry> history;
 }

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class Scanqr extends StatefulWidget {
-  const Scanqr({super.key});
+  const Scanqr({super.key, required this.account});
+
+  final AuthAccount account;
 
   @override
   State<Scanqr> createState() => _ScanqrState();
@@ -55,7 +58,7 @@ class _ScanqrState extends State<Scanqr> {
     }
 
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record)),
+      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
     );
 
     if (!mounted) {

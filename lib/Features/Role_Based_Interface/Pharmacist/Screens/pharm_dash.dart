@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_queue_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/scan_prescription_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
 
 class PharmacistDashboardScreen extends StatelessWidget {
@@ -71,7 +71,7 @@ class _PharmacistShellState extends State<_PharmacistShell> {
         },
         onOpenScanner: () => setState(() => _index = 1),
       ),
-      const Scanqr(),
+      const ScanPrescriptionScreen(),
       const InventoryScreen(),
       ProfileScreen(account: widget.account),
     ];

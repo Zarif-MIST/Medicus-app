@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
+import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -39,24 +41,65 @@ class AppointmentConfirmationScreen extends StatelessWidget {
     super.key,
     required this.doctor,
     required this.date,
-    required this.time,
+    required this.window,
     required this.onConfirmed,
   });
 
   final DoctorSummary doctor;
   final DateTime date;
-  final String time;
+  final DoctorAvailabilityWindow window;
   final ValueChanged<BookedAppointment> onConfirmed;
 
-  void _confirm(BuildContext context) {
+  Future<void> _confirm(BuildContext context) async {
+    const AppointmentRepository repository = AppointmentRepository();
+    int booked;
+    try {
+      booked = await repository.countBookingsForWindow(
+        doctorId: doctor.doctorId,
+        windowId: window.id,
+        date: date,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't confirm the booking — check your connection and try again.")),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    if (booked >= window.capacity) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Slot just filled up'),
+          content: const Text('This time window reached capacity while you were booking — please choose another.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Choose another time', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     onConfirmed(
       BookedAppointment(
+        doctorId: doctor.doctorId,
         doctorName: doctor.name,
         specialty: doctor.specialty,
         hospital: doctor.hospital,
         date: date,
-        time: time,
+        time: window.label,
         fee: doctor.fee,
+        windowId: window.id,
       ),
     );
 
@@ -77,7 +120,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${doctor.name} • ${_formatDate(date)}, $time',
+              '${doctor.name} • ${_formatDate(date)}, ${window.label}',
               style: Theme.of(
                 dialogContext,
               ).textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -165,12 +208,12 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                           _SummaryRow(
                             icon: Icons.access_time,
                             label: 'Time',
-                            value: time,
+                            value: window.label,
                           ),
                           _SummaryRow(
                             icon: Icons.payments_outlined,
                             label: 'Fee',
-                            value: '৳${doctor.fee}',
+                            value: doctor.fee > 0 ? '৳${doctor.fee}' : 'On request',
                             showDivider: false,
                           ),
                         ],

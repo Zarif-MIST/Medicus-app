@@ -67,7 +67,14 @@ class PrescriptionFulfillmentScreen extends StatelessWidget {
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () async {
-              await PharmacistService.instance.markDispensed(item.id);
+              try {
+                await PharmacistService.instance.markDispensed(item.id);
+              } catch (e) {
+                if (context.mounted) {
+                  Get.snackbar('Could not mark dispensed', '$e', snackPosition: SnackPosition.BOTTOM);
+                }
+                return;
+              }
               if (!context.mounted) {
                 return;
               }

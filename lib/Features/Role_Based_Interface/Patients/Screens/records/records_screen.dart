@@ -7,14 +7,11 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/common/ap
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/prescription_pdf.dart';
 
-// TODO: replace with the logged-in patient's AuthAccount, same mock pattern
-// used by patient_home_screen.dart and patient_profile_screen.dart.
-const String _mockPatientId = '4821';
-const String _mockPatientName = 'Tareq';
-
 class RecordsScreen extends StatefulWidget {
-  const RecordsScreen({super.key, required this.prescriptions});
+  const RecordsScreen({super.key, required this.patientId, required this.patientName, required this.prescriptions});
 
+  final String patientId;
+  final String patientName;
   final List<Prescription> prescriptions;
 
   @override
@@ -67,7 +64,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
             else
               for (int i = 0; i < ongoing.length; i++) ...[
                 if (i != 0) const SizedBox(height: 10),
-                _PrescriptionCard(prescription: ongoing[i]),
+                _PrescriptionCard(prescription: ongoing[i], patientId: widget.patientId, patientName: widget.patientName),
               ],
             SizedBox(height: pad),
             Text('Previous Prescriptions', style: theme.textTheme.titleMedium),
@@ -77,7 +74,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
             else
               for (int i = 0; i < previous.length; i++) ...[
                 if (i != 0) const SizedBox(height: 10),
-                _PrescriptionCard(prescription: previous[i]),
+                _PrescriptionCard(prescription: previous[i], patientId: widget.patientId, patientName: widget.patientName),
               ],
           ],
         ),
@@ -87,9 +84,11 @@ class _RecordsScreenState extends State<RecordsScreen> {
 }
 
 class _PrescriptionCard extends StatelessWidget {
-  const _PrescriptionCard({required this.prescription});
+  const _PrescriptionCard({required this.prescription, required this.patientId, required this.patientName});
 
   final Prescription prescription;
+  final String patientId;
+  final String patientName;
 
   String get _formattedDate =>
       '${prescription.date.day.toString().padLeft(2, '0')}/${prescription.date.month.toString().padLeft(2, '0')}/${prescription.date.year}';
@@ -98,8 +97,8 @@ class _PrescriptionCard extends StatelessWidget {
     await Printing.layoutPdf(
       onLayout: (_) => buildPrescriptionPdf(
         prescription: prescription,
-        patientName: _mockPatientName,
-        patientId: _mockPatientId,
+        patientName: patientName,
+        patientId: patientId,
       ),
     );
   }

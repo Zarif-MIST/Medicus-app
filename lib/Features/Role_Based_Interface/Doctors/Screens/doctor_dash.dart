@@ -59,7 +59,7 @@ class _HomeShellState extends State<HomeShell> {
         onOpenScanner: () => setState(() => _index = 2),
       ),
       DoctorAppointmentsScreen(account: widget.account),
-      const Scanqr(),
+      Scanqr(account: widget.account),
       ProfileScreen(account: widget.account),
     ];
 

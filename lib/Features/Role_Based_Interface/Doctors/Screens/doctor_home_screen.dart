@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appointment_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
@@ -39,6 +40,30 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (hour < 12) return 'Good Morning,';
     if (hour < 17) return 'Good Afternoon,';
     return 'Good Evening,';
+  }
+
+  /// Looks a patient up directly by ID — not limited to today's queue, so a
+  /// doctor can pull up any patient's record the same way scanning their QR
+  /// would, just by typing the ID and hitting search.
+  Future<void> _searchAndOpenPatient(String query) async {
+    final String trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+
+    final record = await DoctorService.instance.getPatientRecordById(trimmed);
+    if (!mounted) return;
+
+    if (record == null) {
+      Get.snackbar(
+        'Patient not found',
+        'No patient record matched ID "$trimmed".',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
+    );
   }
 
   @override
@@ -115,8 +140,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                       hintText: 'Search patient ID',
                                       onChanged: (value) =>
                                           setState(() => _searchQuery = value),
-                                      onSubmitted: (value) =>
-                                          setState(() => _searchQuery = value),
+                                      onSubmitted: (value) {
+                                        setState(() => _searchQuery = value);
+                                        _searchAndOpenPatient(value);
+                                      },
                                     ),
                                     const SizedBox(height: 24),
                                     Align(
@@ -288,7 +315,7 @@ class _DoctorQueueTile extends StatelessWidget {
               }
               await Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => PatientDetailScreen(record: record),
+                  builder: (_) => PatientDetailScreen(record: record, doctor: account),
                 ),
               );
             },

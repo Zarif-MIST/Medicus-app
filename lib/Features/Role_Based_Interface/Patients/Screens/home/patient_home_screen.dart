@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/qr/my_qr_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/prescription_medicines_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/upload_report_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/search/patient_search_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/appointment_calendar_sheet.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/emergency_hospitals_sheet.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/next_appointment_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/next_dose_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/prescription_timeline.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/quick_actions_row.dart';
@@ -26,18 +31,45 @@ class PatientHomeScreen extends StatelessWidget {
     required this.account,
     required this.appointments,
     required this.prescriptions,
+    required this.prescriptionRecords,
+    required this.onBookAppointment,
+    required this.medicalInfoIncomplete,
+    required this.onCompleteMedicalInfo,
   });
 
   final AuthAccount account;
 
   final List<BookedAppointment> appointments;
   final List<Prescription> prescriptions;
+  final List<PrescriptionRecord> prescriptionRecords;
+  final ValueChanged<BookedAppointment> onBookAppointment;
+  final bool medicalInfoIncomplete;
+  final VoidCallback onCompleteMedicalInfo;
+
+  /// Only appointments today or later — a past booking should never be
+  /// mistaken for "next", which is what let a stale/previous appointment
+  /// show up here instead of a newly booked upcoming one.
+  List<BookedAppointment> get _upcomingAppointments {
+    final DateTime today = DateTime.now();
+    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
+    return appointments
+        .where((a) => !DateTime(a.date.year, a.date.month, a.date.day).isBefore(todayOnly))
+        .toList();
+  }
 
   int get _daysToNextAppointment {
-    if (appointments.isEmpty) return 0;
-    return appointments
+    final List<BookedAppointment> upcoming = _upcomingAppointments;
+    if (upcoming.isEmpty) return 0;
+    return upcoming
         .map((a) => a.daysFromNow)
         .reduce((a, b) => a < b ? a : b);
+  }
+
+  BookedAppointment? get _nextAppointment {
+    final List<BookedAppointment> upcoming = _upcomingAppointments;
+    if (upcoming.isEmpty) return null;
+    final List<BookedAppointment> sorted = [...upcoming]..sort((a, b) => a.date.compareTo(b.date));
+    return sorted.first;
   }
 
   List<PrescriptionTimelineEntry> get _ongoingPrescriptions {
@@ -80,7 +112,7 @@ class PatientHomeScreen extends StatelessWidget {
               child: Container(
                 color: MColors.primaryColor,
                 child: SizedBox(
-                  height: 360,
+                  height: 290,
                   child: Stack(
                     children: [
                       const Positioned(
@@ -169,10 +201,21 @@ class PatientHomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 26),
                               LiquidGlassSearchBar(
-                                hintText: 'Search doctor, medicine, or record',
-                                onChanged: (_) {},
+                                hintText: 'Search doctors, pharmacies, hospitals…',
+                                onSubmitted: (value) => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => PatientSearchScreen(
+                                      initialQuery: value,
+                                      prescriptions: prescriptions,
+                                      appointments: appointments,
+                                      onBookAppointment: onBookAppointment,
+                                      patientId: patientId,
+                                      patientName: patientName,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 18),
                               Align(
                                 alignment: Alignment.center,
                                 child: IconButton(
@@ -198,12 +241,16 @@ class PatientHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: pad * 0.6),
+            SizedBox(height: pad * 0.2),
             Padding(
               padding: EdgeInsets.fromLTRB(pad, 0, pad, 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (medicalInfoIncomplete) ...[
+                    _MedicalInfoBanner(onTap: onCompleteMedicalInfo),
+                    SizedBox(height: pad),
+                  ],
                   StatCardRow(
                     highlightIndex: 2,
                     onHighlightTap: () => showModalBottomSheet(
@@ -231,45 +278,27 @@ class PatientHomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: pad),
-                  if (ongoing.isNotEmpty)
-                    NextDoseCard(
-                      medicineName: ongoing.first.medicineName,
-                      time: 'Today, 2:00 PM',
-                      adherence: 0.7,
-                    ),
-                  SizedBox(height: pad),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Prescription Timeline',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                  if (_nextAppointment != null) ...[
+                    SizedBox(height: pad),
+                    NextAppointmentCard(
+                      appointment: _nextAppointment!,
+                      onTap: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => AppointmentCalendarSheet(appointments: appointments),
                       ),
-                      if (ongoing.isNotEmpty)
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            foregroundColor: MColors.primaryColor,
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text('See all', style: TextStyle(fontWeight: FontWeight.w600)),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  if (ongoing.isEmpty)
-                    Text(
-                      'No ongoing prescriptions right now.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                    )
-                  else
-                    PrescriptionTimeline(entries: ongoing),
+                    ),
+                  ],
+                  if (prescriptionRecords.isNotEmpty) ...[
+                    SizedBox(height: pad),
+                    NextDoseCard(
+                      patientId: patientId,
+                      activePrescriptions: prescriptionRecords,
+                    ),
+                  ],
+                  SizedBox(height: pad),
+                  _PrescriptionTimelineSection(ongoing: ongoing, prescriptions: prescriptions),
                   SizedBox(height: pad * 0.6),
                   Text(
                     'Quick Actions',
@@ -286,7 +315,11 @@ class PatientHomeScreen extends StatelessWidget {
                       QuickAction(
                         label: 'Upload Report',
                         icon: Icons.upload_file_outlined,
-                        onTap: () {},
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => UploadReportScreen(patientId: patientId, patientName: patientName),
+                          ),
+                        ),
                       ),
                       QuickAction(
                         label: 'Emergency',
@@ -304,6 +337,167 @@ class PatientHomeScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The home screen's "Prescription Timeline" block — header, an optional
+/// per-doctor filter (only shown once a patient actually has more than one
+/// doctor prescribing to them), and up to 4 of the resulting entries with a
+/// "+N more" link into the full "See all" screen. Owns the doctor-filter
+/// selection itself since nothing else on the page needs it.
+class _PrescriptionTimelineSection extends StatefulWidget {
+  const _PrescriptionTimelineSection({required this.ongoing, required this.prescriptions});
+
+  final List<PrescriptionTimelineEntry> ongoing;
+  final List<Prescription> prescriptions;
+
+  @override
+  State<_PrescriptionTimelineSection> createState() => _PrescriptionTimelineSectionState();
+}
+
+class _PrescriptionTimelineSectionState extends State<_PrescriptionTimelineSection> {
+  String? _selectedDoctor;
+
+  List<String> get _doctorNames {
+    final List<String> names = [];
+    for (final PrescriptionTimelineEntry e in widget.ongoing) {
+      if (e.doctorName.isNotEmpty && !names.contains(e.doctorName)) names.add(e.doctorName);
+    }
+    return names;
+  }
+
+  void _openSeeAll(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PrescriptionMedicinesScreen(prescriptions: widget.prescriptions)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final List<String> doctorNames = _doctorNames;
+    // Overlap detection always looks at every doctor's medicines, even while
+    // a filter is active — a duplicate involving a doctor not currently
+    // selected is still worth surfacing.
+    final Set<String> overlapNames = overlappingMedicineNames(widget.ongoing);
+    final List<PrescriptionTimelineEntry> filtered = _selectedDoctor == null
+        ? widget.ongoing
+        : widget.ongoing.where((e) => e.doctorName == _selectedDoctor).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('Prescription Timeline', style: theme.textTheme.titleMedium)),
+            if (widget.prescriptions.isNotEmpty)
+              TextButton(
+                onPressed: () => _openSeeAll(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: MColors.primaryColor,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('See all', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (widget.ongoing.isEmpty)
+          Text(
+            'No ongoing prescriptions right now.',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+          )
+        else ...[
+          if (doctorNames.length > 1) ...[
+            SizedBox(
+              height: 34,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: doctorNames.length + 1,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final String? doctor = index == 0 ? null : doctorNames[index - 1];
+                  final bool selected = _selectedDoctor == doctor;
+                  return ChoiceChip(
+                    label: Text(doctor ?? 'All Doctors'),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _selectedDoctor = doctor),
+                    selectedColor: MColors.primaryColor,
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : null,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (filtered.isEmpty)
+            Text(
+              'No ongoing medicines from $_selectedDoctor.',
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+            )
+          else ...[
+            PrescriptionTimeline(entries: filtered.take(4).toList(), overlapNamesOverride: overlapNames),
+            if (filtered.length > 4) ...[
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => _openSeeAll(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: MColors.primaryColor,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  '+${filtered.length - 4} more — See all',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _MedicalInfoBanner extends StatelessWidget {
+  const _MedicalInfoBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.orange.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Complete your medical profile for emergencies',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.orange),
+            ],
+          ),
         ),
       ),
     );

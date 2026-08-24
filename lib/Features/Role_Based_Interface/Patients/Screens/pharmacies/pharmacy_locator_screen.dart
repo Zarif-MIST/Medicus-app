@@ -115,9 +115,14 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
   }
 
   Future<void> _refreshPharmacyReviews(String pharmacyId) async {
-    final List<PharmacyReview> reviews = await _reviewService.fetchReviews(pharmacyId);
-    if (!mounted) return;
-    setState(() => _reviewsByPharmacy = {..._reviewsByPharmacy, pharmacyId: reviews});
+    try {
+      final List<PharmacyReview> reviews = await _reviewService.fetchReviews(pharmacyId);
+      if (!mounted) return;
+      setState(() => _reviewsByPharmacy = {..._reviewsByPharmacy, pharmacyId: reviews});
+    } catch (_) {
+      // Leave whatever reviews were already showing — a failed refresh
+      // shouldn't wipe a previously-successful one.
+    }
   }
 
   Future<void> _visitAndGetDirections(RegisteredPharmacy pharmacy) async {

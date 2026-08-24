@@ -1,68 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Appointments/Models/appointment_record.dart';
+import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
+import 'package:medicus/Features/Prescriptions/Services/prescription_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/home/patient_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/specialist_selection_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pharmacies/pharmacy_locator_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/profile/patient_profile_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient_profile_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
 
-// Mock data — replaced by a Firestore query (prescriptions collection for
-// this patient, ordered by date) once the data layer is wired up. Each
-// record mirrors what the doctor portal would save: an id, doctor, date,
-// and its medicines — shared between the Home timeline and the Records
-// screen so both reflect the same source of truth.
-final List<Prescription> _initialPrescriptions = [
-  Prescription(
-    id: 'RX-1001',
-    doctorName: 'Dr. Farhana Rahman',
-    date: DateTime.now().subtract(const Duration(days: 12)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Metformin 500mg',
-        dosage: '1 tablet, twice daily',
-        durationDays: 30,
-      ),
-    ],
-  ),
-  Prescription(
-    id: 'RX-1002',
-    doctorName: 'Dr. Kamrul Islam',
-    date: DateTime.now().subtract(const Duration(days: 5)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Amoxicillin 250mg',
-        dosage: '1 capsule, three times daily',
-        durationDays: 7,
-      ),
-    ],
-  ),
-  Prescription(
-    id: 'RX-1003',
-    doctorName: 'Dr. Nusrat Jahan',
-    date: DateTime.now().subtract(const Duration(days: 20)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Cetirizine 10mg',
-        dosage: '1 tablet, once daily',
-        durationDays: 5,
-      ),
-    ],
-  ),
-  Prescription(
-    id: 'RX-1004',
-    doctorName: 'Dr. Shafiul Alam',
-    date: DateTime.now().subtract(const Duration(days: 45)),
-    medicines: const [
-      PrescriptionMedicine(
-        name: 'Ibuprofen 400mg',
-        dosage: '1 tablet, as needed',
-        durationDays: 3,
-      ),
-    ],
-  ),
-];
+// TODO: replace with the logged-in patient's real userId once every screen
+// consistently receives a fully-populated AuthAccount — matches the mock id
+// used app-wide (pharmacy, lab reports, doctor's mock patient lookup).
+const String _mockPatientId = '4821';
+const String _mockPatientName = 'Tareq';
 
 class PatientDashboardScreen extends StatelessWidget {
   const PatientDashboardScreen({super.key, required this.account});
@@ -85,9 +40,18 @@ class _PatientHomeShell extends StatefulWidget {
 }
 
 class _PatientHomeShellState extends State<_PatientHomeShell> {
+  static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();
+  static const AppointmentRepository _appointmentRepository = AppointmentRepository();
+  static const PatientProfileService _profileService = PatientProfileService();
+
   int _index = 0;
-  final List<BookedAppointment> _appointments = [];
-  final List<Prescription> _prescriptions = List.of(_initialPrescriptions);
+  List<BookedAppointment> _appointments = [];
+  List<Prescription> _prescriptions = [];
+  List<PrescriptionRecord> _prescriptionRecords = [];
+  bool _medicalInfoIncomplete = false;
+
+  String get _patientId => widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
+  String get _patientName => widget.account.firstName.isEmpty ? _mockPatientName : widget.account.fullName;
 
   final _items = const [
     LiquidNavItem(
@@ -112,8 +76,123 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
     ),
   ];
 
-  void _addAppointment(BookedAppointment appointment) {
-    setState(() => _appointments.add(appointment));
+  @override
+  void initState() {
+    super.initState();
+    _loadPrescriptions();
+    _loadAppointments();
+    _loadProfileStatus();
+  }
+
+  Future<void> _loadProfileStatus() async {
+    try {
+      final PatientProfileRecord? record = await _profileService.fetch(_patientId);
+      if (!mounted) return;
+      setState(() => _medicalInfoIncomplete = record == null || !record.medicalInfoCompleted);
+    } catch (_) {
+      // Leave the banner hidden on failure (e.g. offline) rather than
+      // guessing — it'll re-check next time the dashboard opens.
+    }
+  }
+
+  Future<void> _loadPrescriptions() async {
+    try {
+      final List<PrescriptionRecord> records = await _prescriptionRepository.fetchForPatient(_patientId);
+      if (!mounted) return;
+      setState(() {
+        _prescriptionRecords = records;
+        _prescriptions = [for (final record in records) _toPrescription(record)];
+      });
+    } catch (_) {
+      // Leave the list empty on failure (e.g. offline) — every screen
+      // downstream already renders a graceful "no prescriptions" state.
+    }
+  }
+
+  Future<void> _loadAppointments() async {
+    try {
+      final List<AppointmentRecord> records = await _appointmentRepository.fetchForPatient(_patientId);
+      if (!mounted) return;
+      final List<BookedAppointment> fetched = [for (final record in records) _toBookedAppointment(record)];
+
+      // An optimistic booking (id.isEmpty — added locally in _addAppointment
+      // before its Firestore write confirmed) can still be mid-flight when
+      // this reload runs, e.g. right after the confirmation dialog if the
+      // patient immediately switches back to the Home tab. Replacing
+      // _appointments outright would wipe it until the *next* reload. Keep
+      // any such pending entries that don't yet have a matching real record
+      // in the fresh fetch; drop them once the fetch shows the real one.
+      final List<BookedAppointment> stillPending = _appointments.where((a) {
+        if (a.id.isNotEmpty) return false;
+        final bool nowConfirmed = fetched.any(
+          (f) =>
+              f.doctorId == a.doctorId &&
+              f.windowId == a.windowId &&
+              f.date.year == a.date.year &&
+              f.date.month == a.date.month &&
+              f.date.day == a.date.day &&
+              f.time == a.time,
+        );
+        return !nowConfirmed;
+      }).toList();
+
+      setState(() => _appointments = [...fetched, ...stillPending]);
+    } catch (_) {
+      // Leave the list as-is on failure — the calendar/next-appointment
+      // widgets already render a graceful "no appointments" state when empty.
+    }
+  }
+
+  BookedAppointment _toBookedAppointment(AppointmentRecord record) {
+    return BookedAppointment(
+      id: record.id,
+      doctorId: record.doctorId,
+      doctorName: record.doctorName,
+      specialty: record.specialty,
+      hospital: record.hospital,
+      date: record.date,
+      time: record.time,
+      fee: record.fee,
+      windowId: record.windowId,
+    );
+  }
+
+  Prescription _toPrescription(PrescriptionRecord record) {
+    return Prescription(
+      id: record.id,
+      doctorName: record.doctorName,
+      date: record.createdAt,
+      medicines: [
+        for (final medicine in record.medicines)
+          PrescriptionMedicine(
+            name: medicine.name,
+            dosage: medicine.instructions.isEmpty ? medicine.dosage : '${medicine.dosage} — ${medicine.instructions}',
+            durationDays: medicine.durationDays,
+          ),
+      ],
+    );
+  }
+
+  Future<void> _addAppointment(BookedAppointment appointment) async {
+    setState(() => _appointments = [..._appointments, appointment]);
+    try {
+      await _appointmentRepository.create(
+        patientId: _patientId,
+        patientName: _patientName,
+        doctorId: appointment.doctorId,
+        doctorName: appointment.doctorName,
+        specialty: appointment.specialty,
+        hospital: appointment.hospital,
+        date: appointment.date,
+        time: appointment.time,
+        fee: appointment.fee,
+        windowId: appointment.windowId,
+      );
+    } catch (_) {
+      // Booking still shows locally for this session even if the write
+      // failed (e.g. offline) — _loadAppointments will reconcile with
+      // Firestore next time the dashboard is reopened.
+    }
   }
 
   @override
@@ -123,13 +202,17 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
         account: widget.account,
         appointments: _appointments,
         prescriptions: _prescriptions,
+        prescriptionRecords: _prescriptionRecords,
+        onBookAppointment: _addAppointment,
+        medicalInfoIncomplete: _medicalInfoIncomplete,
+        onCompleteMedicalInfo: () => setState(() => _index = 3),
       ),
       SpecialistSelectionScreen(
         appointments: _appointments,
         onBook: _addAppointment,
       ),
       PharmacyLocatorScreen(account: widget.account),
-      PatientProfileScreen(prescriptions: _prescriptions),
+      PatientProfileScreen(account: widget.account, prescriptions: _prescriptions),
     ];
 
     return Scaffold(
@@ -146,7 +229,14 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
             child: LiquidGlassNavBar(
               items: _items,
               selectedIndex: _index,
-              onTap: (i) => setState(() => _index = i),
+              onTap: (i) {
+                setState(() => _index = i);
+                if (i == 0) {
+                  _loadProfileStatus();
+                  _loadPrescriptions();
+                  _loadAppointments();
+                }
+              },
             ),
           ),
         ],

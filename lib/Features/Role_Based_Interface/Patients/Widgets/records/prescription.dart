@@ -39,6 +39,8 @@ class Prescription {
           dayCurrent: _dayCurrentFor(medicine),
           dayTotal: medicine.durationDays,
           prescribedOn: date,
+          doctorName: doctorName,
+          prescriptionId: id,
         ),
     ];
   }

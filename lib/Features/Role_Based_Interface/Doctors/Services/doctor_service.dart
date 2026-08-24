@@ -1,9 +1,14 @@
+import 'package:medicus/Features/Appointments/Models/appointment_record.dart';
+import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
+import 'package:medicus/Features/Prescriptions/Services/prescription_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appointment_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_prescription_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient_profile_service.dart';
 
 class DoctorService {
   DoctorService._();
@@ -44,38 +49,30 @@ class DoctorService {
         ),
       };
 
+  static const AppointmentRepository _appointmentRepository = AppointmentRepository();
+
   Future<List<DoctorAppointmentModel>> getTodayAppointments(
     AuthAccount doctor,
   ) async {
-    // TODO(firebase): replace mock queue with Firestore appointments filtered by doctor and current day.
-    return <DoctorAppointmentModel>[
-      DoctorAppointmentModel(
-        id: 'APT-201',
-        patientId: '4821',
-        patientName: 'Tareq Hasan',
-        specialty: doctor.specialty ?? 'General Physician',
-        reason: 'Follow-up on fever and body ache',
-        timeLabel: '09:00 AM',
-        status: 'Confirmed',
-      ),
-      DoctorAppointmentModel(
-        id: 'APT-202',
-        patientId: '5634',
-        patientName: 'Sadia Rahman',
-        specialty: doctor.specialty ?? 'General Physician',
-        reason: 'Prescription review',
-        timeLabel: '10:30 AM',
-        status: 'Waiting',
-      ),
-      DoctorAppointmentModel(
-        id: 'APT-203',
-        patientId: '6108',
-        patientName: 'Nafis Ahmed',
-        specialty: doctor.specialty ?? 'General Physician',
-        reason: 'Routine consultation',
-        timeLabel: '01:15 PM',
-        status: 'Pending',
-      ),
+    if (doctor.userId.isEmpty) return const [];
+
+    final List<AppointmentRecord> records = await _appointmentRepository.fetchForDoctor(doctor.userId);
+    final DateTime now = DateTime.now();
+    final List<AppointmentRecord> today = records
+        .where((r) => r.date.year == now.year && r.date.month == now.month && r.date.day == now.day)
+        .toList();
+
+    return [
+      for (final record in today)
+        DoctorAppointmentModel(
+          id: record.id,
+          patientId: record.patientId,
+          patientName: record.patientName,
+          specialty: record.specialty,
+          reason: 'Booked via Medicus',
+          timeLabel: record.time,
+          status: record.status,
+        ),
     ];
   }
 
@@ -92,39 +89,55 @@ class DoctorService {
       return _mockPatientRecords[normalizedId];
     }
 
+    const PatientProfileService profileService = PatientProfileService();
+    final PatientProfileRecord? profile = await profileService.fetch(normalizedId);
+
     return PatientRecordModel(
       account: account,
-      bloodGroup: 'O+',
-      allergies: 'Penicillin',
-      chronicConditions: 'Type 2 Diabetes',
+      bloodGroup: (profile?.bloodGroup.trim().isNotEmpty ?? false) ? profile!.bloodGroup : 'Not set',
+      allergies: (profile?.allergies.trim().isNotEmpty ?? false) ? profile!.allergies : 'Not set',
+      chronicConditions:
+          (profile?.chronicConditions.trim().isNotEmpty ?? false) ? profile!.chronicConditions : 'Not set',
+      // TODO(firebase): no vitals-recording feature exists yet — these stay
+      // as honest placeholders rather than fabricated numbers once one does.
       vitals: const [
-        PatientVital(label: 'Blood Pressure', value: '120/80', unit: 'mmHg'),
-        PatientVital(label: 'Heart Rate', value: '76', unit: 'bpm'),
-        PatientVital(label: 'Temperature', value: '98.4', unit: 'F'),
-        PatientVital(label: 'Weight', value: '68', unit: 'kg'),
-      ],
-      history: const [
-        // TODO(firebase): replace mock history with Firestore-backed patient visit history.
-        PatientHistoryEntry(
-          title: 'Follow-up Consultation',
-          subtitle:
-              'Reviewed blood sugar trends and updated medication advice.',
-          dateLabel: '12 Jul 2026',
-        ),
-        PatientHistoryEntry(
-          title: 'General Checkup',
-          subtitle: 'Mild seasonal allergy symptoms noted. No urgent findings.',
-          dateLabel: '28 Jun 2026',
-        ),
+        PatientVital(label: 'Blood Pressure', value: '—', unit: ''),
+        PatientVital(label: 'Heart Rate', value: '—', unit: ''),
+        PatientVital(label: 'Temperature', value: '—', unit: ''),
+        PatientVital(label: 'Weight', value: '—', unit: ''),
       ],
     );
   }
 
-  Future<void> savePrescription(DoctorPrescriptionModel prescription) async {
-    // TODO(firebase): save prescription to Firestore and link it to the patient visit timeline.
+  static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();
+
+  Future<String> savePrescription(DoctorPrescriptionModel prescription) async {
     if (prescription.diagnosis.trim().isEmpty) {
       throw ArgumentError('Diagnosis cannot be empty.');
     }
+    if (prescription.medicines.isEmpty) {
+      throw ArgumentError('Add at least one medicine.');
+    }
+
+    return _prescriptionRepository.create(
+      patientId: prescription.patientId,
+      patientName: prescription.patientName,
+      doctorId: prescription.doctorId,
+      doctorName: prescription.doctorName,
+      specialty: prescription.specialty,
+      diagnosis: prescription.diagnosis,
+      additionalNotes: prescription.additionalNotes,
+      medicines: [
+        for (final medicine in prescription.medicines)
+          PrescriptionRecordMedicine(
+            name: medicine.name,
+            dosage: medicine.dosage,
+            instructions: medicine.instructions,
+            durationDays: medicine.durationDays,
+            doseTimes: medicine.doseTimes,
+          ),
+      ],
+    );
   }
 
   static PatientRecordModel _buildMockPatientRecord({
@@ -157,20 +170,6 @@ class DoctorService {
         PatientVital(label: 'Heart Rate', value: '76', unit: 'bpm'),
         PatientVital(label: 'Temperature', value: '98.4', unit: 'F'),
         PatientVital(label: 'Weight', value: '68', unit: 'kg'),
-      ],
-      history: const <PatientHistoryEntry>[
-        // TODO(firebase): replace mock history with Firestore-backed patient visit history.
-        PatientHistoryEntry(
-          title: 'Follow-up Consultation',
-          subtitle:
-              'Reviewed blood sugar trends and updated medication advice.',
-          dateLabel: '12 Jul 2026',
-        ),
-        PatientHistoryEntry(
-          title: 'General Checkup',
-          subtitle: 'Mild seasonal allergy symptoms noted. No urgent findings.',
-          dateLabel: '28 Jun 2026',
-        ),
       ],
     );
   }

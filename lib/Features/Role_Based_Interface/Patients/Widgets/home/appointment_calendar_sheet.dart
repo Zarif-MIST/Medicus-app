@@ -29,13 +29,23 @@ class _AppointmentCalendarSheetState extends State<AppointmentCalendarSheet> {
   void initState() {
     super.initState();
     final DateTime today = DateTime.now();
+    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
     _visibleMonth = DateTime(today.year, today.month);
 
     if (widget.appointments.isNotEmpty) {
-      final List<BookedAppointment> sorted = [...widget.appointments]
+      final List<BookedAppointment> sortedAll = [...widget.appointments]
         ..sort((a, b) => a.date.compareTo(b.date));
-      final DateTime firstAppointment = sorted.first.date;
-      _selectedDay = DateTime(firstAppointment.year, firstAppointment.month, firstAppointment.day);
+
+      // Prefer the soonest upcoming appointment — a previous/past one
+      // shouldn't be what greets the patient when they open the calendar.
+      // Only fall back to the most recent past appointment if nothing is
+      // upcoming at all.
+      final List<BookedAppointment> upcoming = sortedAll
+          .where((a) => !DateTime(a.date.year, a.date.month, a.date.day).isBefore(todayOnly))
+          .toList();
+      final DateTime initialDate = upcoming.isNotEmpty ? upcoming.first.date : sortedAll.last.date;
+
+      _selectedDay = DateTime(initialDate.year, initialDate.month, initialDate.day);
       _visibleMonth = DateTime(_selectedDay!.year, _selectedDay!.month);
     }
   }

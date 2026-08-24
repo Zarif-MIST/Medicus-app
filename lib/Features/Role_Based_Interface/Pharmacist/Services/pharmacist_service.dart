@@ -1,48 +1,44 @@
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
+import 'package:medicus/Features/Prescriptions/Services/prescription_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
+import 'package:medicus/Utilities/prescription_qr.dart';
 
 class PharmacistService {
   PharmacistService._();
 
   static final PharmacistService instance = PharmacistService._();
 
-  static final List<_PharmacyPrescriptionRecord> _records = <_PharmacyPrescriptionRecord>[
-    _PharmacyPrescriptionRecord(
-      id: 'RX-1001',
-      patientId: '4821',
-      patientName: 'Tareq Hasan',
-      doctorName: 'Dr. Farhana Rahman',
-      status: 'Pending',
-      medicines: <String>['Metformin 500mg', 'Vitamin B Complex'],
-    ),
-    _PharmacyPrescriptionRecord(
-      id: 'RX-1002',
-      patientId: '5634',
-      patientName: 'Sadia Rahman',
-      doctorName: 'Dr. Kamrul Islam',
-      status: 'Pending',
-      medicines: <String>['Amoxicillin 250mg'],
-    ),
-  ];
+  static const PrescriptionRepository _repository = PrescriptionRepository();
+
+  PharmacyPrescriptionQueueItem _toQueueItem(PrescriptionRecord record) {
+    return PharmacyPrescriptionQueueItem(
+      id: record.id,
+      patientId: record.patientId,
+      patientName: record.patientName,
+      doctorName: record.doctorName,
+      status: record.status,
+      medicines: [for (final m in record.medicines) m.instructions.isEmpty ? '${m.name} — ${m.dosage}' : '${m.name} — ${m.dosage} (${m.instructions})'],
+    );
+  }
 
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptions() async {
-    // TODO(firebase): replace mock queue with Firestore prescriptions filtered by pending pharmacy fulfillment.
-    return [
-      for (final record in _records)
-        if (record.status == 'Pending')
-          record.toItem(),
-    ];
+    final records = await _repository.fetchByStatus(PrescriptionRecord.statusPending);
+    return [for (final record in records) _toQueueItem(record)];
   }
 
   Future<List<PharmacyPrescriptionQueueItem>> getDispensedPrescriptions() async {
-    return [
-      for (final record in _records)
-        if (record.status == 'Dispensed')
-          record.toItem(),
-    ];
+    final records = await _repository.fetchByStatus(PrescriptionRecord.statusDispensed);
+    return [for (final record in records) _toQueueItem(record)];
   }
 
   Future<int> getDispensedTodayCount() async {
-    return _records.where((record) => record.status == 'Dispensed').length;
+    final records = await _repository.fetchByStatus(PrescriptionRecord.statusDispensed);
+    final DateTime today = DateTime.now();
+    return records.where((record) {
+      final DateTime? dispensedAt = record.dispensedAt;
+      if (dispensedAt == null) return false;
+      return dispensedAt.year == today.year && dispensedAt.month == today.month && dispensedAt.day == today.day;
+    }).length;
   }
 
   Future<List<MedicineInventoryItem>> getInventory() async {
@@ -66,46 +62,25 @@ class PharmacistService {
     ];
   }
 
+  /// Called when the pharmacist scans a prescription's QR (see
+  /// [PrescriptionQrPayload]). The QR only carries a convenience copy of the
+  /// prescription — this looks the id up on Firestore (the real record) and
+  /// cross-checks the patient identity, so a scan is only accepted when it
+  /// verifies against what the doctor actually filed. Throws
+  /// [PrescriptionNotFoundException] or [PrescriptionVerificationException]
+  /// otherwise — callers should not treat those as "added to queue".
+  Future<PharmacyPrescriptionQueueItem> receiveScannedPrescription(PrescriptionQrPayload payload) async {
+    final PrescriptionRecord record = await _repository.verifyScan(
+      rxId: payload.rxId,
+      patientId: payload.patientId,
+    );
+    return _toQueueItem(record);
+  }
+
   Future<void> markDispensed(String prescriptionId) async {
-    // TODO(firebase): update prescription fulfillment status in Firestore.
     if (prescriptionId.trim().isEmpty) {
       throw ArgumentError('Prescription ID is required.');
     }
-
-    for (final record in _records) {
-      if (record.id == prescriptionId.trim()) {
-        record.status = 'Dispensed';
-        return;
-      }
-    }
-  }
-}
-
-class _PharmacyPrescriptionRecord {
-  _PharmacyPrescriptionRecord({
-    required this.id,
-    required this.patientId,
-    required this.patientName,
-    required this.doctorName,
-    required this.status,
-    required this.medicines,
-  });
-
-  final String id;
-  final String patientId;
-  final String patientName;
-  final String doctorName;
-  String status;
-  final List<String> medicines;
-
-  PharmacyPrescriptionQueueItem toItem() {
-    return PharmacyPrescriptionQueueItem(
-      id: id,
-      patientId: patientId,
-      patientName: patientName,
-      doctorName: doctorName,
-      status: status,
-      medicines: medicines,
-    );
+    await _repository.markDispensed(prescriptionId.trim());
   }
 }

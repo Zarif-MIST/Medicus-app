@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appointment_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_availability_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
@@ -39,7 +40,7 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       return;
     }
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record)),
+      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
     );
   }
 
@@ -73,6 +74,15 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text("Today's Appointments"),
+        actions: [
+          IconButton(
+            tooltip: 'My Availability',
+            icon: const Icon(Icons.event_available_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => DoctorAvailabilityScreen(doctor: widget.account)),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<List<DoctorAppointmentModel>>(
         future: _appointmentsFuture,

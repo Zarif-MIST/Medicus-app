@@ -90,6 +90,19 @@ class AuthRegistry {
     ];
   }
 
+  /// All registered doctor accounts — the source of truth for the
+  /// patient-facing "find a specialist" directory.
+  Future<List<AuthAccount>> doctorAccounts() async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: AuthRole.doctor.name)
+        .get();
+
+    return [
+      for (final doc in snapshot.docs) _fromFirestore(doc.id, doc.data()),
+    ];
+  }
+
   Future<AuthAccount?> login({
     required String userId,
     required String password,

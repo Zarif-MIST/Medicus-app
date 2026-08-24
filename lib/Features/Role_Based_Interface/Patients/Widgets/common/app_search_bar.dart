@@ -10,11 +10,15 @@ class AppSearchBar extends StatelessWidget {
     required this.hintText,
     this.onChanged,
     this.onSubmitted,
+    this.controller,
+    this.autofocus = false,
   });
 
   final String hintText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final TextEditingController? controller;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +31,8 @@ class AppSearchBar extends StatelessWidget {
         border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
       ),
       child: TextField(
+        controller: controller,
+        autofocus: autofocus,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
         textInputAction: TextInputAction.search,

@@ -1,29 +1,22 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/bangladesh_hospitals.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/common/app_search_bar.dart';
 
-class _HospitalContact {
-  const _HospitalContact({required this.name, required this.area, required this.phone});
+/// Bottom sheet listing nearby hospitals with a search bar to filter by
+/// name/area and a one-tap "call" action that opens the phone dialer
+/// (pre-filled, via the device's SIM) for that number.
+class EmergencyHospitalsSheet extends StatefulWidget {
+  const EmergencyHospitalsSheet({super.key});
 
-  final String name;
-  final String area;
-  final String phone;
+  @override
+  State<EmergencyHospitalsSheet> createState() => _EmergencyHospitalsSheetState();
 }
 
-// Placeholder contacts for the Emergency quick action — not a real hospital
-// directory. Swap for a real API/dataset before shipping.
-const List<_HospitalContact> _kNearbyHospitals = [
-  _HospitalContact(name: 'City Care Hospital', area: '1.2 km away', phone: '+15551010001'),
-  _HospitalContact(name: 'Green Life Medical Center', area: '2.4 km away', phone: '+15551010002'),
-  _HospitalContact(name: 'Sunrise General Hospital', area: '3.1 km away', phone: '+15551010003'),
-  _HospitalContact(name: 'Lakeview Emergency Center', area: '4.6 km away', phone: '+15551010004'),
-];
-
-/// Bottom sheet listing nearby hospitals with a one-tap "call" action that
-/// opens the phone dialer (pre-filled, via the device's SIM) for that number.
-class EmergencyHospitalsSheet extends StatelessWidget {
-  const EmergencyHospitalsSheet({super.key});
+class _EmergencyHospitalsSheetState extends State<EmergencyHospitalsSheet> {
+  String _query = '';
 
   Future<void> _call(BuildContext context, String phone) async {
     final Uri uri = Uri(scheme: 'tel', path: phone);
@@ -35,14 +28,28 @@ class EmergencyHospitalsSheet extends StatelessWidget {
     }
   }
 
+  List<HospitalContact> get _filtered {
+    final String query = _query.trim().toLowerCase();
+    if (query.isEmpty) return kNearbyHospitals;
+    return kNearbyHospitals
+        .where(
+          (h) =>
+              h.name.toLowerCase().contains(query) ||
+              h.area.toLowerCase().contains(query) ||
+              h.phone.contains(query),
+        )
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
+    final List<HospitalContact> hospitals = _filtered;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.85,
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.92,
       expand: false,
       builder: (context, scrollController) {
         return Container(
@@ -82,13 +89,18 @@ class EmergencyHospitalsSheet extends StatelessWidget {
                       children: [
                         Text('Nearby Hospitals', style: Theme.of(context).textTheme.titleLarge),
                         Text(
-                          'Tap call to reach them directly.',
+                          '${kNearbyHospitals.length} hospitals across Bangladesh · tap call to reach them.',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
                         ),
                       ],
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 14),
+              AppSearchBar(
+                hintText: 'Search by hospital, area, or number',
+                onChanged: (value) => setState(() => _query = value),
               ),
               const SizedBox(height: 10),
               Container(
@@ -103,7 +115,7 @@ class EmergencyHospitalsSheet extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Demo contacts for preview only — not a real hospital directory.',
+                        'Demo directory — verify a number before relying on it in a real emergency.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: MColors.primaryColor,
                           fontWeight: FontWeight.w600,
@@ -114,10 +126,20 @@ class EmergencyHospitalsSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              for (final _HospitalContact hospital in _kNearbyHospitals) ...[
-                _HospitalTile(hospital: hospital, onCall: () => _call(context, hospital.phone)),
-                const SizedBox(height: 10),
-              ],
+              if (hospitals.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    'No hospitals match "$_query".',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  ),
+                )
+              else
+                for (final HospitalContact hospital in hospitals) ...[
+                  _HospitalTile(hospital: hospital, onCall: () => _call(context, hospital.phone)),
+                  const SizedBox(height: 10),
+                ],
             ],
           ),
         );
@@ -129,7 +151,7 @@ class EmergencyHospitalsSheet extends StatelessWidget {
 class _HospitalTile extends StatelessWidget {
   const _HospitalTile({required this.hospital, required this.onCall});
 
-  final _HospitalContact hospital;
+  final HospitalContact hospital;
   final VoidCallback onCall;
 
   @override
@@ -166,8 +188,10 @@ class _HospitalTile extends StatelessWidget {
               children: [
                 Text(hospital.name, style: Theme.of(context).textTheme.titleSmall),
                 Text(
-                  hospital.area,
+                  '${hospital.area} · ${hospital.phone}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -190,3 +214,4 @@ class _HospitalTile extends StatelessWidget {
     );
   }
 }
+

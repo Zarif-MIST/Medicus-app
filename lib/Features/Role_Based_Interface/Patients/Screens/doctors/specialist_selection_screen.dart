@@ -9,102 +9,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShap
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/doctor_profile_screen.dart';
-
-// Mock data — replaced by a Firestore query (users collection, role=doctor)
-// once the data layer is wired up. One doctor per specialty so every chip
-// returns a real result.
-const List<DoctorSummary> _mockDoctors = [
-  DoctorSummary(
-    name: 'Dr. Kamrul Islam',
-    specialty: 'General',
-    hospital: 'United Hospital, Dhaka',
-    rating: 4.6,
-    experienceYears: 8,
-    fee: 500,
-    nextAvailable: 'Tomorrow 10 AM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Farhana Rahman',
-    specialty: 'Cardiologist',
-    hospital: 'Square Hospital, Dhaka',
-    rating: 4.8,
-    experienceYears: 12,
-    fee: 800,
-    nextAvailable: 'Today 5 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Nusrat Jahan',
-    specialty: 'Dermatologist',
-    hospital: 'Apollo Hospital, Dhaka',
-    rating: 4.9,
-    experienceYears: 15,
-    fee: 1000,
-    nextAvailable: 'Today 7 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Shafiul Alam',
-    specialty: 'Pediatrician',
-    hospital: 'Dhaka Shishu Hospital',
-    rating: 4.7,
-    experienceYears: 10,
-    fee: 600,
-    nextAvailable: 'Today 6 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Mahbub Hasan',
-    specialty: 'Orthopedic',
-    hospital: 'Square Hospital, Dhaka',
-    rating: 4.5,
-    experienceYears: 14,
-    fee: 900,
-    nextAvailable: 'Tomorrow 11 AM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Sadia Afrin',
-    specialty: 'Dentist',
-    hospital: 'Smile Dental Care',
-    rating: 4.8,
-    experienceYears: 9,
-    fee: 700,
-    nextAvailable: 'Today 4 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Rehana Begum',
-    specialty: 'Gynecologist',
-    hospital: 'LabAid Hospital, Dhaka',
-    rating: 4.9,
-    experienceYears: 18,
-    fee: 900,
-    nextAvailable: 'Tomorrow 9 AM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Anisur Rahman',
-    specialty: 'ENT',
-    hospital: 'Apollo Hospital, Dhaka',
-    rating: 4.6,
-    experienceYears: 11,
-    fee: 650,
-    nextAvailable: 'Today 3 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Fahmida Sultana',
-    specialty: 'Psychiatrist',
-    hospital: 'United Hospital, Dhaka',
-    rating: 4.7,
-    experienceYears: 7,
-    fee: 750,
-    nextAvailable: 'Tomorrow 2 PM',
-  ),
-  DoctorSummary(
-    name: 'Dr. Zahidul Karim',
-    specialty: 'Neurologist',
-    hospital: 'Square Hospital, Dhaka',
-    rating: 4.8,
-    experienceYears: 16,
-    fee: 1200,
-    nextAvailable: 'Today 8 PM',
-  ),
-];
+import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/doctor_directory.dart';
 
 class SpecialistSelectionScreen extends StatefulWidget {
   const SpecialistSelectionScreen({
@@ -122,7 +27,31 @@ class SpecialistSelectionScreen extends StatefulWidget {
 }
 
 class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
+  static const DoctorDirectoryService _directoryService = DoctorDirectoryService();
+
   Specialty? _selectedSpecialty;
+  List<DoctorSummary> _allDoctors = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final List<DoctorSummary> doctors = await _directoryService.fetchAllDoctors();
+      if (!mounted) return;
+      setState(() {
+        _allDoctors = doctors;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
 
   void _handleSpecialtyTap(Specialty specialty) {
     setState(() {
@@ -143,11 +72,24 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
 
   List<DoctorSummary> get _visibleDoctors {
     if (_selectedSpecialty == null) {
-      return _mockDoctors.take(3).toList();
+      return _allDoctors.take(3).toList();
     }
-    return _mockDoctors
+    return _allDoctors
         .where((d) => d.specialty == _selectedSpecialty!.name)
         .toList();
+  }
+
+  /// Only appointments today or later, soonest first — a past booking
+  /// should drop off this list once its date has gone by, not stick around
+  /// forever alongside genuinely upcoming ones.
+  List<BookedAppointment> get _upcomingAppointments {
+    final DateTime today = DateTime.now();
+    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
+    final List<BookedAppointment> upcoming = widget.appointments
+        .where((a) => !DateTime(a.date.year, a.date.month, a.date.day).isBefore(todayOnly))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    return upcoming;
   }
 
   @override
@@ -156,6 +98,7 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
     final double pad = Sizes.responsivePadding(context);
     final theme = Theme.of(context);
     final List<DoctorSummary> doctors = _visibleDoctors;
+    final List<BookedAppointment> upcomingAppointments = _upcomingAppointments;
 
     return Container(
       color: isDark ? const Color(0xFF181818) : Colors.white,
@@ -201,12 +144,12 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (widget.appointments.isNotEmpty) ...[
+                  if (upcomingAppointments.isNotEmpty) ...[
                     Text('Upcoming Appointments', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 14),
-                    for (int i = 0; i < widget.appointments.length; i++) ...[
+                    for (int i = 0; i < upcomingAppointments.length; i++) ...[
                       if (i != 0) const SizedBox(height: 10),
-                      _UpcomingAppointmentCard(appointment: widget.appointments[i]),
+                      _UpcomingAppointmentCard(appointment: upcomingAppointments[i]),
                     ],
                     SizedBox(height: pad),
                   ],
@@ -223,11 +166,18 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
                     style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 14),
-                  if (doctors.isEmpty)
+                  if (_loading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator(color: MColors.primaryColor)),
+                    )
+                  else if (doctors.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Text(
-                        'No doctors found for this specialty yet.',
+                        _selectedSpecialty == null
+                            ? 'No doctors have registered on Medicus yet.'
+                            : 'No doctors found for this specialty yet.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),

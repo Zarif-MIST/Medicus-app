@@ -4,6 +4,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appo
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/empty_appointments.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -99,6 +100,10 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           }
 
           final appointments = snapshot.data!;
+          if (appointments.isEmpty) {
+            return const Center(child: EmptyAppointmentsPlaceholder());
+          }
+
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             itemCount: appointments.length,

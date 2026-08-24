@@ -6,16 +6,36 @@ import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/appointment_confirmation_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Services/appointment_service.dart';
 
-// Mock slots — same options every day until real availability is wired up.
-const List<String> _mockTimeSlots = [
-  '9:00 AM',
-  '10:00 AM',
-  '11:00 AM',
-  '2:00 PM',
-  '4:00 PM',
-  '6:00 PM',
-];
+/// Clinic hours every doctor sees patients within — fixed across the app.
+const int _clinicStartMinutes = 8 * 60;
+const int _clinicEndMinutes = 14 * 60;
+
+/// Builds the day's bookable time labels (e.g. "9:00 AM") by stepping from
+/// 8:00 AM to 2:00 PM in increments of the doctor's average consultation
+/// time, so a slower doctor gets fewer, longer slots and a faster one gets
+/// more, shorter slots — the last slot always finishes by 2:00 PM.
+List<String> _generateTimeSlots(int consultationMinutes) {
+  final int step = consultationMinutes.clamp(1, 120);
+  final List<String> slots = [];
+  for (
+    int minutes = _clinicStartMinutes;
+    minutes + step <= _clinicEndMinutes;
+    minutes += step
+  ) {
+    slots.add(_formatTimeLabel(minutes));
+  }
+  return slots;
+}
+
+String _formatTimeLabel(int minutesFromMidnight) {
+  final int hour24 = minutesFromMidnight ~/ 60;
+  final int minute = minutesFromMidnight % 60;
+  final String period = hour24 >= 12 ? 'PM' : 'AM';
+  final int hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+  return '$hour12:${minute.toString().padLeft(2, '0')} $period';
+}
 
 class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({
@@ -39,13 +59,32 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     (i) => DateTime.now().add(Duration(days: i)),
   );
 
+  late final List<String> _timeSlots = _generateTimeSlots(
+    widget.doctor.avgConsultationMinutes,
+  );
+
   int _selectedDateIndex = 0;
   String? _selectedSlot;
+  late Future<Set<String>> _bookedTimesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _bookedTimesFuture = _loadBookedTimes();
+  }
+
+  Future<Set<String>> _loadBookedTimes() {
+    return AppointmentService.instance.getBookedTimesForDoctor(
+      doctorId: widget.doctor.id,
+      date: _dates[_selectedDateIndex],
+    );
+  }
 
   void _selectDate(int index) {
     setState(() {
       _selectedDateIndex = index;
       _selectedSlot = null;
+      _bookedTimesFuture = _loadBookedTimes();
     });
   }
 
@@ -164,19 +203,46 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 ),
                 SizedBox(height: pad * 0.8),
                 Text('Select Time', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  'Clinic hours 8:00 AM – 2:00 PM • ~${widget.doctor.avgConsultationMinutes} min per patient',
+                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    for (final slot in _mockTimeSlots)
-                      _SlotChip(
-                        label: slot,
-                        selected: slot == _selectedSlot,
-                        isDark: isDark,
-                        onTap: () => _selectSlot(slot),
-                      ),
-                  ],
+                FutureBuilder<Set<String>>(
+                  future: _bookedTimesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: MColors.primaryColor,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final Set<String> bookedTimes =
+                        snapshot.data ?? <String>{};
+
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        for (final slot in _timeSlots)
+                          _SlotChip(
+                            label: slot,
+                            selected: slot == _selectedSlot,
+                            booked: bookedTimes.contains(slot),
+                            isDark: isDark,
+                            onTap: bookedTimes.contains(slot)
+                                ? null
+                                : () => _selectSlot(slot),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -255,30 +321,65 @@ class _DateChip extends StatelessWidget {
 }
 
 class _SlotChip extends StatelessWidget {
-  const _SlotChip({required this.label, required this.selected, required this.isDark, required this.onTap});
+  const _SlotChip({
+    required this.label,
+    required this.selected,
+    required this.isDark,
+    required this.onTap,
+    this.booked = false,
+  });
 
   final String label;
   final bool selected;
   final bool isDark;
-  final VoidCallback onTap;
+  final bool booked;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final Color background = booked
+        ? (isDark ? const Color(0xFF141414) : Colors.grey.shade200)
+        : selected
+        ? MColors.primaryColor
+        : (isDark ? const Color(0xFF1F1F1F) : Colors.white);
+    final Color textColor = booked
+        ? Colors.grey
+        : selected
+        ? Colors.white
+        : (isDark ? Colors.white70 : Colors.black87);
+
     return Material(
-      color: selected ? MColors.primaryColor : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
+      color: background,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                  decoration: booked ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              if (booked) ...[
+                const SizedBox(height: 2),
+                const Text(
+                  'Booked',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

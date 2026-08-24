@@ -48,6 +48,29 @@ class AppointmentService {
     );
   }
 
+  /// Time labels already booked with this doctor on [date] — used to keep
+  /// two patients from picking the same clinic slot.
+  Future<Set<String>> getBookedTimesForDoctor({
+    required String doctorId,
+    required DateTime date,
+  }) async {
+    final DateTime startOfDay = DateTime(date.year, date.month, date.day);
+    final DateTime startOfNextDay = startOfDay.add(const Duration(days: 1));
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('appointments')
+        .where('doctorId', isEqualTo: doctorId)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThan: Timestamp.fromDate(startOfNextDay))
+        .get();
+
+    return {
+      for (final doc in snapshot.docs)
+        if ((doc.data()['time'] as String?)?.isNotEmpty ?? false)
+          doc.data()['time'] as String,
+    };
+  }
+
   Future<List<BookedAppointment>> getUpcomingAppointments(
     String patientId,
   ) async {

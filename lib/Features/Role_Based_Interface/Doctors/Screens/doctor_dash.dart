@@ -57,6 +57,7 @@ class _HomeShellState extends State<HomeShell> {
       DoctorHomeScreen(
         account: widget.account,
         onOpenScanner: () => setState(() => _index = 2),
+        onOpenAppointments: () => setState(() => _index = 1),
       ),
       DoctorAppointmentsScreen(account: widget.account),
       _index == 2 ? Scanqr(account: widget.account) : const SizedBox.shrink(),

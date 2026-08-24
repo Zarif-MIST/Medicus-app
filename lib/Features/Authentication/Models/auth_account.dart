@@ -23,6 +23,7 @@ class AuthAccount {
     this.pharmacyLat,
     this.pharmacyLng,
     this.isVerified = false,
+    this.avgConsultationMinutes,
   });
 
   final String? firebaseUid;
@@ -47,7 +48,13 @@ class AuthAccount {
   final double? pharmacyLng;
   final bool isVerified;
 
+  /// Minutes a doctor typically spends per patient — set at registration.
+  /// Doctors registered before this field existed fall back to 5 minutes.
+  final int? avgConsultationMinutes;
+
   String get fullName => '$firstName $lastName'.trim();
+
+  int get consultationMinutes => avgConsultationMinutes ?? 5;
 
   String get maskedEmail {
     final int atIndex = email.indexOf('@');
@@ -80,6 +87,7 @@ class AuthAccount {
     double? pharmacyLat,
     double? pharmacyLng,
     bool? isVerified,
+    int? avgConsultationMinutes,
   }) {
     return AuthAccount(
       firebaseUid: firebaseUid ?? this.firebaseUid,
@@ -104,6 +112,8 @@ class AuthAccount {
       pharmacyLat: pharmacyLat ?? this.pharmacyLat,
       pharmacyLng: pharmacyLng ?? this.pharmacyLng,
       isVerified: isVerified ?? this.isVerified,
+      avgConsultationMinutes:
+          avgConsultationMinutes ?? this.avgConsultationMinutes,
     );
   }
 }

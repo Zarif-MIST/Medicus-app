@@ -5,6 +5,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dar
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 class PharmacistDashboardScreen extends StatelessWidget {
   const PharmacistDashboardScreen({super.key, required this.account});
@@ -84,22 +85,26 @@ class _PharmacistShellState extends State<_PharmacistShell> {
       ProfileScreen(account: widget.account),
     ];
 
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          IndexedStack(index: _index, children: pages),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: _onNavTap,
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => _onNavTap(0),
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            IndexedStack(index: _index, children: pages),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: _onNavTap,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

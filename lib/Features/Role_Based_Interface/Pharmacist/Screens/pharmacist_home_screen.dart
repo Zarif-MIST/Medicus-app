@@ -75,7 +75,7 @@ class PharmacistHomeScreenState extends State<PharmacistHomeScreen> {
   Future<void> _openDispensedToday() async {
     await Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const DispensedTodayScreen()));
+    ).push(MaterialPageRoute(builder: (_) => const DispensedLogScreen()));
   }
 
   String get _todayLabel {

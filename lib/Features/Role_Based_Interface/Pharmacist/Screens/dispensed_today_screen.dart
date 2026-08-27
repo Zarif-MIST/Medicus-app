@@ -4,57 +4,60 @@ import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharma
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
-class DispensedTodayScreen extends StatefulWidget {
-  const DispensedTodayScreen({super.key});
+/// Full, ever-growing history of every prescription this pharmacist has
+/// dispensed — newest first, each entry stamped with the date and time it
+/// was dispensed. Opened from the Home screen's "Dispensed Today" tile.
+class DispensedLogScreen extends StatefulWidget {
+  const DispensedLogScreen({super.key});
 
   @override
-  State<DispensedTodayScreen> createState() => _DispensedTodayScreenState();
+  State<DispensedLogScreen> createState() => _DispensedLogScreenState();
 }
 
-class _DispensedTodayScreenState extends State<DispensedTodayScreen> {
+class _DispensedLogScreenState extends State<DispensedLogScreen> {
   late Future<List<PharmacyPrescriptionQueueItem>> _dispensedFuture;
 
-  static const List<String> _weekdays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
-
   static const List<String> _months = [
-    'January',
-    'February',
-    'March',
-    'April',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
     'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
   void initState() {
     super.initState();
-    _dispensedFuture = PharmacistService.instance.getDispensedToday();
+    _dispensedFuture = _load();
   }
 
-  String get _formattedToday {
-    final DateTime now = DateTime.now();
-    return '${_weekdays[now.weekday - 1]}, ${now.day} ${_months[now.month - 1]} ${now.year}';
+  Future<List<PharmacyPrescriptionQueueItem>> _load() async {
+    final List<PharmacyPrescriptionQueueItem> items = await PharmacistService
+        .instance
+        .getDispensedPrescriptions();
+    final List<PharmacyPrescriptionQueueItem> sorted = [...items]
+      ..sort((a, b) {
+        final DateTime aTime =
+            a.dispensedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final DateTime bTime =
+            b.dispensedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+    return sorted;
   }
 
-  String _formatTime(DateTime timestamp) {
+  String _formatDateTime(DateTime timestamp) {
     final int hour = timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12;
     final String minute = timestamp.minute.toString().padLeft(2, '0');
     final String period = timestamp.hour < 12 ? 'AM' : 'PM';
-    return '$hour:$minute $period';
+    return '${timestamp.day} ${_months[timestamp.month - 1]} ${timestamp.year}, $hour:$minute $period';
   }
 
   @override
@@ -68,7 +71,7 @@ class _DispensedTodayScreenState extends State<DispensedTodayScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Dispensed Today'),
+        title: const Text('Dispensed Log'),
       ),
       body: FutureBuilder<List<PharmacyPrescriptionQueueItem>>(
         future: _dispensedFuture,
@@ -118,7 +121,7 @@ class _DispensedTodayScreenState extends State<DispensedTodayScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _formattedToday,
+                            'All-time dispensing history',
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
@@ -156,7 +159,7 @@ class _DispensedTodayScreenState extends State<DispensedTodayScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Nothing dispensed yet today.',
+                        'Nothing dispensed yet.',
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -171,7 +174,7 @@ class _DispensedTodayScreenState extends State<DispensedTodayScreen> {
                     isDark: isDark,
                     timeLabel: item.dispensedAt == null
                         ? null
-                        : _formatTime(item.dispensedAt!),
+                        : _formatDateTime(item.dispensedAt!),
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -213,6 +216,7 @@ class _DispensedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: 18,
@@ -259,6 +263,7 @@ class _DispensedCard extends StatelessWidget {
                   ),
                   child: Text(
                     timeLabel!,
+                    textAlign: TextAlign.right,
                     style: const TextStyle(
                       color: Colors.green,
                       fontWeight: FontWeight.w700,

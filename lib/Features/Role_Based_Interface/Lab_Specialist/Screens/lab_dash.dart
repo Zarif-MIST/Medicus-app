@@ -5,6 +5,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dar
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 class LabDashboardScreen extends StatelessWidget {
   const LabDashboardScreen({super.key, required this.account});
@@ -70,22 +71,26 @@ class _LabShellState extends State<_LabShell> {
       ProfileScreen(account: widget.account),
     ];
 
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          IndexedStack(index: _index, children: pages),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: _onNavTap,
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => _onNavTap(0),
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            IndexedStack(index: _index, children: pages),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: _onNavTap,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

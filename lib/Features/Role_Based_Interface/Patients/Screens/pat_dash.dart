@@ -12,6 +12,7 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/profile/p
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient_profile_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 // TODO: replace with the logged-in patient's real userId once every screen
 // consistently receives a fully-populated AuthAccount — matches the mock id
@@ -236,31 +237,35 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
       ),
     ];
 
-    return Scaffold(
-      // extendBody lets page content flow behind the nav bar so the
-      // BackdropFilter actually has something colorful to blur.
-      extendBody: true,
-      body: Stack(
-        children: [
-          pages[_index],
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: (i) {
-                setState(() => _index = i);
-                if (i == 0) {
-                  _loadProfileStatus();
-                  _loadPrescriptions();
-                  _loadAppointments();
-                }
-              },
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => setState(() => _index = 0),
+      child: Scaffold(
+        // extendBody lets page content flow behind the nav bar so the
+        // BackdropFilter actually has something colorful to blur.
+        extendBody: true,
+        body: Stack(
+          children: [
+            pages[_index],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: (i) {
+                  setState(() => _index = i);
+                  if (i == 0) {
+                    _loadProfileStatus();
+                    _loadPrescriptions();
+                    _loadAppointments();
+                  }
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

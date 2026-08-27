@@ -16,7 +16,8 @@ class EmailVerificationScreen extends StatefulWidget {
   final AuthAccount account;
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
@@ -53,7 +54,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 decoration: BoxDecoration(
                   color: dark ? const Color(0xFF181818) : Colors.white,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: MColors.primaryColor.withValues(alpha: 0.12)),
+                  border: Border.all(
+                    color: MColors.primaryColor.withValues(alpha: 0.12),
+                  ),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x1A000000),
@@ -76,9 +79,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       Text(
                         'Verify your email',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -89,7 +91,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       const SizedBox(height: 18),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: MColors.primaryColor.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(14),
@@ -97,10 +102,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('User ID', style: Theme.of(context).textTheme.bodyMedium),
+                            Text(
+                              'User ID',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
                             Text(
                               widget.account.userId,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
@@ -110,23 +119,33 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         controller: _codeController,
                         keyboardType: TextInputType.number,
                         maxLength: 4,
-                        inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                        validator: (String? value) => AuthValidators.numericCode(value, length: 4),
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (String? value) =>
+                            AuthValidators.numericCode(value, length: 4),
                         decoration: InputDecoration(
                           labelText: '4-digit verification code',
                           counterText: '',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: MColors.primaryColor),
+                            borderSide: const BorderSide(
+                              color: MColors.primaryColor,
+                            ),
                           ),
-                          helperText: 'Use the latest code sent to your email inbox.',
+                          helperText:
+                              'Use the latest code sent to your email inbox.',
                         ),
                       ),
                       const SizedBox(height: 10),
                       TextButton(
                         onPressed: () async {
-                          await AuthRegistry.instance.updateVerificationCode(userId: widget.account.userId);
+                          await AuthRegistry.instance.updateVerificationCode(
+                            userId: widget.account.userId,
+                          );
                           Get.snackbar(
                             'Verification code refreshed',
                             'A new code is ready for ${widget.account.maskedEmail}.',
@@ -144,7 +163,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                             backgroundColor: MColors.primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                           child: const Text('Confirm verification'),
                         ),

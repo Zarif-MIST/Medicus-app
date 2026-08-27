@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:get/get.dart';
+import 'package:medicus/Dev/patient_test_data_seeder.dart';
 import 'package:medicus/Features/Authentication/OnBoard/OnBoard_Controller.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -28,8 +30,7 @@ class OnBoardingScreen extends StatelessWidget {
                 screenHeight: screenHeight,
                 images: 'assets/Images/OnBoard/Doctors-bro.svg',
                 title: 'Welcome to Medicus',
-                subtitle:
-                    'Your health companion app for better Healthcare.',
+                subtitle: 'Your health companion app for better Healthcare.',
               ),
               OnBoardPage(
                 screenWidth: screenWidth,
@@ -69,14 +70,31 @@ class OnBoardingScreen extends StatelessWidget {
                   child: Text(
                     'Skip',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
           DotNav(),
+          if (kDebugMode)
+            Positioned(
+              left: 10,
+              bottom: Sizes.getBottomNavBarHeight(context),
+              child: IconButton(
+                tooltip: 'Seed Test Data (Debug)',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PatientTestDataSeederScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.bug_report_outlined),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black.withValues(alpha: 0.06),
+                ),
+              ),
+            ),
           Positioned(
             right: 10,
             bottom: Sizes.getBottomNavBarHeight(context),

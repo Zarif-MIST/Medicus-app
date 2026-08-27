@@ -102,17 +102,25 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
       ..stop()
       ..value = 0;
 
-    _positionAnim = Tween<double>(begin: from.toDouble(), end: to.toDouble())
-        .animate(_morphController);
+    _positionAnim = Tween<double>(
+      begin: from.toDouble(),
+      end: to.toDouble(),
+    ).animate(_morphController);
 
     // The blob widens mid-travel then relaxes back — a liquid bulge.
     _stretchAnim = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 45,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 55,
       ),
     ]).animate(_morphController);
@@ -136,7 +144,11 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = widget.accentColor ?? (isDark ? const Color.fromARGB(255, 255, 17, 0) : const Color.fromARGB(255, 82, 7, 2));
+    final accent =
+        widget.accentColor ??
+        (isDark
+            ? const Color.fromARGB(255, 255, 17, 0)
+            : const Color.fromARGB(255, 82, 7, 2));
     final radius = widget.height;
 
     // Settings for the main bar body — clear, frosted, barely tinted.
@@ -190,7 +202,9 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar>
                     // The glass bar body itself.
                     Positioned.fill(
                       child: LiquidGlass(
-                        shape: LiquidRoundedSuperellipse(borderRadius: radius / 2),
+                        shape: LiquidRoundedSuperellipse(
+                          borderRadius: radius / 2,
+                        ),
                         child: const SizedBox.expand(),
                       ),
                     ),
@@ -270,9 +284,10 @@ class _NavItemButtonState extends State<_NavItemButton> {
 
   @override
   Widget build(BuildContext context) {
-    final scaleAnim = Tween<double>(begin: 1.0, end: 1.12)
-        .chain(CurveTween(curve: Curves.easeOutBack))
-        .animate(widget.controller);
+    final scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).chain(CurveTween(curve: Curves.easeOutBack)).animate(widget.controller);
 
     // Selected sits on top of the accent-tinted glass blob, which is
     // saturated/dark enough in both themes for white to stay legible.
@@ -302,7 +317,9 @@ class _NavItemButtonState extends State<_NavItemButton> {
                 Transform.scale(
                   scale: scaleAnim.value,
                   child: Icon(
-                    widget.selected ? (widget.item.selectedIcon ?? widget.item.icon) : widget.item.icon,
+                    widget.selected
+                        ? (widget.item.selectedIcon ?? widget.item.icon)
+                        : widget.item.icon,
                     color: widget.selected ? selectedColor : unselectedColor,
                     size: 24,
                   ),
@@ -312,7 +329,9 @@ class _NavItemButtonState extends State<_NavItemButton> {
                   style: TextStyle(
                     color: widget.selected ? selectedColor : unselectedColor,
                     fontSize: 10,
-                    fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w600,
+                    fontWeight: widget.selected
+                        ? FontWeight.w700
+                        : FontWeight.w600,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(top: 3),

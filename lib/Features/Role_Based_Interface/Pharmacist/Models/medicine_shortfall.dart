@@ -21,9 +21,11 @@ class InsufficientStockException implements Exception {
 
   String get message {
     return shortfalls
-        .map((MedicineShortfall s) => s.isOutOfStock
-            ? '${s.medicineName} is out of stock'
-            : '${s.medicineName}: need ${s.requiredQuantity}, only ${s.availableStock} left')
+        .map(
+          (MedicineShortfall s) => s.isOutOfStock
+              ? '${s.medicineName} is out of stock'
+              : '${s.medicineName}: need ${s.requiredQuantity}, only ${s.availableStock} left',
+        )
         .join('\n');
   }
 

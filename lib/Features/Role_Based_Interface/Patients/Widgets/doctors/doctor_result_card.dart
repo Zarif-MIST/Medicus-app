@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class DoctorSummary {
   const DoctorSummary({
-    required this.id,
+    required this.doctorId,
     required this.name,
     required this.specialty,
     required this.hospital,
@@ -13,10 +14,12 @@ class DoctorSummary {
     required this.experienceYears,
     required this.fee,
     required this.nextAvailable,
-    this.avgConsultationMinutes = 5,
   });
 
-  final String id;
+  /// Empty for the (soon to be retired) hand-authored demo doctors; a real
+  /// registered doctor's `AuthAccount.userId` otherwise — required for a
+  /// booking to reach that doctor's real appointment list.
+  final String doctorId;
   final String name;
   final String specialty;
   final String hospital;
@@ -25,9 +28,29 @@ class DoctorSummary {
   final int fee;
   final String nextAvailable;
 
-  /// Minutes this doctor typically spends per patient — drives how many
-  /// bookable slots fit between their 8:00 AM–2:00 PM clinic hours.
-  final int avgConsultationMinutes;
+  /// Registration only collects a doctor's name and specialty today — the
+  /// hospital/fee/experience/rating/availability fields below don't exist
+  /// in the schema yet, so real doctors show honest placeholders for them
+  /// instead of fabricated numbers.
+  factory DoctorSummary.fromAuthAccount(AuthAccount account) {
+    final String rawName = account.fullName.trim();
+    final String displayName = rawName.isEmpty
+        ? 'Dr. Unnamed'
+        : (rawName.toLowerCase().startsWith('dr') ? rawName : 'Dr. $rawName');
+
+    return DoctorSummary(
+      doctorId: account.userId,
+      name: displayName,
+      specialty: (account.specialty ?? '').trim().isEmpty
+          ? 'General'
+          : account.specialty!.trim(),
+      hospital: '',
+      rating: 0,
+      experienceYears: 0,
+      fee: 0,
+      nextAvailable: 'Book to request a time',
+    );
+  }
 }
 
 class DoctorResultCard extends StatelessWidget {
@@ -87,41 +110,52 @@ class DoctorResultCard extends StatelessWidget {
                         Text(doctor.name, style: theme.textTheme.titleSmall),
                         const SizedBox(height: 2),
                         Text(
-                          '${doctor.specialty} • ${doctor.experienceYears} yrs exp',
+                          doctor.experienceYears > 0
+                              ? '${doctor.specialty} • ${doctor.experienceYears} yrs exp'
+                              : doctor.specialty,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: Colors.grey,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          doctor.hospital,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
+                        if (doctor.hospital.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            doctor.hospital,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
+                        ],
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(
-                              Icons.star,
-                              size: 14,
-                              color: Colors.amber,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              doctor.rating.toStringAsFixed(1),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w700,
+                            if (doctor.rating > 0) ...[
+                              const Icon(
+                                Icons.star,
+                                size: 14,
+                                color: Colors.amber,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '৳${doctor.fee}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: MColors.primaryColor,
+                              const SizedBox(width: 4),
+                              Text(
+                                doctor.rating.toStringAsFixed(1),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            Flexible(
+                              child: Text(
+                                doctor.fee > 0
+                                    ? '৳${doctor.fee}'
+                                    : 'Fee on request',
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: MColors.primaryColor,
+                                ),
                               ),
                             ),
                           ],

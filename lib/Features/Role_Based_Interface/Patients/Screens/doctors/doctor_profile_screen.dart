@@ -1,51 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
+import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
+import 'package:medicus/Features/Appointments/Services/doctor_availability_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/appointment_confirmation_screen.dart';
-import 'package:medicus/Features/Role_Based_Interface/Patients/Services/appointment_service.dart';
-
-/// Clinic hours every doctor sees patients within — fixed across the app.
-const int _clinicStartMinutes = 8 * 60;
-const int _clinicEndMinutes = 14 * 60;
-
-/// Builds the day's bookable time labels (e.g. "9:00 AM") by stepping from
-/// 8:00 AM to 2:00 PM in increments of the doctor's average consultation
-/// time, so a slower doctor gets fewer, longer slots and a faster one gets
-/// more, shorter slots — the last slot always finishes by 2:00 PM.
-List<String> _generateTimeSlots(int consultationMinutes) {
-  final int step = consultationMinutes.clamp(1, 120);
-  final List<String> slots = [];
-  for (
-    int minutes = _clinicStartMinutes;
-    minutes + step <= _clinicEndMinutes;
-    minutes += step
-  ) {
-    slots.add(_formatTimeLabel(minutes));
-  }
-  return slots;
-}
-
-String _formatTimeLabel(int minutesFromMidnight) {
-  final int hour24 = minutesFromMidnight ~/ 60;
-  final int minute = minutesFromMidnight % 60;
-  final String period = hour24 >= 12 ? 'PM' : 'AM';
-  final int hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
-  return '$hour12:${minute.toString().padLeft(2, '0')} $period';
-}
 
 class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({
     super.key,
-    required this.account,
     required this.doctor,
     required this.onBooked,
   });
 
-  final AuthAccount account;
   final DoctorSummary doctor;
   final ValueChanged<BookedAppointment> onBooked;
 
@@ -54,53 +24,87 @@ class DoctorProfileScreen extends StatefulWidget {
 }
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
+  static const DoctorAvailabilityRepository _availabilityRepository =
+      DoctorAvailabilityRepository();
+  static const AppointmentRepository _appointmentRepository =
+      AppointmentRepository();
+
   late final List<DateTime> _dates = List.generate(
     7,
     (i) => DateTime.now().add(Duration(days: i)),
   );
 
-  late final List<String> _timeSlots = _generateTimeSlots(
-    widget.doctor.avgConsultationMinutes,
-  );
-
   int _selectedDateIndex = 0;
-  String? _selectedSlot;
-  late Future<Set<String>> _bookedTimesFuture;
+  DoctorAvailabilityWindow? _selectedWindow;
+
+  bool _loading = true;
+  List<DoctorAvailabilityWindow> _windows = [];
+  Map<String, int> _bookedCountByWindowId = {};
 
   @override
   void initState() {
     super.initState();
-    _bookedTimesFuture = _loadBookedTimes();
+    _load();
   }
 
-  Future<Set<String>> _loadBookedTimes() {
-    return AppointmentService.instance.getBookedTimesForDoctor(
-      doctorId: widget.doctor.id,
-      date: _dates[_selectedDateIndex],
-    );
+  Future<void> _load() async {
+    try {
+      final List<DoctorAvailabilityWindow> windows =
+          await _availabilityRepository.fetchForDoctor(widget.doctor.doctorId);
+      final counts = <String, int>{};
+      for (final window in windows) {
+        for (final DateTime date in _dates) {
+          if (window.weekday != date.weekday) continue;
+          final int count = await _appointmentRepository.countBookingsForWindow(
+            doctorId: widget.doctor.doctorId,
+            windowId: window.id,
+            date: date,
+          );
+          counts['${window.id}_${date.year}${date.month}${date.day}'] = count;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _windows = windows;
+        _bookedCountByWindowId = counts;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  List<DoctorAvailabilityWindow> get _windowsForSelectedDate {
+    final DateTime date = _dates[_selectedDateIndex];
+    return _windows.where((w) => w.weekday == date.weekday).toList();
+  }
+
+  int _bookedCountFor(DoctorAvailabilityWindow window) {
+    final DateTime date = _dates[_selectedDateIndex];
+    return _bookedCountByWindowId['${window.id}_${date.year}${date.month}${date.day}'] ??
+        0;
   }
 
   void _selectDate(int index) {
     setState(() {
       _selectedDateIndex = index;
-      _selectedSlot = null;
-      _bookedTimesFuture = _loadBookedTimes();
+      _selectedWindow = null;
     });
   }
 
-  void _selectSlot(String slot) {
-    setState(() => _selectedSlot = slot);
+  void _selectWindow(DoctorAvailabilityWindow window) {
+    setState(() => _selectedWindow = window);
   }
 
   void _handleBook() {
-    if (_selectedSlot == null) return;
+    if (_selectedWindow == null) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AppointmentConfirmationScreen(
-          account: widget.account,
           doctor: widget.doctor,
           date: _dates[_selectedDateIndex],
-          time: _selectedSlot!,
+          window: _selectedWindow!,
           onConfirmed: widget.onBooked,
         ),
       ),
@@ -113,6 +117,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     final double pad = Sizes.responsivePadding(context);
     final theme = Theme.of(context);
     final DoctorSummary doctor = widget.doctor;
+    final List<DoctorAvailabilityWindow> windows = _windowsForSelectedDate;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
@@ -128,8 +133,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 34,
-                      backgroundColor: MColors.primaryColor.withValues(alpha: 0.12),
-                      child: const Icon(Icons.person, color: MColors.primaryColor, size: 34),
+                      backgroundColor: MColors.primaryColor.withValues(
+                        alpha: 0.12,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        color: MColors.primaryColor,
+                        size: 34,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -139,29 +150,50 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           Text(doctor.name, style: theme.textTheme.titleLarge),
                           const SizedBox(height: 2),
                           Text(
-                            '${doctor.specialty} • ${doctor.experienceYears} yrs exp',
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                            doctor.experienceYears > 0
+                                ? '${doctor.specialty} • ${doctor.experienceYears} yrs exp'
+                                : doctor.specialty,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            doctor.hospital,
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-                          ),
+                          if (doctor.hospital.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              doctor.hospital,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              const Icon(Icons.star, size: 15, color: Colors.amber),
-                              const SizedBox(width: 4),
-                              Text(
-                                doctor.rating.toStringAsFixed(1),
-                                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '৳${doctor.fee} fee',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: MColors.primaryColor,
+                              if (doctor.rating > 0) ...[
+                                const Icon(
+                                  Icons.star,
+                                  size: 15,
+                                  color: Colors.amber,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  doctor.rating.toStringAsFixed(1),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  doctor.fee > 0
+                                      ? '৳${doctor.fee} fee'
+                                      : 'Fee on request',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: MColors.primaryColor,
+                                  ),
                                 ),
                               ),
                             ],
@@ -175,10 +207,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 Text('About', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(
-                  '${doctor.name} is a ${doctor.specialty.toLowerCase()} specialist at ${doctor.hospital}, '
-                  'with ${doctor.experienceYears} years of experience helping patients with '
-                  'consultations, diagnoses, and ongoing treatment plans.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, height: 1.4),
+                  '${doctor.name} is a ${doctor.specialty.toLowerCase()} specialist'
+                  '${doctor.hospital.isNotEmpty ? ' at ${doctor.hospital}' : ''}, '
+                  'helping patients with consultations, diagnoses, and ongoing treatment plans.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    height: 1.4,
+                  ),
                 ),
                 SizedBox(height: pad),
                 Text('Select Date', style: theme.textTheme.titleMedium),
@@ -203,47 +238,35 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 ),
                 SizedBox(height: pad * 0.8),
                 Text('Select Time', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  'Clinic hours 8:00 AM – 2:00 PM • ~${widget.doctor.avgConsultationMinutes} min per patient',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-                ),
                 const SizedBox(height: 12),
-                FutureBuilder<Set<String>>(
-                  future: _bookedTimesFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: MColors.primaryColor,
-                          ),
+                if (_loading)
+                  const Center(
+                    child: CircularProgressIndicator(
+                      color: MColors.primaryColor,
+                    ),
+                  )
+                else if (windows.isEmpty)
+                  Text(
+                    "This doctor hasn't set availability for this day yet — try another date.",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  )
+                else
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      for (final DoctorAvailabilityWindow window in windows)
+                        _SlotChip(
+                          window: window,
+                          bookedCount: _bookedCountFor(window),
+                          selected: window.id == _selectedWindow?.id,
+                          isDark: isDark,
+                          onTap: () => _selectWindow(window),
                         ),
-                      );
-                    }
-
-                    final Set<String> bookedTimes =
-                        snapshot.data ?? <String>{};
-
-                    return Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        for (final slot in _timeSlots)
-                          _SlotChip(
-                            label: slot,
-                            selected: slot == _selectedSlot,
-                            booked: bookedTimes.contains(slot),
-                            isDark: isDark,
-                            onTap: bookedTimes.contains(slot)
-                                ? null
-                                : () => _selectSlot(slot),
-                          ),
-                      ],
-                    );
-                  },
-                ),
+                    ],
+                  ),
               ],
             ),
             Positioned(
@@ -251,16 +274,22 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               right: pad,
               bottom: 16,
               child: ElevatedButton(
-                onPressed: _selectedSlot == null ? null : _handleBook,
+                onPressed: _selectedWindow == null ? null : _handleBook,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: MColors.primaryColor,
                   disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: const Text(
                   'Book Appointment',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
@@ -272,19 +301,34 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 }
 
 class _DateChip extends StatelessWidget {
-  const _DateChip({required this.date, required this.selected, required this.isDark, required this.onTap});
+  const _DateChip({
+    required this.date,
+    required this.selected,
+    required this.isDark,
+    required this.onTap,
+  });
 
   final DateTime date;
   final bool selected;
   final bool isDark;
   final VoidCallback onTap;
 
-  static const List<String> _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const List<String> _weekdays = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? MColors.primaryColor : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
+      color: selected
+          ? MColors.primaryColor
+          : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -309,7 +353,9 @@ class _DateChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                  color: selected
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
                 ),
               ),
             ],
@@ -322,63 +368,62 @@ class _DateChip extends StatelessWidget {
 
 class _SlotChip extends StatelessWidget {
   const _SlotChip({
-    required this.label,
+    required this.window,
+    required this.bookedCount,
     required this.selected,
     required this.isDark,
     required this.onTap,
-    this.booked = false,
   });
 
-  final String label;
+  final DoctorAvailabilityWindow window;
+  final int bookedCount;
   final bool selected;
   final bool isDark;
-  final bool booked;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color background = booked
-        ? (isDark ? const Color(0xFF141414) : Colors.grey.shade200)
-        : selected
-        ? MColors.primaryColor
-        : (isDark ? const Color(0xFF1F1F1F) : Colors.white);
-    final Color textColor = booked
-        ? Colors.grey
-        : selected
-        ? Colors.white
-        : (isDark ? Colors.white70 : Colors.black87);
+    final bool isFull = bookedCount >= window.capacity;
 
     return Material(
-      color: background,
+      color: isFull
+          ? (isDark ? Colors.white10 : Colors.black12)
+          : selected
+          ? MColors.primaryColor
+          : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
+        onTap: isFull ? null : onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                label,
+                window.label,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: textColor,
-                  decoration: booked ? TextDecoration.lineThrough : null,
+                  color: isFull
+                      ? Colors.grey
+                      : selected
+                      ? Colors.white
+                      : (isDark ? Colors.white70 : Colors.black87),
                 ),
               ),
-              if (booked) ...[
-                const SizedBox(height: 2),
-                const Text(
-                  'Booked',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey,
-                  ),
+              const SizedBox(height: 2),
+              Text(
+                isFull ? 'Full' : '$bookedCount/${window.capacity} booked',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isFull
+                      ? Colors.redAccent
+                      : selected
+                      ? Colors.white70
+                      : Colors.grey,
                 ),
-              ],
+              ),
             ],
           ),
         ),

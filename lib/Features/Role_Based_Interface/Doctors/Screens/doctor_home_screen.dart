@@ -54,14 +54,27 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       DoctorService.instance.getPatientsSeenTodayIds(widget.account.userId),
     ).wait;
 
-    return _DoctorHomeData(appointments: results.$1, seenPatientIds: results.$2);
+    return _DoctorHomeData(
+      appointments: results.$1,
+      seenPatientIds: results.$2,
+    );
   }
 
   String get _todayLabel {
     final DateTime now = DateTime.now();
     const List<String> months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${now.day} ${months[now.month - 1]} ${now.year}';
   }
@@ -114,7 +127,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           final Set<String> seenPatientIds =
               snapshot.data?.seenPatientIds ?? <String>{};
           final List<DoctorAppointmentModel> pendingAppointments = appointments
-              .where((appointment) => !seenPatientIds.contains(appointment.patientId))
+              .where(
+                (appointment) =>
+                    !seenPatientIds.contains(appointment.patientId),
+              )
               .toList();
           final DoctorAppointmentModel? nextAppointment =
               pendingAppointments.isNotEmpty
@@ -188,7 +204,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                         if ((widget.account.specialty ?? '')
                                             .isNotEmpty)
                                           _HeaderChip(
-                                            icon: Icons.medical_services_outlined,
+                                            icon:
+                                                Icons.medical_services_outlined,
                                             label: widget.account.specialty!,
                                           ),
                                         const _HeaderChip(
@@ -491,8 +508,7 @@ class _ResponsiveStatGrid extends StatelessWidget {
             : maxWidth >= 420
             ? 3
             : 2;
-        final double tileWidth =
-            (maxWidth - spacing * (columns - 1)) / columns;
+        final double tileWidth = (maxWidth - spacing * (columns - 1)) / columns;
 
         return Wrap(
           spacing: spacing,
@@ -584,9 +600,9 @@ class _NextUpCardState extends State<_NextUpCard>
     if (!context.mounted || record == null) {
       return;
     }
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record)),
+    );
   }
 
   @override
@@ -630,10 +646,8 @@ class _NextUpCardState extends State<_NextUpCard>
                       children: [
                         AnimatedBuilder(
                           animation: _pulse,
-                          builder: (context, child) => Opacity(
-                            opacity: _pulse.value,
-                            child: child,
-                          ),
+                          builder: (context, child) =>
+                              Opacity(opacity: _pulse.value, child: child),
                           child: Container(
                             width: 7,
                             height: 7,
@@ -754,20 +768,26 @@ class _PatientSearchTile extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: MColors.primaryColor.withValues(alpha: 0.12),
-            child: const Icon(Icons.person_outline, color: MColors.primaryColor),
+            child: const Icon(
+              Icons.person_outline,
+              color: MColors.primaryColor,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(record.account.fullName, style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  record.account.fullName,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 2),
                 Text(
                   'Patient ID: ${record.account.userId}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
               ],
             ),

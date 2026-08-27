@@ -148,10 +148,12 @@ class _HighlightStatCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     data.label,
-                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white70,
+                    ),
                     maxLines: 2,
                   ),
-                    if (onTap != null) ...[
+                  if (onTap != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -164,7 +166,11 @@ class _HighlightStatCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 2),
-                        const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 12),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 12,
+                        ),
                       ],
                     ),
                   ],
@@ -215,7 +221,9 @@ class _StatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  color: MColors.primaryColor.withValues(
+                    alpha: isDark ? 0.18 : 0.1,
+                  ),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(data.icon, color: MColors.primaryColor, size: 14),
@@ -228,14 +236,20 @@ class _StatCard extends StatelessWidget {
                 builder: (context, value, _) {
                   return Text(
                     '${value.round()}${data.suffix}',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   );
                 },
               ),
               const SizedBox(height: 1),
               Text(
                 data.label,
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11, height: 1.2),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.grey,
+                  fontSize: 11,
+                  height: 1.2,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

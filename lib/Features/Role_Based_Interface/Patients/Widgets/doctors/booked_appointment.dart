@@ -1,7 +1,6 @@
 class BookedAppointment {
   const BookedAppointment({
-    required this.id,
-    required this.patientId,
+    this.id = '',
     required this.doctorId,
     required this.doctorName,
     required this.specialty,
@@ -9,11 +8,12 @@ class BookedAppointment {
     required this.date,
     required this.time,
     required this.fee,
-    required this.status,
+    this.windowId = '',
   });
 
+  /// Firestore document id once persisted; empty for a freshly-built booking
+  /// that hasn't been written yet.
   final String id;
-  final String patientId;
   final String doctorId;
   final String doctorName;
   final String specialty;
@@ -21,7 +21,10 @@ class BookedAppointment {
   final DateTime date;
   final String time;
   final int fee;
-  final String status;
+
+  /// The availability window this was booked against, if any — lets the
+  /// backend count bookings per window to enforce its capacity.
+  final String windowId;
 
   int get daysFromNow {
     final DateTime today = DateTime.now();

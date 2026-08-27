@@ -54,30 +54,42 @@ class DoctorService {
     final DateTime startOfToday = DateTime(now.year, now.month, now.day);
     final DateTime startOfTomorrow = startOfToday.add(const Duration(days: 1));
 
+    // Single equality filter on doctorId only — combining it with a date
+    // range + orderBy would need a composite Firestore index that isn't
+    // provisioned for this project, so the today-window is filtered/sorted
+    // client-side on the (small) per-doctor result set instead.
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('appointments')
         .where('doctorId', isEqualTo: doctor.userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
-        .where('date', isLessThan: Timestamp.fromDate(startOfTomorrow))
-        .orderBy('date')
         .get();
 
-    return [
+    final List<DoctorAppointmentModel> todaysAppointments = [
       for (final doc in snapshot.docs)
-        DoctorAppointmentModel(
-          id: doc.id,
-          patientId: (doc.data()['patientId'] ?? '') as String,
-          patientName: (doc.data()['patientName'] ?? '') as String,
-          specialty:
-              (doc.data()['specialty'] ??
-                      doctor.specialty ??
-                      'General Physician')
-                  as String,
-          reason: (doc.data()['reason'] ?? '') as String,
-          timeLabel: (doc.data()['time'] ?? '') as String,
-          status: (doc.data()['status'] ?? 'upcoming') as String,
-        ),
+        if (_isWithin(doc.data()['date'], startOfToday, startOfTomorrow))
+          DoctorAppointmentModel(
+            id: doc.id,
+            patientId: (doc.data()['patientId'] ?? '') as String,
+            patientName: (doc.data()['patientName'] ?? '') as String,
+            specialty:
+                (doc.data()['specialty'] ??
+                        doctor.specialty ??
+                        'General Physician')
+                    as String,
+            reason: (doc.data()['reason'] ?? '') as String,
+            timeLabel: (doc.data()['time'] ?? '') as String,
+            status: (doc.data()['status'] ?? 'upcoming') as String,
+          ),
     ];
+    todaysAppointments.sort((a, b) => a.timeLabel.compareTo(b.timeLabel));
+    return todaysAppointments;
+  }
+
+  bool _isWithin(Object? rawDate, DateTime start, DateTime endExclusive) {
+    if (rawDate is! Timestamp) {
+      return false;
+    }
+    final DateTime date = rawDate.toDate();
+    return !date.isBefore(start) && date.isBefore(endExclusive);
   }
 
   /// IDs of patients this doctor has already written a prescription for

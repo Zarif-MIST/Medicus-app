@@ -130,13 +130,18 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
   }
 
   Future<void> _refreshPharmacyReviews(String pharmacyId) async {
-    final List<PharmacyReview> reviews = await _reviewService.fetchReviews(
-      pharmacyId,
-    );
-    if (!mounted) return;
-    setState(
-      () => _reviewsByPharmacy = {..._reviewsByPharmacy, pharmacyId: reviews},
-    );
+    try {
+      final List<PharmacyReview> reviews = await _reviewService.fetchReviews(
+        pharmacyId,
+      );
+      if (!mounted) return;
+      setState(
+        () => _reviewsByPharmacy = {..._reviewsByPharmacy, pharmacyId: reviews},
+      );
+    } catch (_) {
+      // Leave whatever reviews were already showing — a failed refresh
+      // shouldn't wipe a previously-successful one.
+    }
   }
 
   Future<void> _visitAndGetDirections(RegisteredPharmacy pharmacy) async {
@@ -345,8 +350,12 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
                       markerId: MarkerId(item.pharmacy.id),
                       position: LatLng(item.pharmacy.lat, item.pharmacy.lng),
                       icon: _visitedIds.contains(item.pharmacy.id)
-                          ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
-                          : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                          ? BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueGreen,
+                            )
+                          : BitmapDescriptor.defaultMarkerWithHue(
+                              BitmapDescriptor.hueRed,
+                            ),
                       infoWindow: InfoWindow(title: item.pharmacy.name),
                       onTap: () => _showPharmacyPreview(item.pharmacy),
                     ),

@@ -6,6 +6,10 @@ class LabOrderModel {
     required this.orderType,
     required this.requestedBy,
     required this.status,
+    this.createdAt,
+    this.completedAt,
+    this.resultNote,
+    this.resultFileName,
   });
 
   final String id;
@@ -14,4 +18,8 @@ class LabOrderModel {
   final String orderType;
   final String requestedBy;
   final String status;
+  final DateTime? createdAt;
+  final DateTime? completedAt;
+  final String? resultNote;
+  final String? resultFileName;
 }

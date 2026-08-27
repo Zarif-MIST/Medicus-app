@@ -1,16 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_lab_result_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
-class PatientDetailScreen extends StatelessWidget {
+class PatientDetailScreen extends StatefulWidget {
   const PatientDetailScreen({super.key, required this.record});
 
   final PatientRecordModel record;
 
   @override
+  State<PatientDetailScreen> createState() => _PatientDetailScreenState();
+}
+
+class _PatientDetailScreenState extends State<PatientDetailScreen> {
+  static const List<String> _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  late Future<List<PatientLabResultModel>> _labResultsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _labResultsFuture = DoctorService.instance.getLabResultsForPatient(
+      widget.record.account.userId,
+    );
+  }
+
+  String _formatDateTime(DateTime timestamp) {
+    final int hour = timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12;
+    final String minute = timestamp.minute.toString().padLeft(2, '0');
+    final String period = timestamp.hour < 12 ? 'AM' : 'PM';
+    return '${timestamp.day} ${_months[timestamp.month - 1]} ${timestamp.year}, $hour:$minute $period';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final PatientRecordModel record = widget.record;
     final bool isDark = MHelperFunctions.isDarkMode(context);
     final theme = Theme.of(context);
 
@@ -125,6 +165,55 @@ class PatientDetailScreen extends StatelessWidget {
             _HistoryCard(entry: entry, isDark: isDark),
             const SizedBox(height: 12),
           ],
+          const SizedBox(height: 20),
+          Text('Lab Results', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 10),
+          FutureBuilder<List<PatientLabResultModel>>(
+            future: _labResultsFuture,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: MColors.primaryColor,
+                    ),
+                  ),
+                );
+              }
+
+              final List<PatientLabResultModel> results = snapshot.data!;
+              if (results.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    'No completed lab results for this patient yet.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final result in results) ...[
+                    _LabResultCard(
+                      result: result,
+                      isDark: isDark,
+                      formatDateTime: _formatDateTime,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -268,6 +357,109 @@ class _HistoryCard extends StatelessWidget {
               color: isDark ? Colors.white70 : Colors.black54,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LabResultCard extends StatelessWidget {
+  const _LabResultCard({
+    required this.result,
+    required this.isDark,
+    required this.formatDateTime,
+  });
+
+  final PatientLabResultModel result;
+  final bool isDark;
+  final String Function(DateTime) formatDateTime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  result.orderType,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (result.completedAt != null)
+                Text(
+                  formatDateTime(result.completedAt!),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            result.requestedBy,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : const Color(0xFFF8F5F3),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              (result.resultNote == null || result.resultNote!.isEmpty)
+                  ? 'No result note was added for this order.'
+                  : result.resultNote!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: (result.resultNote == null || result.resultNote!.isEmpty)
+                    ? Colors.grey
+                    : (isDark ? Colors.white70 : Colors.black87),
+              ),
+            ),
+          ),
+          if (result.resultFileName != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.attach_file,
+                  size: 15,
+                  color: MColors.primaryColor,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    result.resultFileName!,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

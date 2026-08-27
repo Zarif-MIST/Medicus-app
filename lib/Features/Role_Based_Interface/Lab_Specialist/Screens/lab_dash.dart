@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
-import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_orders_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
 
 class LabDashboardScreen extends StatelessWidget {
@@ -38,9 +38,9 @@ class _LabShellState extends State<_LabShell> {
       label: 'Home',
     ),
     LiquidNavItem(
-      icon: Icons.science_outlined,
-      selectedIcon: Icons.science,
-      label: 'Orders',
+      icon: Icons.qr_code_scanner_outlined,
+      selectedIcon: Icons.qr_code_scanner,
+      label: 'Scan QR',
     ),
     LiquidNavItem(
       icon: Icons.upload_file_outlined,
@@ -65,7 +65,7 @@ class _LabShellState extends State<_LabShell> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       LabHomeScreen(key: _homeKey, account: widget.account),
-      const LabOrdersScreen(),
+      _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
       const LabResultsScreen(),
       ProfileScreen(account: widget.account),
     ];

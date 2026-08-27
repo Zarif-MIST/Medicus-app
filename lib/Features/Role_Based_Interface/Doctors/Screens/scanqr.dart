@@ -8,6 +8,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_rec
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/scanned_patient_orders_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/scanned_patient_queue_screen.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
@@ -102,6 +103,8 @@ class _ScanqrState extends State<Scanqr> {
 
     if (widget.account.role == AuthRole.pharmacist) {
       await _handlePharmacistScan(rawValue);
+    } else if (widget.account.role == AuthRole.labSpecialist) {
+      await _handleLabScan(rawValue);
     } else {
       await _handleDoctorScan(rawValue);
     }
@@ -142,6 +145,35 @@ class _ScanqrState extends State<Scanqr> {
           patientId: rawValue,
           patientName: patientAccount.fullName,
           pharmacistId: pharmacistId,
+        ),
+      ),
+    );
+  }
+
+  /// Lab specialists never get patient record or prescription-authoring
+  /// access — a scan only ever resolves to that one patient's own pending
+  /// lab order(s) as given by their doctor.
+  Future<void> _handleLabScan(String rawValue) async {
+    final AuthAccount? patientAccount = await AuthRegistry.instance
+        .accountForUserId(rawValue);
+    if (!mounted) {
+      return;
+    }
+
+    if (patientAccount == null || patientAccount.role != AuthRole.patient) {
+      Get.snackbar(
+        'Patient not found',
+        'No patient record matched ID $rawValue.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ScannedPatientOrdersScreen(
+          patientId: rawValue,
+          patientName: patientAccount.fullName,
         ),
       ),
     );
@@ -216,6 +248,8 @@ class _ScanqrState extends State<Scanqr> {
                         Text(
                           widget.account.role == AuthRole.pharmacist
                               ? 'Align the QR code inside the camera frame to view this patient\'s pending prescription.'
+                              : widget.account.role == AuthRole.labSpecialist
+                              ? 'Align the QR code inside the camera frame to view this patient\'s pending lab orders.'
                               : 'Align the QR code inside the camera frame to open the patient record.',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(

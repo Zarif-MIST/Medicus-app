@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:medicus/Utilities/colors.dart';
 
 /// Full-screen map picker used during pharmacist registration to capture
@@ -20,7 +21,7 @@ class _PharmacyLocationPickerScreenState
     extends State<PharmacyLocationPickerScreen> {
   static const LatLng _fallbackCenter = LatLng(23.8103, 90.4125); // Dhaka
 
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   LatLng? _picked;
   bool _locating = false;
 
@@ -54,9 +55,7 @@ class _PharmacyLocationPickerScreenState
 
       if (!mounted) return;
       setState(() => _picked = target);
-      await _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(target, 16),
-      );
+      _mapController.move(target, 16);
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -72,17 +71,34 @@ class _PharmacyLocationPickerScreenState
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: widget.initial ?? _fallbackCenter,
-              zoom: 14,
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: widget.initial ?? _fallbackCenter,
+              initialZoom: 14,
+              onTap: (_, latLng) => setState(() => _picked = latLng),
             ),
-            onMapCreated: (controller) => _mapController = controller,
-            onTap: (latLng) => setState(() => _picked = latLng),
-            markers: {
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.medicus',
+              ),
               if (_picked != null)
-                Marker(markerId: const MarkerId('picked'), position: _picked!),
-            },
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _picked!,
+                      width: 36,
+                      height: 36,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 36,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           ),
           Positioned(
             top: 12,

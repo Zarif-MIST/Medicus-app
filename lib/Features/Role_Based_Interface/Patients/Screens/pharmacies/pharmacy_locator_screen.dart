@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
@@ -42,7 +43,7 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
   List<NearbyPharmacy> _allPharmacies = [];
   Set<String> _visitedIds = {};
   Map<String, List<PharmacyReview>> _reviewsByPharmacy = {};
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
 
   String get _patientId =>
       widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
@@ -176,8 +177,9 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
 
   void _showPharmacyPreview(RegisteredPharmacy pharmacy) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLng(LatLng(pharmacy.lat, pharmacy.lng)),
+    _mapController.move(
+      LatLng(pharmacy.lat, pharmacy.lng),
+      _mapController.camera.zoom,
     );
     showModalBottomSheet(
       context: context,
@@ -335,31 +337,82 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
             padding: EdgeInsets.symmetric(horizontal: pad),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(position.latitude, position.longitude),
-                  zoom: 13,
-                ),
-                onMapCreated: (controller) => _mapController = controller,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                zoomControlsEnabled: false,
-                markers: {
-                  for (final NearbyPharmacy item in _allPharmacies)
-                    Marker(
-                      markerId: MarkerId(item.pharmacy.id),
-                      position: LatLng(item.pharmacy.lat, item.pharmacy.lng),
-                      icon: _visitedIds.contains(item.pharmacy.id)
-                          ? BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueGreen,
-                            )
-                          : BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueRed,
-                            ),
-                      infoWindow: InfoWindow(title: item.pharmacy.name),
-                      onTap: () => _showPharmacyPreview(item.pharmacy),
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: LatLng(
+                        position.latitude,
+                        position.longitude,
+                      ),
+                      initialZoom: 13,
                     ),
-                },
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.medicus',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(
+                              position.latitude,
+                              position.longitude,
+                            ),
+                            width: 22,
+                            height: 22,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                          ),
+                          for (final NearbyPharmacy item in _allPharmacies)
+                            Marker(
+                              point: LatLng(
+                                item.pharmacy.lat,
+                                item.pharmacy.lng,
+                              ),
+                              width: 36,
+                              height: 36,
+                              child: GestureDetector(
+                                onTap: () =>
+                                    _showPharmacyPreview(item.pharmacy),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: 36,
+                                  color: _visitedIds.contains(item.pharmacy.id)
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: FloatingActionButton.small(
+                      heroTag: 'pharmacy_locator_recenter',
+                      backgroundColor: Colors.white,
+                      foregroundColor: MColors.primaryColor,
+                      onPressed: () => _mapController.move(
+                        LatLng(position.latitude, position.longitude),
+                        13,
+                      ),
+                      child: const Icon(Icons.my_location),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

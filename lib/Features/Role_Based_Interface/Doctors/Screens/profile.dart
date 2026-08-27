@@ -1,6 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Screens/login/login.dart';
@@ -443,8 +444,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _ActionRow(
                   icon: Icons.logout,
                   label: 'Logout',
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(sheetContext).pop();
+                    await FirebaseAuth.instance.signOut();
                     Get.offAll(
                       () => const LoginScreen(),
                       transition: Transition.fadeIn,

@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Authentication/Screens/login/login.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -367,7 +370,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 _ActionRow(
                   icon: Icons.logout,
                   label: 'Logout',
-                  onTap: () {},
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await FirebaseAuth.instance.signOut();
+                    Get.offAll(
+                      () => const LoginScreen(),
+                      transition: Transition.fadeIn,
+                    );
+                  },
                   isDestructive: true,
                   showDivider: false,
                 ),

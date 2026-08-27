@@ -28,6 +28,8 @@ class _LabShell extends StatefulWidget {
 
 class _LabShellState extends State<_LabShell> {
   int _index = 0;
+  final GlobalKey<LabHomeScreenState> _homeKey =
+      GlobalKey<LabHomeScreenState>();
 
   final List<LiquidNavItem> _items = const [
     LiquidNavItem(
@@ -52,13 +54,17 @@ class _LabShellState extends State<_LabShell> {
     ),
   ];
 
+  void _onNavTap(int index) {
+    setState(() => _index = index);
+    if (index == 0) {
+      _homeKey.currentState?.refreshOrdersData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      LabHomeScreen(
-        account: widget.account,
-        onOpenOrders: () => setState(() => _index = 1),
-      ),
+      LabHomeScreen(key: _homeKey, account: widget.account),
       const LabOrdersScreen(),
       const LabResultsScreen(),
       ProfileScreen(account: widget.account),
@@ -76,7 +82,7 @@ class _LabShellState extends State<_LabShell> {
             child: LiquidGlassNavBar(
               items: _items,
               selectedIndex: _index,
-              onTap: (index) => setState(() => _index = index),
+              onTap: _onNavTap,
             ),
           ),
         ],

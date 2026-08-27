@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
@@ -16,11 +17,48 @@ class LabResultUploadScreen extends StatefulWidget {
 
 class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
   final TextEditingController _noteController = TextEditingController();
+  String? _selectedFileName;
+  bool _saving = false;
 
   @override
   void dispose() {
     _noteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    final PlatformFile? file = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (file == null) {
+      return;
+    }
+    setState(() => _selectedFileName = file.name);
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      await LabService.instance.attachResult(
+        orderId: widget.order.id,
+        note: _noteController.text.trim(),
+        fileName: _selectedFileName,
+      );
+      if (!mounted) {
+        return;
+      }
+      Get.snackbar(
+        'Result attached',
+        'The order has been updated for ${widget.order.patientName}.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 
   @override
@@ -61,20 +99,40 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    Get.snackbar(
-                      'Upload stub',
-                      'File picker can be connected later to Firebase Storage.',
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
-                  },
+                  onPressed: _pickFile,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: MColors.primaryColor,
                     side: const BorderSide(color: MColors.primaryColor),
                   ),
                   icon: const Icon(Icons.attach_file),
-                  label: const Text('Pick Result File'),
+                  label: Text(
+                    _selectedFileName == null
+                        ? 'Pick Result File'
+                        : 'Change File',
+                  ),
                 ),
+                if (_selectedFileName != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _selectedFileName!,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 14),
                 TextField(
                   controller: _noteController,
@@ -97,28 +155,23 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () async {
-              await LabService.instance.attachResult(
-                orderId: widget.order.id,
-                note: _noteController.text.trim(),
-              );
-              if (!context.mounted) {
-                return;
-              }
-              Get.snackbar(
-                'Result attached',
-                'The order has been updated with a result note stub.',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-              Navigator.of(context).pop();
-            },
+            onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
               backgroundColor: MColors.primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            icon: const Icon(Icons.upload_file_outlined),
-            label: const Text('Save Result Stub'),
+            icon: _saving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.upload_file_outlined),
+            label: Text(_saving ? 'Saving...' : 'Save Result'),
           ),
         ],
       ),

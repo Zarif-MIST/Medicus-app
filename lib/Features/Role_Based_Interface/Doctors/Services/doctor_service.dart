@@ -4,6 +4,7 @@ import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appointment_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_prescription_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_lab_result_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 
 class DoctorService {
@@ -56,10 +57,7 @@ class DoctorService {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('appointments')
         .where('doctorId', isEqualTo: doctor.userId)
-        .where(
-          'date',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday),
-        )
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
         .where('date', isLessThan: Timestamp.fromDate(startOfTomorrow))
         .orderBy('date')
         .get();
@@ -70,7 +68,11 @@ class DoctorService {
           id: doc.id,
           patientId: (doc.data()['patientId'] ?? '') as String,
           patientName: (doc.data()['patientName'] ?? '') as String,
-          specialty: (doc.data()['specialty'] ?? doctor.specialty ?? 'General Physician') as String,
+          specialty:
+              (doc.data()['specialty'] ??
+                      doctor.specialty ??
+                      'General Physician')
+                  as String,
           reason: (doc.data()['reason'] ?? '') as String,
           timeLabel: (doc.data()['time'] ?? '') as String,
           status: (doc.data()['status'] ?? 'upcoming') as String,
@@ -181,13 +183,57 @@ class DoctorService {
       return firestoreMatches;
     }
 
-    return _mockPatientRecords.values
-        .where((record) {
-          final String fullName = record.account.fullName.toLowerCase();
-          final String userId = record.account.userId.toLowerCase();
-          return fullName.contains(normalized) || userId.contains(normalized);
-        })
-        .toList();
+    return _mockPatientRecords.values.where((record) {
+      final String fullName = record.account.fullName.toLowerCase();
+      final String userId = record.account.userId.toLowerCase();
+      return fullName.contains(normalized) || userId.contains(normalized);
+    }).toList();
+  }
+
+  /// Completed lab orders for one patient, newest first — reads the same
+  /// `lab_orders` collection the lab specialist's Results screen writes to,
+  /// so a result attached there is immediately visible here.
+  Future<List<PatientLabResultModel>> getLabResultsForPatient(
+    String patientId,
+  ) async {
+    final String id = patientId.trim();
+    if (id.isEmpty) {
+      return const [];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
+        .collection('lab_orders')
+        .where('status', isEqualTo: 'Completed')
+        .where('patientId', isEqualTo: id)
+        .get();
+
+    final List<PatientLabResultModel> results = [
+      for (final doc in snapshot.docs)
+        _labResultFromFirestore(doc.id, doc.data()),
+    ];
+    results.sort((a, b) {
+      final DateTime aTime =
+          a.completedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final DateTime bTime =
+          b.completedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+    return results;
+  }
+
+  PatientLabResultModel _labResultFromFirestore(
+    String id,
+    Map<String, dynamic> data,
+  ) {
+    final Object? rawCompletedAt = data['completedAt'];
+    return PatientLabResultModel(
+      id: id,
+      orderType: (data['orderType'] ?? '').toString(),
+      requestedBy: (data['requestedBy'] ?? '').toString(),
+      resultNote: data['resultNote'] as String?,
+      resultFileName: data['resultFileName'] as String?,
+      completedAt: rawCompletedAt is Timestamp ? rawCompletedAt.toDate() : null,
+    );
   }
 
   Future<void> savePrescription(DoctorPrescriptionModel prescription) async {

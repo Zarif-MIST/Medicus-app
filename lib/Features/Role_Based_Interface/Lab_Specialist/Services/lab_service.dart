@@ -37,11 +37,11 @@ class LabService {
 
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _orders
         .where('patientId', isEqualTo: id)
-        .where('status', isNotEqualTo: 'Completed')
         .get();
-    return [
+    final List<LabOrderModel> orders = [
       for (final doc in snapshot.docs) _fromFirestore(doc.id, doc.data()),
     ];
+    return orders.where((order) => order.status != 'Completed').toList();
   }
 
   Future<List<LabOrderModel>> getAllOrders() async {

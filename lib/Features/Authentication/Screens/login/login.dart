@@ -16,6 +16,8 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_das
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_dash.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharm_dash.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pat_dash.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/onboarding/patient_medical_onboarding_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient_profile_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.initialUserId, this.initialRole});
@@ -378,10 +380,21 @@ class _LoginScreenState extends State<LoginScreen> {
         transition: Transition.fadeIn,
       );
     } else if (account.role == AuthRole.patient) {
-      Get.offAll(
-        () => PatientDashboardScreen(account: account),
-        transition: Transition.fadeIn,
+      const PatientProfileService profileService = PatientProfileService();
+      final PatientProfileRecord? existingProfile = await profileService.fetch(
+        account.userId,
       );
+      if (existingProfile == null) {
+        Get.offAll(
+          () => PatientMedicalOnboardingScreen(account: account),
+          transition: Transition.fadeIn,
+        );
+      } else {
+        Get.offAll(
+          () => PatientDashboardScreen(account: account),
+          transition: Transition.fadeIn,
+        );
+      }
     }
   }
 }

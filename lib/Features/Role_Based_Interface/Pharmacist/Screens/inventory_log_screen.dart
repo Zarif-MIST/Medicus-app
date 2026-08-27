@@ -19,7 +19,9 @@ class _InventoryLogScreenState extends State<InventoryLogScreen> {
   @override
   void initState() {
     super.initState();
-    _logFuture = PharmacistService.instance.getInventoryLog(widget.pharmacistId);
+    _logFuture = PharmacistService.instance.getInventoryLog(
+      widget.pharmacistId,
+    );
   }
 
   @override
@@ -53,7 +55,9 @@ class _InventoryLogScreenState extends State<InventoryLogScreen> {
                 child: Text(
                   'No inventory transactions yet. Stock changes, restocks, and dispensing will show up here.',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                 ),
               ),
             );
@@ -83,13 +87,18 @@ class _TransactionTile extends StatelessWidget {
   ({IconData icon, Color color}) get _style {
     switch (transaction.type) {
       case InventoryTransactionType.dispensed:
-        return (icon: Icons.local_pharmacy_outlined, color: Colors.orange.shade700);
+        return (
+          icon: Icons.local_pharmacy_outlined,
+          color: Colors.orange.shade700,
+        );
       case InventoryTransactionType.restock:
         return (icon: Icons.add_box_outlined, color: Colors.green.shade700);
       case InventoryTransactionType.adjustment:
         return (
           icon: Icons.tune,
-          color: transaction.delta >= 0 ? Colors.green.shade700 : Colors.red.shade700,
+          color: transaction.delta >= 0
+              ? Colors.green.shade700
+              : Colors.red.shade700,
         );
       case InventoryTransactionType.added:
         return (icon: Icons.new_releases_outlined, color: MColors.primaryColor);
@@ -99,7 +108,8 @@ class _TransactionTile extends StatelessWidget {
   }
 
   String _formatTimestamp(DateTime timestamp) {
-    final String hour = (timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12).toString();
+    final String hour = (timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12)
+        .toString();
     final String minute = timestamp.minute.toString().padLeft(2, '0');
     final String period = timestamp.hour < 12 ? 'AM' : 'PM';
     return '${timestamp.day}/${timestamp.month}/${timestamp.year} • $hour:$minute $period';
@@ -142,7 +152,9 @@ class _TransactionTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   transaction.reason,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 4),
                 Text(

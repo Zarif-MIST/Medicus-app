@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-class MTextTheme{
+
+class MTextTheme {
   MTextTheme._();
   static TextTheme lightTextTheme = TextTheme(
     headlineLarge: TextStyle().copyWith(
@@ -28,31 +29,15 @@ class MTextTheme{
       color: Colors.black,
     ),
     titleSmall: TextStyle().copyWith(
-      fontSize: 14.0,     
+      fontSize: 14.0,
       fontWeight: FontWeight.bold,
       color: Colors.black,
-    ), 
-    bodyLarge: TextStyle().copyWith(
-      fontSize: 16.0,
-      color: Colors.black,
     ),
-    bodyMedium: TextStyle().copyWith(
-      fontSize: 14.0,     
-      color: Colors.black,
-    ),
-    bodySmall: TextStyle().copyWith(
-      fontSize: 12.0,     
-      color: Colors.black,
-    ),
-    labelLarge: TextStyle().copyWith(
-      fontSize: 14.0,     
-      color: Colors.black,
-    ),
-    labelMedium: TextStyle().copyWith(
-      fontSize: 12.0,     
-      color: Colors.black,      
-    ),
-
+    bodyLarge: TextStyle().copyWith(fontSize: 16.0, color: Colors.black),
+    bodyMedium: TextStyle().copyWith(fontSize: 14.0, color: Colors.black),
+    bodySmall: TextStyle().copyWith(fontSize: 12.0, color: Colors.black),
+    labelLarge: TextStyle().copyWith(fontSize: 14.0, color: Colors.black),
+    labelMedium: TextStyle().copyWith(fontSize: 12.0, color: Colors.black),
   );
 
   static TextTheme darkTextTheme = TextTheme(
@@ -82,29 +67,14 @@ class MTextTheme{
       color: Colors.white,
     ),
     titleSmall: TextStyle().copyWith(
-      fontSize: 14.0,     
+      fontSize: 14.0,
       fontWeight: FontWeight.bold,
       color: Colors.white,
-    ), 
-    bodyLarge: TextStyle().copyWith(
-      fontSize: 16.0,
-      color: Colors.white,
-    ),      
-    bodyMedium: TextStyle().copyWith(
-      fontSize: 14.0,     
-      color: Colors.white,
     ),
-    bodySmall: TextStyle().copyWith(
-      fontSize: 12.0,     
-      color: Colors.white,
-    ),
-    labelLarge: TextStyle().copyWith(
-      fontSize: 14.0,     
-      color: Colors.white,
-    ),    
-    labelMedium: TextStyle().copyWith(
-      fontSize: 12.0,     
-      color: Colors.white,      
-    ),  
+    bodyLarge: TextStyle().copyWith(fontSize: 16.0, color: Colors.white),
+    bodyMedium: TextStyle().copyWith(fontSize: 14.0, color: Colors.white),
+    bodySmall: TextStyle().copyWith(fontSize: 12.0, color: Colors.white),
+    labelLarge: TextStyle().copyWith(fontSize: 14.0, color: Colors.white),
+    labelMedium: TextStyle().copyWith(fontSize: 12.0, color: Colors.white),
   );
 }

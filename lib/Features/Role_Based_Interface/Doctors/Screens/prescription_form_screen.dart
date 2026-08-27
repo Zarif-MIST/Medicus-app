@@ -336,31 +336,30 @@ class _PrescriptionAutocompleteField extends StatelessWidget {
         if (query.isEmpty) {
           return options;
         }
-        return options.where(
-          (option) => option.toLowerCase().contains(query),
-        );
+        return options.where((option) => option.toLowerCase().contains(query));
       },
       onSelected: (selection) {
         controller.text = selection;
       },
-      fieldViewBuilder: (context, fieldController, focusNode, onFieldSubmitted) {
-        fieldController.text = controller.text;
-        fieldController.selection = controller.selection;
-        fieldController.addListener(() {
-          if (fieldController.text != controller.text) {
-            controller.text = fieldController.text;
-            controller.selection = fieldController.selection;
-          }
-        });
+      fieldViewBuilder:
+          (context, fieldController, focusNode, onFieldSubmitted) {
+            fieldController.text = controller.text;
+            fieldController.selection = controller.selection;
+            fieldController.addListener(() {
+              if (fieldController.text != controller.text) {
+                controller.text = fieldController.text;
+                controller.selection = fieldController.selection;
+              }
+            });
 
-        return TextFormField(
-          controller: fieldController,
-          focusNode: focusNode,
-          validator: validator,
-          decoration: _inputDecoration(context, label),
-          textInputAction: TextInputAction.next,
-        );
-      },
+            return TextFormField(
+              controller: fieldController,
+              focusNode: focusNode,
+              validator: validator,
+              decoration: _inputDecoration(context, label),
+              textInputAction: TextInputAction.next,
+            );
+          },
       optionsViewBuilder: (context, onSelected, options) {
         return Align(
           alignment: Alignment.topLeft,

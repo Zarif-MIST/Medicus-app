@@ -12,10 +12,12 @@ class PharmacyLocationPickerScreen extends StatefulWidget {
   final LatLng? initial;
 
   @override
-  State<PharmacyLocationPickerScreen> createState() => _PharmacyLocationPickerScreenState();
+  State<PharmacyLocationPickerScreen> createState() =>
+      _PharmacyLocationPickerScreenState();
 }
 
-class _PharmacyLocationPickerScreenState extends State<PharmacyLocationPickerScreen> {
+class _PharmacyLocationPickerScreenState
+    extends State<PharmacyLocationPickerScreen> {
   static const LatLng _fallbackCenter = LatLng(23.8103, 90.4125); // Dhaka
 
   GoogleMapController? _mapController;
@@ -38,18 +40,23 @@ class _PharmacyLocationPickerScreenState extends State<PharmacyLocationPickerScr
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         return;
       }
 
       final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       final LatLng target = LatLng(position.latitude, position.longitude);
 
       if (!mounted) return;
       setState(() => _picked = target);
-      await _mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, 16));
+      await _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(target, 16),
+      );
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -66,11 +73,15 @@ class _PharmacyLocationPickerScreenState extends State<PharmacyLocationPickerScr
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: widget.initial ?? _fallbackCenter, zoom: 14),
+            initialCameraPosition: CameraPosition(
+              target: widget.initial ?? _fallbackCenter,
+              zoom: 14,
+            ),
             onMapCreated: (controller) => _mapController = controller,
             onTap: (latLng) => setState(() => _picked = latLng),
             markers: {
-              if (_picked != null) Marker(markerId: const MarkerId('picked'), position: _picked!),
+              if (_picked != null)
+                Marker(markerId: const MarkerId('picked'), position: _picked!),
             },
           ),
           Positioned(
@@ -82,13 +93,22 @@ class _PharmacyLocationPickerScreenState extends State<PharmacyLocationPickerScr
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Text(
                 _picked == null
                     ? 'Tap anywhere on the map to drop a pin at your pharmacy.'
                     : 'Pin set at ${_picked!.latitude.toStringAsFixed(5)}, ${_picked!.longitude.toStringAsFixed(5)}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -116,13 +136,20 @@ class _PharmacyLocationPickerScreenState extends State<PharmacyLocationPickerScr
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _picked == null ? null : () => Navigator.of(context).pop(_picked),
+                onPressed: _picked == null
+                    ? null
+                    : () => Navigator.of(context).pop(_picked),
                 style: FilledButton.styleFrom(
                   backgroundColor: MColors.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                child: const Text('Confirm Location', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Confirm Location',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ),

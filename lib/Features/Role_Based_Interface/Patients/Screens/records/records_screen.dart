@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
-import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -11,11 +10,13 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/prescri
 class RecordsScreen extends StatefulWidget {
   const RecordsScreen({
     super.key,
-    required this.account,
+    required this.patientId,
+    required this.patientName,
     required this.prescriptions,
   });
 
-  final AuthAccount account;
+  final String patientId;
+  final String patientName;
   final List<Prescription> prescriptions;
 
   @override
@@ -42,12 +43,18 @@ class _RecordsScreenState extends State<RecordsScreen> {
         ? widget.prescriptions
         : widget.prescriptions.where((p) {
             final matchesDoctor = p.doctorName.toLowerCase().contains(query);
-            final matchesMedicine = p.medicines.any((m) => m.name.toLowerCase().contains(query));
+            final matchesMedicine = p.medicines.any(
+              (m) => m.name.toLowerCase().contains(query),
+            );
             return matchesDoctor || matchesMedicine;
           }).toList();
 
-    final List<Prescription> ongoing = _sortedByRecency(filtered.where((p) => !p.isCompleted).toList());
-    final List<Prescription> previous = _sortedByRecency(filtered.where((p) => p.isCompleted).toList());
+    final List<Prescription> ongoing = _sortedByRecency(
+      filtered.where((p) => !p.isCompleted).toList(),
+    );
+    final List<Prescription> previous = _sortedByRecency(
+      filtered.where((p) => p.isCompleted).toList(),
+    );
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
@@ -68,7 +75,11 @@ class _RecordsScreenState extends State<RecordsScreen> {
             else
               for (int i = 0; i < ongoing.length; i++) ...[
                 if (i != 0) const SizedBox(height: 10),
-                _PrescriptionCard(prescription: ongoing[i], account: widget.account),
+                _PrescriptionCard(
+                  prescription: ongoing[i],
+                  patientId: widget.patientId,
+                  patientName: widget.patientName,
+                ),
               ],
             SizedBox(height: pad),
             Text('Previous Prescriptions', style: theme.textTheme.titleMedium),
@@ -78,7 +89,11 @@ class _RecordsScreenState extends State<RecordsScreen> {
             else
               for (int i = 0; i < previous.length; i++) ...[
                 if (i != 0) const SizedBox(height: 10),
-                _PrescriptionCard(prescription: previous[i], account: widget.account),
+                _PrescriptionCard(
+                  prescription: previous[i],
+                  patientId: widget.patientId,
+                  patientName: widget.patientName,
+                ),
               ],
           ],
         ),
@@ -88,10 +103,15 @@ class _RecordsScreenState extends State<RecordsScreen> {
 }
 
 class _PrescriptionCard extends StatelessWidget {
-  const _PrescriptionCard({required this.prescription, required this.account});
+  const _PrescriptionCard({
+    required this.prescription,
+    required this.patientId,
+    required this.patientName,
+  });
 
   final Prescription prescription;
-  final AuthAccount account;
+  final String patientId;
+  final String patientName;
 
   String get _formattedDate =>
       '${prescription.date.day.toString().padLeft(2, '0')}/${prescription.date.month.toString().padLeft(2, '0')}/${prescription.date.year}';
@@ -100,8 +120,8 @@ class _PrescriptionCard extends StatelessWidget {
     await Printing.layoutPdf(
       onLayout: (_) => buildPrescriptionPdf(
         prescription: prescription,
-        patientName: account.fullName.isEmpty ? 'Patient' : account.fullName,
-        patientId: account.userId,
+        patientName: patientName,
+        patientId: patientId,
       ),
     );
   }
@@ -130,20 +150,35 @@ class _PrescriptionCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(prescription.id, style: theme.textTheme.titleSmall?.copyWith(color: MColors.primaryColor)),
+                child: Text(
+                  prescription.id,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: MColors.primaryColor,
+                  ),
+                ),
               ),
-              Text(_formattedDate, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+              Text(
+                _formattedDate,
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
             ],
           ),
           const SizedBox(height: 2),
-          Text(prescription.doctorName, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            prescription.doctorName,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 10),
           for (final medicine in prescription.medicines)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
                 '${medicine.name} — ${medicine.dosage} (${medicine.durationDays}d)',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.grey.shade700,
+                ),
               ),
             ),
           const SizedBox(height: 8),
@@ -151,8 +186,18 @@ class _PrescriptionCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               onPressed: () => _viewPdf(context),
-              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18, color: MColors.primaryColor),
-              label: const Text('View PDF', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+              icon: const Icon(
+                Icons.picture_as_pdf_outlined,
+                size: 18,
+                color: MColors.primaryColor,
+              ),
+              label: const Text(
+                'View PDF',
+                style: TextStyle(
+                  color: MColors.primaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
@@ -172,7 +217,9 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
       ),
     );
   }

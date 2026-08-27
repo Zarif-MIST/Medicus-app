@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
-import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
+import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
-import 'package:medicus/Features/Role_Based_Interface/Patients/Services/appointment_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 
@@ -36,63 +36,86 @@ String _formatDate(DateTime date) {
   return '${_weekdays[date.weekday - 1]}, ${date.day} ${_months[date.month - 1]}';
 }
 
-class AppointmentConfirmationScreen extends StatefulWidget {
+class AppointmentConfirmationScreen extends StatelessWidget {
   const AppointmentConfirmationScreen({
     super.key,
-    required this.account,
     required this.doctor,
     required this.date,
-    required this.time,
+    required this.window,
     required this.onConfirmed,
   });
 
-  final AuthAccount account;
   final DoctorSummary doctor;
   final DateTime date;
-  final String time;
+  final DoctorAvailabilityWindow window;
   final ValueChanged<BookedAppointment> onConfirmed;
 
-  @override
-  State<AppointmentConfirmationScreen> createState() =>
-      _AppointmentConfirmationScreenState();
-}
-
-class _AppointmentConfirmationScreenState
-    extends State<AppointmentConfirmationScreen> {
-  bool _isBooking = false;
-
-  DoctorSummary get doctor => widget.doctor;
-  DateTime get date => widget.date;
-  String get time => widget.time;
-
   Future<void> _confirm(BuildContext context) async {
-    setState(() => _isBooking = true);
-
-    final BookedAppointment appointment;
+    const AppointmentRepository repository = AppointmentRepository();
+    int booked;
     try {
-      appointment = await AppointmentService.instance.bookAppointment(
-        patient: widget.account,
-        doctor: widget.doctor,
-        date: widget.date,
-        time: widget.time,
+      booked = await repository.countBookingsForWindow(
+        doctorId: doctor.doctorId,
+        windowId: window.id,
+        date: date,
       );
-    } catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-      setState(() => _isBooking = false);
+    } catch (_) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not book appointment: $error')),
+        const SnackBar(
+          content: Text(
+            "Couldn't confirm the booking — check your connection and try again.",
+          ),
+        ),
       );
       return;
     }
 
-    if (!context.mounted) {
+    if (!context.mounted) return;
+
+    if (booked >= window.capacity) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Slot just filled up'),
+          content: const Text(
+            'This time window reached capacity while you were booking — please choose another.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Choose another time',
+                style: TextStyle(
+                  color: MColors.primaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
       return;
     }
 
-    setState(() => _isBooking = false);
-    widget.onConfirmed(appointment);
+    onConfirmed(
+      BookedAppointment(
+        doctorId: doctor.doctorId,
+        doctorName: doctor.name,
+        specialty: doctor.specialty,
+        hospital: doctor.hospital,
+        date: date,
+        time: window.label,
+        fee: doctor.fee,
+        windowId: window.id,
+      ),
+    );
 
     showDialog(
       context: context,
@@ -111,7 +134,7 @@ class _AppointmentConfirmationScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              '${doctor.name} • ${_formatDate(date)}, $time',
+              '${doctor.name} • ${_formatDate(date)}, ${window.label}',
               style: Theme.of(
                 dialogContext,
               ).textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -199,12 +222,14 @@ class _AppointmentConfirmationScreenState
                           _SummaryRow(
                             icon: Icons.access_time,
                             label: 'Time',
-                            value: time,
+                            value: window.label,
                           ),
                           _SummaryRow(
                             icon: Icons.payments_outlined,
                             label: 'Fee',
-                            value: '৳${doctor.fee}',
+                            value: doctor.fee > 0
+                                ? '৳${doctor.fee}'
+                                : 'On request',
                             showDivider: false,
                           ),
                         ],
@@ -217,32 +242,22 @@ class _AppointmentConfirmationScreenState
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isBooking ? null : () => _confirm(context),
+                  onPressed: () => _confirm(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: MColors.primaryColor,
-                    disabledBackgroundColor: MColors.primaryColor.withValues(alpha: 0.6),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: _isBooking
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Confirm Booking',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
+                  child: const Text(
+                    'Confirm Booking',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
               ),
             ],

@@ -12,12 +12,13 @@ class PharmacyReviewService {
   Future<List<PharmacyReview>> fetchReviews(String pharmacyId) async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _collection
         .where('pharmacyId', isEqualTo: pharmacyId)
-        .orderBy('createdAt', descending: true)
         .get();
 
-    return [
-      for (final doc in snapshot.docs) PharmacyReview.fromFirestore(doc.id, doc.data()),
-    ];
+    final List<PharmacyReview> reviews = [
+      for (final doc in snapshot.docs)
+        PharmacyReview.fromFirestore(doc.id, doc.data()),
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return reviews;
   }
 
   Future<void> submitReview({

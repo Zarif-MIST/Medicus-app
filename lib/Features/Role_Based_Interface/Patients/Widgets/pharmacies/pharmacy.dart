@@ -17,13 +17,17 @@ class RegisteredPharmacy {
   /// missing a pinned location (registered before location capture existed,
   /// or hasn't updated their profile yet).
   static RegisteredPharmacy? fromAuthAccount(AuthAccount account) {
-    if (account.pharmacyLat == null || account.pharmacyLng == null || account.firebaseUid == null) {
+    if (account.pharmacyLat == null ||
+        account.pharmacyLng == null ||
+        account.firebaseUid == null) {
       return null;
     }
 
     return RegisteredPharmacy(
       id: account.firebaseUid!,
-      name: (account.pharmacyName?.trim().isNotEmpty ?? false) ? account.pharmacyName! : 'Unnamed Pharmacy',
+      name: (account.pharmacyName?.trim().isNotEmpty ?? false)
+          ? account.pharmacyName!
+          : 'Unnamed Pharmacy',
       address: account.pharmacyLocation ?? '',
       phone: account.phoneNumber,
       lat: account.pharmacyLat!,

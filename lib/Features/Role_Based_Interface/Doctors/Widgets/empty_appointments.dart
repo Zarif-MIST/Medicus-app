@@ -54,10 +54,7 @@ class _EmptyAppointmentsPlaceholderState
         builder: (context, entrance, child) {
           return Opacity(
             opacity: entrance,
-            child: Transform.scale(
-              scale: 0.9 + (0.1 * entrance),
-              child: child,
-            ),
+            child: Transform.scale(scale: 0.9 + (0.1 * entrance), child: child),
           );
         },
         child: Column(

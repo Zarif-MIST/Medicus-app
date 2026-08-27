@@ -53,7 +53,10 @@ class AuthTextField extends StatelessWidget {
         prefixText: prefixText,
         suffixIcon: suffixIcon,
         counterText: '',
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

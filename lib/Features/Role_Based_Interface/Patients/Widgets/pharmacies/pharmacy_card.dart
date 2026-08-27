@@ -47,22 +47,35 @@ class PharmacyCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  color: MColors.primaryColor.withValues(
+                    alpha: isDark ? 0.18 : 0.1,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.local_pharmacy_outlined, color: MColors.primaryColor, size: 20),
+                child: const Icon(
+                  Icons.local_pharmacy_outlined,
+                  color: MColors.primaryColor,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(pharmacy.name, style: theme.textTheme.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      pharmacy.name,
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 3),
                     if (pharmacy.address.isNotEmpty)
                       Text(
                         pharmacy.address,
-                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -70,27 +83,46 @@ class PharmacyCard extends StatelessWidget {
                     Row(
                       children: [
                         if (reviewCount > 0) ...[
-                          const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF5A623)),
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: Color(0xFFF5A623),
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             averageRating.toStringAsFixed(1),
-                            style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           Text(
                             ' ($reviewCount review${reviewCount == 1 ? '' : 's'})',
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ] else ...[
                           Text(
                             'No reviews yet',
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ],
-                        Icon(Icons.place_outlined, size: 13, color: Colors.grey.shade500),
+                        Icon(
+                          Icons.place_outlined,
+                          size: 13,
+                          color: Colors.grey.shade500,
+                        ),
                         const SizedBox(width: 2),
-                        Text(item.distanceLabel, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                        Text(
+                          item.distanceLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.grey,
+                          ),
+                        ),
                       ],
                     ),
                   ],

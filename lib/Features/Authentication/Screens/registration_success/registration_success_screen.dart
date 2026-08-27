@@ -37,7 +37,9 @@ class RegistrationSuccessScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: dark ? const Color(0xFF181818) : Colors.white,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: MColors.primaryColor.withValues(alpha: 0.12)),
+                  border: Border.all(
+                    color: MColors.primaryColor.withValues(alpha: 0.12),
+                  ),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x1A000000),
@@ -55,14 +57,17 @@ class RegistrationSuccessScreen extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 14),
-                    const Icon(Icons.verified_rounded, color: MColors.primaryColor, size: 56),
+                    const Icon(
+                      Icons.verified_rounded,
+                      color: MColors.primaryColor,
+                      size: 56,
+                    ),
                     const SizedBox(height: 14),
                     Text(
                       'Registration successful',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -75,7 +80,10 @@ class RegistrationSuccessScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     _InfoChip(label: 'User ID', value: account.userId),
                     const SizedBox(height: 10),
-                    _InfoChip(label: 'Verification email', value: account.email),
+                    _InfoChip(
+                      label: 'Verification email',
+                      value: account.email,
+                    ),
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
@@ -90,7 +98,9 @@ class RegistrationSuccessScreen extends StatelessWidget {
                           backgroundColor: MColors.primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         child: const Text('Verify Email Code'),
                       ),
@@ -129,12 +139,19 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ],

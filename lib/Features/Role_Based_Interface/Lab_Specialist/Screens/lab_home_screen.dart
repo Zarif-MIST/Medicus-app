@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_order_log_screen.dart';
@@ -24,7 +23,6 @@ enum _HomeSection { pending, completed }
 
 class LabHomeScreenState extends State<LabHomeScreen> {
   late Future<List<LabOrderModel>> _ordersFuture;
-  String _query = '';
   _HomeSection _selectedSection = _HomeSection.pending;
 
   @override
@@ -81,23 +79,6 @@ class LabHomeScreenState extends State<LabHomeScreen> {
               .where((order) => order.status == 'Completed')
               .toList();
 
-          List<LabOrderModel> filter(List<LabOrderModel> list) {
-            final String query = _query.trim().toLowerCase();
-            if (query.isEmpty) {
-              return list;
-            }
-            return list
-                .where(
-                  (order) =>
-                      order.patientName.toLowerCase().contains(query) ||
-                      order.patientId.toLowerCase().contains(query),
-                )
-                .toList();
-          }
-
-          final List<LabOrderModel> visiblePending = filter(pendingOrders);
-          final List<LabOrderModel> visibleCompleted = filter(completedOrders);
-
           return SingleChildScrollView(
             child: Column(
               children: [
@@ -148,12 +129,6 @@ class LabHomeScreenState extends State<LabHomeScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 16),
-                                    LiquidGlassSearchBar(
-                                      hintText: 'Search order or patient',
-                                      onChanged: (value) =>
-                                          setState(() => _query = value),
-                                    ),
                                     const SizedBox(height: 24),
                                   ],
                                 ),
@@ -200,8 +175,8 @@ class LabHomeScreenState extends State<LabHomeScreen> {
                       const SizedBox(height: 18),
                       _SectionToggle(
                         selected: _selectedSection,
-                        pendingCount: visiblePending.length,
-                        completedCount: visibleCompleted.length,
+                        pendingCount: pendingOrders.length,
+                        completedCount: completedOrders.length,
                         onChanged: (section) =>
                             setState(() => _selectedSection = section),
                       ),
@@ -213,7 +188,7 @@ class LabHomeScreenState extends State<LabHomeScreen> {
                           ),
                         )
                       else if (_selectedSection == _HomeSection.pending) ...[
-                        for (final order in visiblePending) ...[
+                        for (final order in pendingOrders) ...[
                           _QueueCard(
                             order: order,
                             isDark: isDark,
@@ -221,21 +196,21 @@ class LabHomeScreenState extends State<LabHomeScreen> {
                           ),
                           const SizedBox(height: 10),
                         ],
-                        if (visiblePending.isEmpty)
+                        if (pendingOrders.isEmpty)
                           _EmptyState(
                             message: 'No pending lab orders right now.',
                             icon: Icons.inbox_outlined,
                             isDark: isDark,
                           ),
                       ] else ...[
-                        if (visibleCompleted.isEmpty)
+                        if (completedOrders.isEmpty)
                           _EmptyState(
                             message: 'No completed lab orders yet.',
                             icon: Icons.history,
                             isDark: isDark,
                           )
                         else
-                          for (final order in visibleCompleted) ...[
+                          for (final order in completedOrders) ...[
                             _QueueCard(
                               order: order,
                               isDark: isDark,

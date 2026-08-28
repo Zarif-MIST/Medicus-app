@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:medicus/Utilities/sizes.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart'; 
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:medicus/Features/Authentication/OnBoard/OnBoard_Controller.dart';
@@ -12,9 +12,9 @@ class OnBoardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-     double screenWidth = MediaQuery.of(context).size.width;
-     double screenHeight = MediaQuery.of(context).size.height;
-     final controller = Get.put(OnBoardController());
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+    final controller = Get.put(OnBoardController());
     return Scaffold(
       body: Stack(
         children: [
@@ -23,26 +23,34 @@ class OnBoardingScreen extends StatelessWidget {
             onPageChanged: controller.updatePageIndicator,
             children: [
               // Add your onboarding pages here
-              OnBoardPage(screenWidth: screenWidth, 
-              screenHeight: screenHeight,
-              images: 'assets/Images/OnBoard/Doctors-bro.svg', 
-              title: 'Welcome to Medicus', 
-              subtitle: 'Your health companion app for better Healthcare.'),
-              OnBoardPage(screenWidth: screenWidth +100, 
-              screenHeight: screenHeight +100,
-              images: 'assets/Images/OnBoard/Hospital patient-rafiki.svg', 
-              title: 'All-in-One Health Platform', 
-              subtitle: 'Find all your Tests, Prescriptions and Records in one place.'),
-              OnBoardPage(screenWidth: screenWidth, 
-              screenHeight: screenHeight,
-              images: 'assets/Images/OnBoard/Pharmacist-bro.svg', 
-              title: 'Friction-free Platform', 
-              subtitle: 'Find your nearest pharmacy and your favourite doctors'),
+              OnBoardPage(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight,
+                images: 'assets/Images/OnBoard/Doctors-bro.svg',
+                title: 'Welcome to Medicus',
+                subtitle: 'Your health companion app for better Healthcare.',
+              ),
+              OnBoardPage(
+                screenWidth: screenWidth + 100,
+                screenHeight: screenHeight + 100,
+                images: 'assets/Images/OnBoard/Hospital patient-rafiki.svg',
+                title: 'All-in-One Health Platform',
+                subtitle:
+                    'Find all your Tests, Prescriptions and Records in one place.',
+              ),
+              OnBoardPage(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight,
+                images: 'assets/Images/OnBoard/Pharmacist-bro.svg',
+                title: 'Friction-free Platform',
+                subtitle:
+                    'Find your nearest pharmacy and your favourite doctors',
+              ),
             ],
           ),
 
           Positioned(
-            top: Sizes.getAppBarHeight(context)+20,
+            top: Sizes.getAppBarHeight(context) + 20,
             right: 0,
             child: SafeArea(
               right: true,
@@ -58,30 +66,32 @@ class OnBoardingScreen extends StatelessWidget {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   onPressed: () => controller.skipPage(),
-                  child: Text('Skip',style:Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Skip',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
 
-
           DotNav(),
-
-
 
           Positioned(
             right: 10,
             bottom: Sizes.getBottomNavBarHeight(context),
             child: ElevatedButton(
-            onPressed: () => controller.nextPage(), 
-            style: ElevatedButton.styleFrom(
-              shape: const CircleBorder(),
-              backgroundColor: MColors.primaryColor, // <-- Button color
-              foregroundColor: Colors.white, // <-- Splash color
+              onPressed: () => controller.nextPage(),
+              style: ElevatedButton.styleFrom(
+                shape: const CircleBorder(),
+                backgroundColor: MColors.primaryColor, // <-- Button color
+                foregroundColor: Colors.white, // <-- Splash color
+              ),
+              child: const Icon(Iconsax.arrow_circle_right, size: 35),
             ),
-            child: const Icon(Iconsax.arrow_circle_right,size: 35,),
-            )
-            )
+          ),
         ],
       ),
     );
@@ -89,21 +99,24 @@ class OnBoardingScreen extends StatelessWidget {
 }
 
 class DotNav extends StatelessWidget {
-  DotNav({
-    super.key,
-  });
-final controller = Get.put(OnBoardController());
+  DotNav({super.key});
+  final controller = Get.put(OnBoardController());
   @override
   Widget build(BuildContext context) {
     return Positioned(
       bottom: Sizes.getBottomNavBarHeight(context) + 20,
-      left: Sizes.defaultpadding +20,
+      left: Sizes.defaultpadding + 20,
       right: 0,
-      
-      child: SmoothPageIndicator(controller: controller.pageController, 
-      onDotClicked: controller.dotNavClick,
-      count: 3,
-      effect:ExpandingDotsEffect(activeDotColor: MColors.primaryColor,dotHeight: 6)),
+
+      child: SmoothPageIndicator(
+        controller: controller.pageController,
+        onDotClicked: controller.dotNavClick,
+        count: 3,
+        effect: ExpandingDotsEffect(
+          activeDotColor: MColors.primaryColor,
+          dotHeight: 6,
+        ),
+      ),
     );
   }
 }
@@ -123,15 +136,16 @@ class OnBoardPage extends StatelessWidget {
   final String images, title, subtitle;
   @override
   Widget build(BuildContext context) {
-    return Padding(padding: const EdgeInsets.all(80.0),
-    child:Column(
-      children: [
-         SvgPicture.asset(
-          images,
-          width: screenWidth * 0.6,   // 60% of screen width
-          height: screenHeight * 0.4 , // 60% of screen height
-          fit: BoxFit.contain,        // Scale nicely within bounds
-        ),
+    return Padding(
+      padding: const EdgeInsets.all(80.0),
+      child: Column(
+        children: [
+          SvgPicture.asset(
+            images,
+            width: screenWidth * 0.6, // 60% of screen width
+            height: screenHeight * 0.4, // 60% of screen height
+            fit: BoxFit.contain, // Scale nicely within bounds
+          ),
           SizedBox(height: 80),
           Text(
             title,
@@ -144,8 +158,8 @@ class OnBoardPage extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
-      ],
-    )
+        ],
+      ),
     );
   }
 }

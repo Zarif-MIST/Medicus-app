@@ -31,7 +31,11 @@ class WelcomeBanner extends StatelessWidget {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(Icons.lightbulb_outline, size: 16, color: MColors.primaryColor),
+            const Icon(
+              Icons.lightbulb_outline,
+              size: 16,
+              color: MColors.primaryColor,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(

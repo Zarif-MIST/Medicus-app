@@ -1,74 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
-class LabResultsScreen extends StatelessWidget {
+class LabResultsScreen extends StatefulWidget {
   const LabResultsScreen({super.key});
 
-  static const List<_PatientLabResult> _results = [
-    _PatientLabResult(
-      patientName: 'Tareq Hasan',
-      patientId: '4821',
-      testName: 'CBC + Blood Sugar',
-      reportId: 'RPT-801',
-      collectedAt: '28 Jul 2026, 09:20 AM',
-      reviewedBy: 'Dr. Farhana Rahman',
-      status: 'Ready',
-      findings: [
-        _LabFinding(
-          label: 'Hemoglobin',
-          value: '13.8 g/dL',
-          note: 'Within normal adult range.',
-        ),
-        _LabFinding(
-          label: 'WBC Count',
-          value: '7,400 /uL',
-          note: 'No acute infection marker found.',
-        ),
-        _LabFinding(
-          label: 'Platelet Count',
-          value: '245,000 /uL',
-          note: 'Normal platelet level.',
-        ),
-        _LabFinding(
-          label: 'Fasting Blood Sugar',
-          value: '102 mg/dL',
-          note: 'Slightly above ideal fasting range.',
-        ),
-      ],
-    ),
-    _PatientLabResult(
-      patientName: 'Nafis Ahmed',
-      patientId: '6108',
-      testName: 'Chest X-Ray',
-      reportId: 'RPT-802',
-      collectedAt: '28 Jul 2026, 11:05 AM',
-      reviewedBy: 'Dr. Nusrat Jahan',
-      status: 'Review Needed',
-      findings: [
-        _LabFinding(
-          label: 'Lung Fields',
-          value: 'Mild haziness',
-          note: 'Patchy opacity noted in lower right zone.',
-        ),
-        _LabFinding(
-          label: 'Cardiac Silhouette',
-          value: 'Normal size',
-          note: 'No cardiomegaly visible.',
-        ),
-        _LabFinding(
-          label: 'Pleural Space',
-          value: 'Clear',
-          note: 'No pleural effusion detected.',
-        ),
-        _LabFinding(
-          label: 'Impression',
-          value: 'Follow-up advised',
-          note: 'Clinical correlation recommended by physician.',
-        ),
-      ],
-    ),
-  ];
+  @override
+  State<LabResultsScreen> createState() => _LabResultsScreenState();
+}
+
+class _LabResultsScreenState extends State<LabResultsScreen> {
+  late Future<List<LabOrderModel>> _resultsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _resultsFuture = _load();
+  }
+
+  Future<List<LabOrderModel>> _load() async {
+    final List<LabOrderModel> all = await LabService.instance.getAllOrders();
+    return all.where((order) => order.status == 'Completed').toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,16 +38,42 @@ class LabResultsScreen extends StatelessWidget {
         elevation: 0,
         title: const Text('Lab Results'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-        children: [
-          _ResultsHeader(totalReports: _results.length, isDark: isDark),
-          const SizedBox(height: 16),
-          for (final result in _results) ...[
-            _PatientResultTile(result: result, isDark: isDark),
-            const SizedBox(height: 12),
-          ],
-        ],
+      body: FutureBuilder<List<LabOrderModel>>(
+        future: _resultsFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: MColors.primaryColor),
+            );
+          }
+
+          final List<LabOrderModel> results = snapshot.data!;
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+            children: [
+              _ResultsHeader(totalReports: results.length, isDark: isDark),
+              const SizedBox(height: 16),
+              if (results.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 32),
+                    child: Text(
+                      'No completed lab reports yet.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                for (final result in results) ...[
+                  _PatientResultTile(result: result, isDark: isDark),
+                  const SizedBox(height: 12),
+                ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -145,7 +126,7 @@ class _ResultsHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$totalReports reports ready for review',
+                  '$totalReports reports completed',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.78),
                     fontSize: 13,
@@ -160,10 +141,32 @@ class _ResultsHeader extends StatelessWidget {
   }
 }
 
+const List<String> _kMonths = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+String _formatDateTime(DateTime timestamp) {
+  final int hour = timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12;
+  final String minute = timestamp.minute.toString().padLeft(2, '0');
+  final String period = timestamp.hour < 12 ? 'AM' : 'PM';
+  return '${timestamp.day} ${_kMonths[timestamp.month - 1]} ${timestamp.year}, $hour:$minute $period';
+}
+
 class _PatientResultTile extends StatelessWidget {
   const _PatientResultTile({required this.result, required this.isDark});
 
-  final _PatientLabResult result;
+  final LabOrderModel result;
   final bool isDark;
 
   @override
@@ -206,57 +209,58 @@ class _PatientResultTile extends StatelessWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              '${result.testName} - ${result.status}',
+              result.orderType,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: mutedColor),
             ),
           ),
           children: [
-            _ResultMetaGrid(result: result, mutedColor: mutedColor),
-            const SizedBox(height: 14),
-            for (final finding in result.findings) ...[
-              _FindingLine(finding: finding, isDark: isDark),
-              const SizedBox(height: 10),
-            ],
+            _MetaLine(
+              label: 'Patient ID',
+              value: result.patientId,
+              mutedColor: mutedColor,
+            ),
+            _MetaLine(
+              label: 'Requested By',
+              value: result.requestedBy,
+              mutedColor: mutedColor,
+            ),
+            if (result.completedAt != null)
+              _MetaLine(
+                label: 'Completed',
+                value: _formatDateTime(result.completedAt!),
+                mutedColor: mutedColor,
+              ),
+            if (result.resultFileName != null)
+              _MetaLine(
+                label: 'Attachment',
+                value: result.resultFileName!,
+                mutedColor: mutedColor,
+              ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : const Color(0xFFF8F5F3),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                (result.resultNote == null || result.resultNote!.isEmpty)
+                    ? 'No result note was added for this order.'
+                    : result.resultNote!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:
+                      (result.resultNote == null || result.resultNote!.isEmpty)
+                      ? Colors.grey
+                      : (isDark ? Colors.white70 : Colors.black87),
+                ),
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ResultMetaGrid extends StatelessWidget {
-  const _ResultMetaGrid({required this.result, required this.mutedColor});
-
-  final _PatientLabResult result;
-  final Color mutedColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _MetaLine(
-          label: 'Patient ID',
-          value: result.patientId,
-          mutedColor: mutedColor,
-        ),
-        _MetaLine(
-          label: 'Report ID',
-          value: result.reportId,
-          mutedColor: mutedColor,
-        ),
-        _MetaLine(
-          label: 'Collected',
-          value: result.collectedAt,
-          mutedColor: mutedColor,
-        ),
-        _MetaLine(
-          label: 'Reviewed By',
-          value: result.reviewedBy,
-          mutedColor: mutedColor,
-        ),
-      ],
     );
   }
 }
@@ -299,91 +303,4 @@ class _MetaLine extends StatelessWidget {
       ),
     );
   }
-}
-
-class _FindingLine extends StatelessWidget {
-  const _FindingLine({required this.finding, required this.isDark});
-
-  final _LabFinding finding;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : const Color(0xFFF8F5F3),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            margin: const EdgeInsets.only(top: 7),
-            decoration: const BoxDecoration(
-              color: MColors.primaryColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${finding.label}: ${finding.value}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  finding.note,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark ? Colors.white60 : Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PatientLabResult {
-  const _PatientLabResult({
-    required this.patientName,
-    required this.patientId,
-    required this.testName,
-    required this.reportId,
-    required this.collectedAt,
-    required this.reviewedBy,
-    required this.status,
-    required this.findings,
-  });
-
-  final String patientName;
-  final String patientId;
-  final String testName;
-  final String reportId;
-  final String collectedAt;
-  final String reviewedBy;
-  final String status;
-  final List<_LabFinding> findings;
-}
-
-class _LabFinding {
-  const _LabFinding({
-    required this.label,
-    required this.value,
-    required this.note,
-  });
-
-  final String label;
-  final String value;
-  final String note;
 }

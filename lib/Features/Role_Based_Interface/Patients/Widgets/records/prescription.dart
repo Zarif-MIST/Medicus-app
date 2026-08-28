@@ -1,7 +1,11 @@
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/prescription_timeline.dart';
 
 class PrescriptionMedicine {
-  const PrescriptionMedicine({required this.name, required this.dosage, required this.durationDays});
+  const PrescriptionMedicine({
+    required this.name,
+    required this.dosage,
+    required this.durationDays,
+  });
 
   final String name;
   final String dosage;

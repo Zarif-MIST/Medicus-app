@@ -15,6 +15,7 @@ class AuthAccount {
     this.gender,
     this.dateOfBirth,
     this.licenseNumber,
+    this.pharmacistRegistrationNumber,
     this.pharmacyName,
     this.tradeLicense,
     this.nidNumber,
@@ -22,6 +23,7 @@ class AuthAccount {
     this.pharmacyLat,
     this.pharmacyLng,
     this.isVerified = false,
+    this.avgConsultationMinutes,
   });
 
   final String? firebaseUid;
@@ -37,6 +39,7 @@ class AuthAccount {
   final String? gender;
   final DateTime? dateOfBirth;
   final String? licenseNumber;
+  final String? pharmacistRegistrationNumber;
   final String? pharmacyName;
   final String? tradeLicense;
   final String? nidNumber;
@@ -45,7 +48,13 @@ class AuthAccount {
   final double? pharmacyLng;
   final bool isVerified;
 
+  /// Minutes a doctor typically spends per patient — set at registration.
+  /// Doctors registered before this field existed fall back to 5 minutes.
+  final int? avgConsultationMinutes;
+
   String get fullName => '$firstName $lastName'.trim();
+
+  int get consultationMinutes => avgConsultationMinutes ?? 5;
 
   String get maskedEmail {
     final int atIndex = email.indexOf('@');
@@ -70,6 +79,7 @@ class AuthAccount {
     String? gender,
     DateTime? dateOfBirth,
     String? licenseNumber,
+    String? pharmacistRegistrationNumber,
     String? pharmacyName,
     String? tradeLicense,
     String? nidNumber,
@@ -77,6 +87,7 @@ class AuthAccount {
     double? pharmacyLat,
     double? pharmacyLng,
     bool? isVerified,
+    int? avgConsultationMinutes,
   }) {
     return AuthAccount(
       firebaseUid: firebaseUid ?? this.firebaseUid,
@@ -92,6 +103,8 @@ class AuthAccount {
       gender: gender ?? this.gender,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       licenseNumber: licenseNumber ?? this.licenseNumber,
+      pharmacistRegistrationNumber:
+          pharmacistRegistrationNumber ?? this.pharmacistRegistrationNumber,
       pharmacyName: pharmacyName ?? this.pharmacyName,
       tradeLicense: tradeLicense ?? this.tradeLicense,
       nidNumber: nidNumber ?? this.nidNumber,
@@ -99,6 +112,8 @@ class AuthAccount {
       pharmacyLat: pharmacyLat ?? this.pharmacyLat,
       pharmacyLng: pharmacyLng ?? this.pharmacyLng,
       isVerified: isVerified ?? this.isVerified,
+      avgConsultationMinutes:
+          avgConsultationMinutes ?? this.avgConsultationMinutes,
     );
   }
 }

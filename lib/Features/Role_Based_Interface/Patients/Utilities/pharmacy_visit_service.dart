@@ -9,7 +9,10 @@ class PharmacyVisitService {
   CollectionReference<Map<String, dynamic>> get _collection =>
       FirebaseFirestore.instance.collection('pharmacy_visits');
 
-  Future<void> markVisited({required String patientId, required String pharmacyId}) async {
+  Future<void> markVisited({
+    required String patientId,
+    required String pharmacyId,
+  }) async {
     await _collection.doc('${patientId}_$pharmacyId').set({
       'patientId': patientId,
       'pharmacyId': pharmacyId,
@@ -18,8 +21,9 @@ class PharmacyVisitService {
   }
 
   Future<Set<String>> fetchVisitedPharmacyIds(String patientId) async {
-    final QuerySnapshot<Map<String, dynamic>> snapshot =
-        await _collection.where('patientId', isEqualTo: patientId).get();
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _collection
+        .where('patientId', isEqualTo: patientId)
+        .get();
 
     return {
       for (final doc in snapshot.docs) doc.data()['pharmacyId'] as String,

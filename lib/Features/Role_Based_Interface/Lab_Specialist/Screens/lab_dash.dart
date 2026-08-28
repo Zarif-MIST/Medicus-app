@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
-import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_orders_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 class LabDashboardScreen extends StatelessWidget {
   const LabDashboardScreen({super.key, required this.account});
@@ -28,6 +29,8 @@ class _LabShell extends StatefulWidget {
 
 class _LabShellState extends State<_LabShell> {
   int _index = 0;
+  final GlobalKey<LabHomeScreenState> _homeKey =
+      GlobalKey<LabHomeScreenState>();
 
   final List<LiquidNavItem> _items = const [
     LiquidNavItem(
@@ -36,9 +39,9 @@ class _LabShellState extends State<_LabShell> {
       label: 'Home',
     ),
     LiquidNavItem(
-      icon: Icons.science_outlined,
-      selectedIcon: Icons.science,
-      label: 'Orders',
+      icon: Icons.qr_code_scanner_outlined,
+      selectedIcon: Icons.qr_code_scanner,
+      label: 'Scan QR',
     ),
     LiquidNavItem(
       icon: Icons.upload_file_outlined,
@@ -52,34 +55,42 @@ class _LabShellState extends State<_LabShell> {
     ),
   ];
 
+  void _onNavTap(int index) {
+    setState(() => _index = index);
+    if (index == 0) {
+      _homeKey.currentState?.refreshOrdersData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      LabHomeScreen(
-        account: widget.account,
-        onOpenOrders: () => setState(() => _index = 1),
-      ),
-      const LabOrdersScreen(),
+      LabHomeScreen(key: _homeKey, account: widget.account),
+      _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
       const LabResultsScreen(),
       ProfileScreen(account: widget.account),
     ];
 
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          pages[_index],
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: (index) => setState(() => _index = index),
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => _onNavTap(0),
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            IndexedStack(index: _index, children: pages),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: _onNavTap,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

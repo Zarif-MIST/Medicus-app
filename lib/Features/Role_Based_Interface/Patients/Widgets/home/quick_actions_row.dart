@@ -3,7 +3,11 @@ import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class QuickAction {
-  const QuickAction({required this.label, required this.icon, required this.onTap});
+  const QuickAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   final String label;
   final IconData icon;
@@ -56,10 +60,16 @@ class _ActionTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isEmergency
                       ? Colors.white.withValues(alpha: 0.18)
-                      : MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                      : MColors.primaryColor.withValues(
+                          alpha: isDark ? 0.18 : 0.1,
+                        ),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(action.icon, color: isEmergency ? Colors.white : MColors.primaryColor, size: 20),
+                child: Icon(
+                  action.icon,
+                  color: isEmergency ? Colors.white : MColors.primaryColor,
+                  size: 20,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -68,7 +78,9 @@ class _ActionTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isEmergency ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                  color: isEmergency
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
                 ),
                 maxLines: 2,
               ),

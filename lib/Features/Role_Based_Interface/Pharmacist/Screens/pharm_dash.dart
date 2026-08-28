@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
-import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_queue_screen.dart';
-import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/scan_prescription_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 class PharmacistDashboardScreen extends StatelessWidget {
   const PharmacistDashboardScreen({super.key, required this.account});
@@ -31,6 +31,8 @@ class _PharmacistShellState extends State<_PharmacistShell> {
   int _index = 0;
   final GlobalKey<PharmacistHomeScreenState> _homeKey =
       GlobalKey<PharmacistHomeScreenState>();
+  final GlobalKey<InventoryScreenState> _inventoryKey =
+      GlobalKey<InventoryScreenState>();
 
   final List<LiquidNavItem> _items = const [
     LiquidNavItem(
@@ -55,43 +57,54 @@ class _PharmacistShellState extends State<_PharmacistShell> {
     ),
   ];
 
+  void _onNavTap(int index) {
+    setState(() => _index = index);
+    if (index == 0) {
+      _homeKey.currentState?.refreshQueueData();
+    } else if (index == 2) {
+      _inventoryKey.currentState?.refreshInventory();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       PharmacistHomeScreen(
         key: _homeKey,
         account: widget.account,
-        onOpenQueue: () async {
-          await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const PrescriptionQueueScreen(),
-            ),
-          );
-          _homeKey.currentState?.refreshQueueData();
+        onOpenInventory: () {
+          setState(() => _index = 2);
+          _inventoryKey.currentState?.showLowStockOnly();
         },
-        onOpenScanner: () => setState(() => _index = 1),
       ),
-      const ScanPrescriptionScreen(),
-      const InventoryScreen(),
+      _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
+      InventoryScreen(
+        key: _inventoryKey,
+        pharmacistId: widget.account.firebaseUid ?? widget.account.userId,
+      ),
       ProfileScreen(account: widget.account),
     ];
 
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          pages[_index],
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: (index) => setState(() => _index = index),
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => _onNavTap(0),
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            IndexedStack(index: _index, children: pages),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: _onNavTap,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

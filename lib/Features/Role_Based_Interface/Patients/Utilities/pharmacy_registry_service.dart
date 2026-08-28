@@ -10,7 +10,8 @@ class PharmacyRegistryService {
   Future<List<RegisteredPharmacy>> fetchAllPharmacies() async {
     final accounts = await AuthRegistry.instance.pharmacistAccounts();
     return [
-      for (final account in accounts) ?RegisteredPharmacy.fromAuthAccount(account),
+      for (final account in accounts)
+        ?RegisteredPharmacy.fromAuthAccount(account),
     ];
   }
 }

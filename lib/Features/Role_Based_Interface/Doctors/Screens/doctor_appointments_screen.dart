@@ -5,6 +5,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_ava
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/empty_appointments.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -87,6 +88,21 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       body: FutureBuilder<List<DoctorAppointmentModel>>(
         future: _appointmentsFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Could not load appointments.\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+              ),
+            );
+          }
+
           if (!snapshot.hasData) {
             return const Center(
               child: CircularProgressIndicator(color: MColors.primaryColor),
@@ -94,17 +110,16 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           }
 
           final appointments = snapshot.data!;
+          if (appointments.isEmpty) {
+            return const Center(child: EmptyAppointmentsPlaceholder());
+          }
+
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
             itemCount: appointments.length,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final appointment = appointments[index];
-              final Color statusColor = switch (appointment.status) {
-                'Confirmed' => Colors.green,
-                'Waiting' => Colors.orange,
-                _ => MColors.primaryColor,
-              };
 
               return Container(
                 padding: const EdgeInsets.all(16),
@@ -124,33 +139,9 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            appointment.patientName,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            appointment.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      appointment.patientName,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 6),
                     Text(

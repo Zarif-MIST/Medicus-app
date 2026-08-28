@@ -35,17 +35,29 @@ class AuthRoleSelector extends StatelessWidget {
                 (AuthRole role) => OutlinedButton(
                   onPressed: () => onChanged(role),
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: selectedRole == role ? MColors.primaryColor.withValues(alpha: 0.08) : null,
-                    side: BorderSide(color: dark ? Colors.white : MColors.primaryColor, width: 2),
+                    backgroundColor: selectedRole == role
+                        ? MColors.primaryColor.withValues(alpha: 0.08)
+                        : null,
+                    side: BorderSide(
+                      color: dark ? Colors.white : MColors.primaryColor,
+                      width: 2,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 8,
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(role.icon, color: dark ? Colors.white : MColors.primaryColor, size: iconSize),
+                      Icon(
+                        role.icon,
+                        color: dark ? Colors.white : MColors.primaryColor,
+                        size: iconSize,
+                      ),
                       const SizedBox(height: 6),
                       Text(
                         _buttonLabel(role),

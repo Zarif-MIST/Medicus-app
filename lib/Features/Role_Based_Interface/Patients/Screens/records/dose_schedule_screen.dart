@@ -348,18 +348,40 @@ class _DoseRow extends StatelessWidget {
   final bool isOverlapping;
   final ValueChanged<bool> onToggle;
 
+  /// Split into two fixed lines (rather than relying on [TimeOfDay.format]'s
+  /// automatic wrapping, which only breaks at a space and inconsistently
+  /// overflowed into the medicine name for some times but not others).
+  String _hourMinute(DateTime time) {
+    final int hour12 = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    return '$hour12:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _meridiem(DateTime time) => time.hour < 12 ? 'AM' : 'PM';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           width: 52,
-          child: Text(
-            TimeOfDay.fromDateTime(dose.scheduledAt).format(context),
-            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.w600),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _hourMinute(dose.scheduledAt),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  _meridiem(dose.scheduledAt),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -367,11 +389,25 @@ class _DoseRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(dose.medicineName, style: theme.textTheme.titleSmall),
-              if (dose.doctorName.isNotEmpty)
-                Text(
-                  'Prescribed by ${dose.doctorName}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+              if (dose.doctorName.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: MColors.primaryColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    MHelperFunctions.doctorNameWithTitle(dose.doctorName),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 4),
+              ],
               if (dose.dosage.isNotEmpty || dose.instructions.isNotEmpty)
                 Text(
                   [dose.dosage, dose.instructions].where((s) => s.isNotEmpty).join(' · '),

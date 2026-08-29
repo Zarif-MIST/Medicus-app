@@ -8,6 +8,9 @@
         android:label="medicus"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAyLKv6mT3FaqJszlgZqQ3V9K7eJ6xRUiY" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

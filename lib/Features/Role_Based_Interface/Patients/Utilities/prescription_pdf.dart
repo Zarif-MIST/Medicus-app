@@ -3,7 +3,6 @@ import 'package:barcode/barcode.dart' as bc;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
-import 'package:medicus/Utilities/prescription_qr.dart';
 
 Future<Uint8List> buildPrescriptionPdf({
   required Prescription prescription,
@@ -14,21 +13,11 @@ Future<Uint8List> buildPrescriptionPdf({
   final String formattedDate =
       '${prescription.date.day.toString().padLeft(2, '0')}/${prescription.date.month.toString().padLeft(2, '0')}/${prescription.date.year}';
 
-  final String qrData = PrescriptionQrPayload(
-    rxId: prescription.id,
-    patientId: patientId,
-    patientName: patientName,
-    doctorName: prescription.doctorName,
-    issuedOn: prescription.date,
-    medicines: [
-      for (final medicine in prescription.medicines)
-        PrescriptionQrMedicine(
-          name: medicine.name,
-          dosage: medicine.dosage,
-          durationDays: medicine.durationDays,
-        ),
-    ],
-  ).encode();
+  // Same plain-patient-ID QR as the patient's "My Treatment QR" screen, so a
+  // pharmacist scanning this printed slip goes through the identical
+  // Scanqr -> ScannedPatientQueueScreen path and sees this (and any other)
+  // pending prescription live from Firestore.
+  final String qrData = patientId;
 
   doc.addPage(
     pw.Page(

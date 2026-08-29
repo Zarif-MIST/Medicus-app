@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/inventory_transaction.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/medicine_shortfall.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
@@ -12,18 +13,20 @@ class PharmacistService {
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptions() async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('prescriptions')
-        .where('status', isEqualTo: 'pendingPharmacy')
+        .where('status', isEqualTo: PrescriptionRecord.statusPending)
         .get();
 
     return [
       for (final doc in snapshot.docs)
-        _fromFirestore(doc.id, doc.data(), status: 'Pending'),
+        _fromFirestore(doc.id, doc.data(), status: PrescriptionRecord.statusPending),
     ];
   }
 
   /// Used for the pharmacist's QR scan flow: only the scanned patient's own
   /// pending prescription(s) are returned — nothing else about the patient
-  /// or any other patient's data is exposed.
+  /// or any other patient's data is exposed. Fetches by `patientId` alone and
+  /// filters `status` client-side, since this project avoids combined-filter
+  /// Firestore queries that need a composite index.
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptionsForPatient(
     String patientId,
   ) async {
@@ -34,13 +37,13 @@ class PharmacistService {
 
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('prescriptions')
-        .where('status', isEqualTo: 'pendingPharmacy')
         .where('patientId', isEqualTo: id)
         .get();
 
     return [
       for (final doc in snapshot.docs)
-        _fromFirestore(doc.id, doc.data(), status: 'Pending'),
+        if ((doc.data()['status'] ?? '') == PrescriptionRecord.statusPending)
+          _fromFirestore(doc.id, doc.data(), status: PrescriptionRecord.statusPending),
     ];
   }
 
@@ -48,12 +51,12 @@ class PharmacistService {
   getDispensedPrescriptions() async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('prescriptions')
-        .where('status', isEqualTo: 'dispensed')
+        .where('status', isEqualTo: PrescriptionRecord.statusDispensed)
         .get();
 
     return [
       for (final doc in snapshot.docs)
-        _fromFirestore(doc.id, doc.data(), status: 'Dispensed'),
+        _fromFirestore(doc.id, doc.data(), status: PrescriptionRecord.statusDispensed),
     ];
   }
 
@@ -105,13 +108,23 @@ class PharmacistService {
     final String frequency = (data['frequency'] ?? '').toString().trim();
     final int? durationDays = (data['durationDays'] as num?)?.toInt();
     final String instructions = (data['instructions'] ?? '').toString().trim();
+    final int dosesPerDay = (data['doseTimes'] as List<dynamic>?)?.length ?? 0;
+
+    // Older prescriptions stored an explicit `quantity`; the current
+    // doctor-side form only records `durationDays` and `doseTimes`, so
+    // derive a reasonable total (one unit per scheduled dose) instead of
+    // silently assuming 1 and under-deducting inventory.
+    final int? explicitQuantity = (data['quantity'] as num?)?.toInt();
+    final int derivedQuantity = durationDays != null && dosesPerDay > 0
+        ? durationDays * dosesPerDay
+        : (durationDays ?? 1);
 
     return PrescribedMedicine(
       name: (data['name'] ?? '').toString(),
       dosage: (data['dosage'] ?? '').toString(),
       frequency: frequency.isEmpty ? 'As directed' : frequency,
       duration: durationDays == null ? 'Not specified' : '$durationDays days',
-      quantity: (data['quantity'] as num?)?.toInt() ?? 1,
+      quantity: explicitQuantity ?? derivedQuantity,
       instructions: instructions.isEmpty ? null : instructions,
     );
   }
@@ -357,7 +370,7 @@ class PharmacistService {
 
     await _firestore.collection('prescriptions').doc(id).update(
       <String, dynamic>{
-        'status': 'dispensed',
+        'status': PrescriptionRecord.statusDispensed,
         'dispensedAt': FieldValue.serverTimestamp(),
       },
     );

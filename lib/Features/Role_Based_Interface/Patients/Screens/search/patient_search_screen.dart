@@ -141,7 +141,11 @@ class _PatientSearchScreenState extends State<PatientSearchScreen> {
   void _openDoctor(DoctorSummary doctor) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DoctorProfileScreen(doctor: doctor, onBooked: widget.onBookAppointment),
+        builder: (_) => DoctorProfileScreen(
+          doctor: doctor,
+          onBooked: widget.onBookAppointment,
+          appointments: widget.appointments,
+        ),
       ),
     );
   }

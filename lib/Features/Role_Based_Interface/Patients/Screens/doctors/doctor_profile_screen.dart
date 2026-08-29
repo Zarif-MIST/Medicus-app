@@ -10,10 +10,11 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/b
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/appointment_confirmation_screen.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
-  const DoctorProfileScreen({super.key, required this.doctor, required this.onBooked});
+  const DoctorProfileScreen({super.key, required this.doctor, required this.onBooked, required this.appointments});
 
   final DoctorSummary doctor;
   final ValueChanged<BookedAppointment> onBooked;
+  final List<BookedAppointment> appointments;
 
   @override
   State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
@@ -99,6 +100,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           date: _dates[_selectedDateIndex],
           window: _selectedWindow!,
           onConfirmed: widget.onBooked,
+          existingAppointments: widget.appointments,
         ),
       ),
     );

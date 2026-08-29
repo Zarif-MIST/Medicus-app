@@ -10,6 +10,47 @@ class LabService {
   CollectionReference<Map<String, dynamic>> get _orders =>
       _firestore.collection('lab_orders');
 
+  /// Creates a lab order, optionally linked to the prescription that
+  /// recommended it. Called from the doctor's prescription-writing flow.
+  Future<void> createOrder({
+    required String patientId,
+    required String patientName,
+    required String orderType,
+    required String requestedBy,
+    String prescriptionId = '',
+  }) async {
+    if (patientId.trim().isEmpty || orderType.trim().isEmpty) {
+      return;
+    }
+
+    await _orders.add(<String, dynamic>{
+      'patientId': patientId.trim(),
+      'patientName': patientName,
+      'orderType': orderType.trim(),
+      'requestedBy': requestedBy,
+      'status': 'Pending',
+      'prescriptionId': prescriptionId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Every order for one patient, completed or not — used by the patient's
+  /// Medical Records screen to show test results alongside the prescription
+  /// that recommended them.
+  Future<List<LabOrderModel>> getAllOrdersForPatient(String patientId) async {
+    final String id = patientId.trim();
+    if (id.isEmpty) {
+      return const [];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _orders
+        .where('patientId', isEqualTo: id)
+        .get();
+    return [
+      for (final doc in snapshot.docs) _fromFirestore(doc.id, doc.data()),
+    ];
+  }
+
   Future<List<LabOrderModel>> getPendingOrders() async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _orders
         .where('status', isNotEqualTo: 'Completed')
@@ -89,6 +130,7 @@ class LabService {
       orderType: (data['orderType'] ?? '').toString(),
       requestedBy: (data['requestedBy'] ?? '').toString(),
       status: (data['status'] ?? 'Pending').toString(),
+      prescriptionId: (data['prescriptionId'] ?? '').toString(),
       createdAt: rawCreatedAt is Timestamp ? rawCreatedAt.toDate() : null,
       completedAt: rawCompletedAt is Timestamp ? rawCompletedAt.toDate() : null,
       resultNote: data['resultNote'] as String?,

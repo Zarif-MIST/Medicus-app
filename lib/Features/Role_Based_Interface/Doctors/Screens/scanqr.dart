@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
+/// Shared patient-QR scanner reused by every role's "Scan QR" tab. What
+/// happens after a patient is found differs by role: a doctor gets that
+/// patient's full history and can write a prescription, but a pharmacist or
+/// lab specialist should only ever land on their own scoped queue screen —
+/// never on [PatientDetailScreen], which exposes full medical history and
+/// prescription-writing. [onPatientFound] lets each caller supply the right
+/// destination; omitting it keeps the doctor's default behavior.
 class Scanqr extends StatefulWidget {
-  const Scanqr({super.key, required this.account});
+  const Scanqr({super.key, required this.account, this.onPatientFound});
 
   final AuthAccount account;
+  final Widget Function(PatientRecordModel record, AuthAccount account)? onPatientFound;
 
   @override
   State<Scanqr> createState() => _ScanqrState();
@@ -57,8 +66,10 @@ class _ScanqrState extends State<Scanqr> {
       return;
     }
 
+    final Widget destination = widget.onPatientFound?.call(record, widget.account) ??
+        PatientDetailScreen(record: record, doctor: widget.account);
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
+      MaterialPageRoute(builder: (_) => destination),
     );
 
     if (!mounted) {

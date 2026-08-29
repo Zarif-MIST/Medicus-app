@@ -5,6 +5,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dar
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/scanned_patient_orders_screen.dart';
 import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 class LabDashboardScreen extends StatelessWidget {
@@ -66,7 +67,15 @@ class _LabShellState extends State<_LabShell> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       LabHomeScreen(key: _homeKey, account: widget.account),
-      _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
+      _index == 1
+          ? Scanqr(
+              account: widget.account,
+              onPatientFound: (record, account) => ScannedPatientOrdersScreen(
+                patientId: record.account.userId,
+                patientName: record.account.fullName,
+              ),
+            )
+          : const SizedBox.shrink(),
       const LabResultsScreen(),
       ProfileScreen(account: widget.account),
     ];

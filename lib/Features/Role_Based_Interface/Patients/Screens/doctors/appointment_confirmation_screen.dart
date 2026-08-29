@@ -43,6 +43,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
     required this.date,
     required this.window,
     required this.onConfirmed,
+    required this.existingAppointments,
   });
 
   final DoctorSummary doctor;
@@ -50,7 +51,42 @@ class AppointmentConfirmationScreen extends StatelessWidget {
   final DoctorAvailabilityWindow window;
   final ValueChanged<BookedAppointment> onConfirmed;
 
+  /// The patient's own current bookings — used to enforce the per-day cap
+  /// (at most 2 appointments a day, and never the same doctor twice in one
+  /// day) before writing a new one.
+  final List<BookedAppointment> existingAppointments;
+
+  void _showBlockedDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Can't book this appointment"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirm(BuildContext context) async {
+    final List<BookedAppointment> sameDay = existingAppointments.where((a) {
+      return a.date.year == date.year && a.date.month == date.month && a.date.day == date.day;
+    }).toList();
+
+    if (sameDay.any((a) => a.doctorId == doctor.doctorId)) {
+      _showBlockedDialog(context, 'You already have an appointment with ${doctor.name} on this day.');
+      return;
+    }
+    if (sameDay.length >= 2) {
+      _showBlockedDialog(context, 'You can book at most 2 appointments a day, with 2 different doctors.');
+      return;
+    }
+
     const AppointmentRepository repository = AppointmentRepository();
     int booked;
     try {

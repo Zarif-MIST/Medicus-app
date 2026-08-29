@@ -1,6 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
+import 'package:medicus/Features/Prescriptions/Services/prescription_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
@@ -16,9 +18,14 @@ class LabResultUploadScreen extends StatefulWidget {
 }
 
 class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
+  static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();
+
   final TextEditingController _noteController = TextEditingController();
   String? _selectedFileName;
   bool _saving = false;
+  late final Future<PrescriptionRecord?> _linkedPrescriptionFuture = widget.order.prescriptionId.isEmpty
+      ? Future.value(null)
+      : _prescriptionRepository.fetchById(widget.order.prescriptionId);
 
   @override
   void dispose() {
@@ -154,6 +161,8 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          _LinkedPrescriptionCard(future: _linkedPrescriptionFuture, isDark: isDark),
+          const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
@@ -175,6 +184,68 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Shows the prescription this order was requested from, if any, so the
+/// specialist can see why the test was ordered before filing the result —
+/// and so the result stays attached to that exact prescription for the
+/// patient's and the requesting doctor's records.
+class _LinkedPrescriptionCard extends StatelessWidget {
+  const _LinkedPrescriptionCard({required this.future, required this.isDark});
+
+  final Future<PrescriptionRecord?> future;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PrescriptionRecord?>(
+      future: future,
+      builder: (context, snapshot) {
+        final PrescriptionRecord? prescription = snapshot.data;
+        if (snapshot.connectionState == ConnectionState.waiting || prescription == null) {
+          return const SizedBox.shrink();
+        }
+
+        final theme = Theme.of(context);
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : const Color(0xFFF8F5F3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: MColors.primaryColor.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined, size: 16, color: MColors.primaryColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Requested from this prescription',
+                    style: theme.textTheme.bodySmall?.copyWith(color: MColors.primaryColor, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('Dr. ${prescription.doctorName}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+              if (prescription.diagnosis.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(prescription.diagnosis, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+              ],
+              if (prescription.medicines.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  prescription.medicines.map((m) => m.name).join(', '),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

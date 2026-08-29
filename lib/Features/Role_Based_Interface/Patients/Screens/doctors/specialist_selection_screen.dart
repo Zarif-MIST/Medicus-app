@@ -64,8 +64,11 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
   void _onDoctorSelected(DoctorSummary doctor) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            DoctorProfileScreen(doctor: doctor, onBooked: widget.onBook),
+        builder: (_) => DoctorProfileScreen(
+          doctor: doctor,
+          onBooked: widget.onBook,
+          appointments: widget.appointments,
+        ),
       ),
     );
   }

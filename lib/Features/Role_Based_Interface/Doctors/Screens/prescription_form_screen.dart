@@ -4,6 +4,7 @@ import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_prescription_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -65,12 +66,14 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _diagnosisController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _labTestController = TextEditingController();
   final List<_MedicineDraft> _medicines = <_MedicineDraft>[_MedicineDraft()];
 
   @override
   void dispose() {
     _diagnosisController.dispose();
     _notesController.dispose();
+    _labTestController.dispose();
     for (final medicine in _medicines) {
       medicine.dispose();
     }
@@ -126,6 +129,17 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
       return;
     }
 
+    final String labTest = _labTestController.text.trim();
+    if (labTest.isNotEmpty) {
+      await LabService.instance.createOrder(
+        patientId: widget.patient.account.userId,
+        patientName: widget.patient.account.fullName,
+        orderType: labTest,
+        requestedBy: widget.doctor.fullName,
+        prescriptionId: rxId,
+      );
+    }
+
     if (!mounted) {
       return;
     }
@@ -137,6 +151,7 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
     _formKey.currentState?.reset();
     _diagnosisController.clear();
     _notesController.clear();
+    _labTestController.clear();
     for (final medicine in _medicines) {
       medicine.dispose();
     }
@@ -245,6 +260,34 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
                     ),
                     if (i != _medicines.length - 1) const SizedBox(height: 12),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _FormCard(
+              isDark: isDark,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recommend a Lab Test (optional)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _labTestController,
+                    decoration: _inputDecoration(
+                      context,
+                      'e.g. Complete Blood Count, Lipid Profile',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Leave blank if no test is needed. If filled, this creates a lab order linked to this prescription — the patient sees it in Medical Records and a lab specialist can attach results to it.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
+                  ),
                 ],
               ),
             ),

@@ -150,11 +150,24 @@ class _PrescriptionTimelineRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(entry.dosage, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
-                    if (entry.doctorName.isNotEmpty)
-                      Text(
-                        'Prescribed by ${entry.doctorName}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    if (entry.doctorName.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: MColors.primaryColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          MHelperFunctions.doctorNameWithTitle(entry.doctorName),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
+                    ],
                     if (isOverlapping)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),

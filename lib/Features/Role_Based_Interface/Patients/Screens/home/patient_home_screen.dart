@@ -7,6 +7,7 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/qr/my_qr_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/prescription_medicines_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/records_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/upload_report_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/search/patient_search_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
@@ -14,6 +15,7 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/appo
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/emergency_hospitals_sheet.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/next_appointment_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/next_dose_card.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/notifications_sheet.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/prescription_timeline.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/quick_actions_row.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
@@ -186,7 +188,16 @@ class PatientHomeScreen extends StatelessWidget {
                                     shape: const CircleBorder(),
                                     child: InkWell(
                                       customBorder: const CircleBorder(),
-                                      onTap: () {},
+                                      onTap: () => showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (_) => NotificationsSheet(
+                                          patientId: patientId,
+                                          nextAppointment: _nextAppointment,
+                                          activePrescriptions: prescriptionRecords,
+                                        ),
+                                      ),
                                       child: const Padding(
                                         padding: EdgeInsets.all(10),
                                         child: Icon(
@@ -308,9 +319,17 @@ class PatientHomeScreen extends StatelessWidget {
                   QuickActionsRow(
                     actions: [
                       QuickAction(
-                        label: 'Order Medicine',
-                        icon: Icons.medication_outlined,
-                        onTap: () {},
+                        label: 'Medical Records',
+                        icon: Icons.folder_shared_outlined,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => RecordsScreen(
+                              patientId: patientId,
+                              patientName: patientName,
+                              prescriptions: prescriptions,
+                            ),
+                          ),
+                        ),
                       ),
                       QuickAction(
                         label: 'Upload Report',

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
 import 'package:medicus/Features/Prescriptions/Services/prescription_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescription_form_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/lab_report_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/common/app_search_bar.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -153,6 +157,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTi
                     key: ValueKey(_historyRefreshKey),
                     patientId: record.account.userId,
                     isDark: isDark,
+                    doctor: widget.doctor,
                   ),
                   PrescriptionFormBody(
                     doctor: widget.doctor,
@@ -169,11 +174,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTi
   }
 }
 
-class _HistoryTab extends StatelessWidget {
-  const _HistoryTab({super.key, required this.patientId, required this.isDark});
+class _HistoryTab extends StatefulWidget {
+  const _HistoryTab({super.key, required this.patientId, required this.isDark, required this.doctor});
 
   final String patientId;
   final bool isDark;
+  final AuthAccount doctor;
+
+  @override
+  State<_HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends State<_HistoryTab> {
+  String _query = '';
+  late final Future<List<LabOrderModel>> _labOrdersFuture =
+      LabService.instance.getAllOrdersForPatient(widget.patientId);
 
   @override
   Widget build(BuildContext context) {
@@ -182,13 +197,29 @@ class _HistoryTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
+        AppSearchBar(
+          hintText: 'Search prescriptions by medicine or doctor',
+          onChanged: (value) => setState(() => _query = value),
+        ),
+        const SizedBox(height: 20),
         Text('Reports', style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
-        _UploadedReportsSection(patientId: patientId, isDark: isDark),
+        _UploadedReportsSection(patientId: widget.patientId, isDark: widget.isDark),
         const SizedBox(height: 24),
         Text('Prescriptions', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          'Ongoing and previous courses, with any linked lab test shown under its prescription — same grouping the patient sees.',
+          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
         const SizedBox(height: 10),
-        _PrescriptionHistorySection(patientId: patientId, isDark: isDark),
+        _PrescriptionHistorySection(
+          patientId: widget.patientId,
+          isDark: widget.isDark,
+          query: _query,
+          doctor: widget.doctor,
+          labOrdersFuture: _labOrdersFuture,
+        ),
       ],
     );
   }
@@ -286,10 +317,19 @@ class _UploadedReportsSectionState extends State<_UploadedReportsSection> {
 }
 
 class _PrescriptionHistorySection extends StatefulWidget {
-  const _PrescriptionHistorySection({required this.patientId, required this.isDark});
+  const _PrescriptionHistorySection({
+    required this.patientId,
+    required this.isDark,
+    required this.doctor,
+    required this.labOrdersFuture,
+    this.query = '',
+  });
 
   final String patientId;
   final bool isDark;
+  final AuthAccount doctor;
+  final Future<List<LabOrderModel>> labOrdersFuture;
+  final String query;
 
   @override
   State<_PrescriptionHistorySection> createState() => _PrescriptionHistorySectionState();
@@ -299,10 +339,18 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
   static const PrescriptionRepository _repository = PrescriptionRepository();
   late final Future<List<PrescriptionRecord>> _future = _repository.fetchForPatient(widget.patientId);
 
+  List<PrescriptionRecord> _sortedByRecency(List<PrescriptionRecord> records) {
+    final list = [...records];
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<PrescriptionRecord>>(
-      future: _future,
+    final theme = Theme.of(context);
+
+    return FutureBuilder<List<Object>>(
+      future: Future.wait([_future, widget.labOrdersFuture]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
@@ -313,24 +361,88 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
         if (snapshot.hasError) {
           return Text(
             'Could not load prescriptions.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
           );
         }
 
-        final List<PrescriptionRecord> records = [...(snapshot.data ?? const [])]
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        if (records.isEmpty) {
+        final List<PrescriptionRecord> all = snapshot.data![0] as List<PrescriptionRecord>;
+        final List<LabOrderModel> allOrders = snapshot.data![1] as List<LabOrderModel>;
+        final Map<String, List<LabOrderModel>> byPrescription = {};
+        final List<LabOrderModel> unlinked = [];
+        for (final order in allOrders) {
+          if (order.prescriptionId.isEmpty) {
+            unlinked.add(order);
+          } else {
+            (byPrescription[order.prescriptionId] ??= []).add(order);
+          }
+        }
+
+        final String query = widget.query.trim().toLowerCase();
+        final List<PrescriptionRecord> filtered = query.isEmpty
+            ? all
+            : all.where((record) {
+                final bool matchesDoctor = record.doctorName.toLowerCase().contains(query);
+                final bool matchesMedicine = record.medicines.any(
+                  (medicine) => medicine.name.toLowerCase().contains(query),
+                );
+                return matchesDoctor || matchesMedicine;
+              }).toList();
+
+        final List<PrescriptionRecord> ongoing = _sortedByRecency(filtered.where((r) => !r.isCompleted).toList());
+        final List<PrescriptionRecord> previous = _sortedByRecency(filtered.where((r) => r.isCompleted).toList());
+
+        if (filtered.isEmpty) {
           return Text(
-            'No prescriptions on file for this patient yet.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            query.isEmpty
+                ? 'No prescriptions on file for this patient yet.'
+                : 'No prescriptions match "$query".',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
           );
         }
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final PrescriptionRecord record in records) ...[
-              _PrescriptionHistoryCard(record: record, isDark: widget.isDark),
+            Text('Ongoing', style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
+            const SizedBox(height: 10),
+            if (ongoing.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text('None right now.', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+              )
+            else
+              for (final PrescriptionRecord record in ongoing) ...[
+                _PrescriptionHistoryCard(
+                  record: record,
+                  isDark: widget.isDark,
+                  doctor: widget.doctor,
+                  labTests: byPrescription[record.id] ?? const [],
+                ),
+                const SizedBox(height: 12),
+              ],
+            const SizedBox(height: 12),
+            Text('Previous', style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
+            const SizedBox(height: 10),
+            if (previous.isEmpty)
+              Text('None on file.', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey))
+            else
+              for (final PrescriptionRecord record in previous) ...[
+                _PrescriptionHistoryCard(
+                  record: record,
+                  isDark: widget.isDark,
+                  doctor: widget.doctor,
+                  labTests: byPrescription[record.id] ?? const [],
+                ),
+                const SizedBox(height: 12),
+              ],
+            if (unlinked.isNotEmpty) ...[
               const SizedBox(height: 12),
+              Text('Other Lab Tests', style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
+              const SizedBox(height: 10),
+              for (final LabOrderModel order in unlinked) ...[
+                _LabTestTile(order: order, isDark: widget.isDark),
+                const SizedBox(height: 8),
+              ],
             ],
           ],
         );
@@ -339,14 +451,125 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
   }
 }
 
+class _LabTestTile extends StatelessWidget {
+  const _LabTestTile({required this.order, required this.isDark});
+
+  final LabOrderModel order;
+  final bool isDark;
+
+  bool get _isCompleted => order.status == 'Completed';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white10 : const Color(0xFFF8F5F3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.science_outlined, size: 16, color: MColors.primaryColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  order.orderType,
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (_isCompleted ? Colors.green : Colors.orange).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  order.status,
+                  style: TextStyle(
+                    color: _isCompleted ? Colors.green.shade700 : Colors.orange.shade800,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_isCompleted && (order.resultNote ?? '').isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(order.resultNote!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _PrescriptionHistoryCard extends StatelessWidget {
-  const _PrescriptionHistoryCard({required this.record, required this.isDark});
+  const _PrescriptionHistoryCard({
+    required this.record,
+    required this.isDark,
+    required this.doctor,
+    this.labTests = const [],
+  });
 
   final PrescriptionRecord record;
   final bool isDark;
+  final AuthAccount doctor;
+  final List<LabOrderModel> labTests;
 
   String _formattedDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+  Future<void> _orderLabTest(BuildContext context) async {
+    final TextEditingController controller = TextEditingController();
+    final String? testName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Order Lab Test'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'e.g. Complete Blood Count'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Order'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (testName == null || testName.isEmpty) {
+      return;
+    }
+
+    await LabService.instance.createOrder(
+      patientId: record.patientId,
+      patientName: record.patientName,
+      orderType: testName,
+      requestedBy: doctor.fullName,
+      prescriptionId: record.id,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+    Get.snackbar(
+      'Lab test ordered',
+      '$testName requested for ${record.patientName}.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -386,6 +609,22 @@ class _PrescriptionHistoryCard extends StatelessWidget {
             if (i != 0) const Divider(height: 18),
             _MedicineLine(medicine: record.medicines[i]),
           ],
+          if (labTests.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (final LabOrderModel order in labTests) ...[
+              _LabTestTile(order: order, isDark: isDark),
+              const SizedBox(height: 6),
+            ],
+          ],
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _orderLabTest(context),
+              icon: const Icon(Icons.science_outlined, size: 16, color: MColors.primaryColor),
+              label: const Text('Order Lab Test', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+            ),
+          ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavb
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/pharmacist_home_screen.dart';
+import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/scanned_patient_queue_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
 import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
@@ -77,7 +78,16 @@ class _PharmacistShellState extends State<_PharmacistShell> {
           _inventoryKey.currentState?.showLowStockOnly();
         },
       ),
-      _index == 1 ? Scanqr(account: widget.account) : const SizedBox.shrink(),
+      _index == 1
+          ? Scanqr(
+              account: widget.account,
+              onPatientFound: (record, account) => ScannedPatientQueueScreen(
+                patientId: record.account.userId,
+                patientName: record.account.fullName,
+                pharmacistId: account.firebaseUid ?? account.userId,
+              ),
+            )
+          : const SizedBox.shrink(),
       InventoryScreen(
         key: _inventoryKey,
         pharmacistId: widget.account.firebaseUid ?? widget.account.userId,

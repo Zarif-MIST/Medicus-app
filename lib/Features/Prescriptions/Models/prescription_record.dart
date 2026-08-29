@@ -86,6 +86,16 @@ class PrescriptionRecord {
   final DateTime createdAt;
   final DateTime? dispensedAt;
 
+  /// Whether every medicine's course has run its full length — the same
+  /// day-elapsed-vs-duration check the patient's dose/timeline views use
+  /// (`Prescription.isCompleted`), so a prescription never shows as
+  /// "ongoing" to the patient and "previous" to the doctor or vice versa.
+  bool get isCompleted {
+    if (medicines.isEmpty) return false;
+    final int daysSince = DateTime.now().difference(createdAt).inDays;
+    return medicines.every((medicine) => daysSince >= medicine.durationDays);
+  }
+
   Map<String, dynamic> toCreateJson() => {
         'patientId': patientId,
         'patientName': patientName,

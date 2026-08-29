@@ -5,6 +5,7 @@ import 'package:medicus/Features/Prescriptions/Models/scheduled_dose.dart';
 import 'package:medicus/Features/Prescriptions/Services/dose_log_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/dose_schedule_screen.dart';
 import 'package:medicus/Utilities/colors.dart';
+import 'package:medicus/Utilities/helperFunctions.dart';
 
 /// The patient's real next-due medicine — computed from active
 /// prescriptions' dose times, not a hardcoded string. "Mark as taken" and
@@ -241,13 +242,23 @@ class _NextDoseCardState extends State<NextDoseCard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (dose.doctorName.isNotEmpty)
-                      Text(
-                        'Prescribed by ${dose.doctorName}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    if (dose.doctorName.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          MHelperFunctions.doctorNameWithTitle(dose.doctorName),
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(height: 3),
+                    ],
                     if (dose.dosage.isNotEmpty || dose.instructions.isNotEmpty)
                       Text(
                         [dose.dosage, dose.instructions].where((s) => s.isNotEmpty).join(' · '),

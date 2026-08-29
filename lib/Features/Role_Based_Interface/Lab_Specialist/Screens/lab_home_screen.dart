@@ -547,6 +547,18 @@ class _QueueCard extends StatelessWidget {
                   ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
+              if (order.prescriptionId.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: MColors.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'From Rx',
+                    style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700, fontSize: 10),
+                  ),
+                ),
             ],
           ),
           if (onAttachResult != null) ...[

@@ -6,6 +6,7 @@ class LabOrderModel {
     required this.orderType,
     required this.requestedBy,
     required this.status,
+    this.prescriptionId = '',
     this.createdAt,
     this.completedAt,
     this.resultNote,
@@ -18,6 +19,10 @@ class LabOrderModel {
   final String orderType;
   final String requestedBy;
   final String status;
+
+  /// The prescription this test was recommended from, if any — empty for
+  /// standalone orders not tied to a specific prescription.
+  final String prescriptionId;
   final DateTime? createdAt;
   final DateTime? completedAt;
   final String? resultNote;

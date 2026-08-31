@@ -8,6 +8,39 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/la
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
+const List<String> _commonMedicineNames = [
+  'Metformin 500mg',
+  'Amoxicillin 250mg',
+  'Cetirizine 10mg',
+  'Ibuprofen 400mg',
+  'Vitamin B Complex',
+  'Omeprazole 20mg',
+  'Paracetamol 500mg',
+  'Salbutamol Inhaler',
+  'Amlodipine 5mg',
+];
+
+const List<String> _commonDosages = [
+  '1 tablet',
+  '1 capsule',
+  '2 tablets',
+  '500mg',
+  '250mg',
+  '10ml',
+  '5ml',
+];
+
+const List<String> _commonDurations = ['3', '5', '7', '10', '14', '30'];
+
+const List<String> _commonInstructions = [
+  'Take after meals',
+  'Take before meals',
+  'Take with water',
+  'Take at bedtime',
+  'Avoid driving',
+  'Take as directed',
+];
+
 /// Standalone full-screen entry point — used by the "Write Rx" action on a
 /// scheduled appointment. Wraps [PrescriptionFormBody] with its own
 /// AppBar/Scaffold and pops on save.
@@ -350,11 +383,20 @@ class _MedicineDraft {
   final TextEditingController durationDays;
   final List<TimeOfDay> doseTimes = [];
 
+  final FocusNode nameFocus = FocusNode();
+  final FocusNode dosageFocus = FocusNode();
+  final FocusNode instructionsFocus = FocusNode();
+  final FocusNode durationDaysFocus = FocusNode();
+
   void dispose() {
     name.dispose();
     dosage.dispose();
     instructions.dispose();
     durationDays.dispose();
+    nameFocus.dispose();
+    dosageFocus.dispose();
+    instructionsFocus.dispose();
+    durationDaysFocus.dispose();
   }
 }
 
@@ -423,31 +465,39 @@ class _MedicineFieldsState extends State<_MedicineFields> {
             ],
           ),
           const SizedBox(height: 8),
-          TextFormField(
+          _SuggestingTextFormField(
             controller: draft.name,
+            focusNode: draft.nameFocus,
+            suggestions: _commonMedicineNames,
             validator: (value) => value == null || value.trim().isEmpty
                 ? 'Enter medicine name'
                 : null,
             decoration: _inputDecoration(context, 'Medicine name'),
           ),
           const SizedBox(height: 10),
-          TextFormField(
+          _SuggestingTextFormField(
             controller: draft.dosage,
+            focusNode: draft.dosageFocus,
+            suggestions: _commonDosages,
             validator: (value) =>
                 value == null || value.trim().isEmpty ? 'Enter dosage' : null,
             decoration: _inputDecoration(context, 'Dosage'),
           ),
           const SizedBox(height: 10),
-          TextFormField(
+          _SuggestingTextFormField(
             controller: draft.instructions,
+            focusNode: draft.instructionsFocus,
+            suggestions: _commonInstructions,
             validator: (value) => value == null || value.trim().isEmpty
                 ? 'Enter instructions'
                 : null,
             decoration: _inputDecoration(context, 'Instructions'),
           ),
           const SizedBox(height: 10),
-          TextFormField(
+          _SuggestingTextFormField(
             controller: draft.durationDays,
+            focusNode: draft.durationDaysFocus,
+            suggestions: _commonDurations,
             keyboardType: TextInputType.number,
             validator: (value) {
               final int? parsed = int.tryParse(value?.trim() ?? '');
@@ -493,6 +543,76 @@ class _MedicineFieldsState extends State<_MedicineFields> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// A [TextFormField] that offers a dropdown of matching [suggestions] as
+/// the doctor types — speeds up entry of common medicine names, dosages,
+/// instructions, and durations without forcing a fixed list.
+class _SuggestingTextFormField extends StatelessWidget {
+  const _SuggestingTextFormField({
+    required this.controller,
+    required this.focusNode,
+    required this.suggestions,
+    required this.decoration,
+    this.validator,
+    this.keyboardType,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final List<String> suggestions;
+  final InputDecoration decoration;
+  final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return RawAutocomplete<String>(
+      textEditingController: controller,
+      focusNode: focusNode,
+      optionsBuilder: (TextEditingValue value) {
+        final String query = value.text.trim().toLowerCase();
+        if (query.isEmpty) return const Iterable<String>.empty();
+        return suggestions.where((s) => s.toLowerCase().contains(query));
+      },
+      fieldViewBuilder: (context, fieldController, fieldFocusNode, onFieldSubmitted) {
+        return TextFormField(
+          controller: fieldController,
+          focusNode: fieldFocusNode,
+          keyboardType: keyboardType,
+          validator: validator,
+          decoration: decoration,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final bool isDark = MHelperFunctions.isDarkMode(context);
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200, minWidth: 220),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final String option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

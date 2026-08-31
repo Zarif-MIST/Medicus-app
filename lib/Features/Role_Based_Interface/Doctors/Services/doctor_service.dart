@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:medicus/Features/Appointments/Models/appointment_record.dart';
 import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
@@ -76,6 +77,34 @@ class DoctorService {
     ];
   }
 
+  /// IDs of patients this doctor has already written a prescription for
+  /// today — drives the "Patients Seen" / "Pending Cases" home-screen stats.
+  Future<Set<String>> getPatientsSeenTodayIds(String doctorId) async {
+    if (doctorId.isEmpty) return const <String>{};
+
+    final DateTime now = DateTime.now();
+    final DateTime startOfToday = DateTime(now.year, now.month, now.day);
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore.instance
+        .collection('prescriptions')
+        .where('doctorId', isEqualTo: doctorId)
+        .get();
+
+    final Set<String> patientIds = <String>{};
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final Timestamp? createdAt = data['createdAt'] as Timestamp?;
+      if (createdAt == null || createdAt.toDate().isBefore(startOfToday)) {
+        continue;
+      }
+      final String patientId = (data['patientId'] ?? '') as String;
+      if (patientId.isNotEmpty) {
+        patientIds.add(patientId);
+      }
+    }
+    return patientIds;
+  }
+
   Future<PatientRecordModel?> getPatientRecordById(String patientId) async {
     final String normalizedId = patientId.trim();
     if (normalizedId.isEmpty) {
@@ -107,6 +136,29 @@ class DoctorService {
         PatientVital(label: 'Weight', value: '—', unit: ''),
       ],
     );
+  }
+
+  /// Patients whose ID or name matches [query] — not limited to today's
+  /// queue, so a doctor can look up any registered patient by name.
+  Future<List<AuthAccount>> searchPatients(String query) async {
+    final String normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return const <AuthAccount>[];
+
+    final List<AuthAccount> patients = await AuthRegistry.instance.patientAccounts();
+    final List<AuthAccount> matches = patients.where((account) {
+      return account.userId.toLowerCase().contains(normalized) ||
+          account.fullName.toLowerCase().contains(normalized);
+    }).toList();
+
+    if (matches.isNotEmpty) return matches;
+
+    return _mockPatientRecords.values
+        .map((record) => record.account)
+        .where((account) {
+          return account.userId.toLowerCase().contains(normalized) ||
+              account.fullName.toLowerCase().contains(normalized);
+        })
+        .toList();
   }
 
   static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();

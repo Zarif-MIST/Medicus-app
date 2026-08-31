@@ -14,6 +14,7 @@ class DoctorSummary {
     required this.experienceYears,
     required this.fee,
     required this.nextAvailable,
+    this.avgConsultationMinutes = 5,
   });
 
   /// Empty for the (soon to be retired) hand-authored demo doctors; a real
@@ -27,6 +28,11 @@ class DoctorSummary {
   final int experienceYears;
   final int fee;
   final String nextAvailable;
+
+  /// Minutes this doctor typically spends per patient — steps the
+  /// auto-generated clinic-hours time slots used as a fallback when they
+  /// haven't manually configured any availability windows.
+  final int avgConsultationMinutes;
 
   /// Registration only collects a doctor's name and specialty today — the
   /// hospital/fee/experience/rating/availability fields below don't exist
@@ -47,6 +53,7 @@ class DoctorSummary {
       experienceYears: 0,
       fee: 0,
       nextAvailable: 'Book to request a time',
+      avgConsultationMinutes: account.consultationMinutes,
     );
   }
 }

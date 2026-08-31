@@ -42,10 +42,49 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     _load();
   }
 
+  /// Clinic hours used to auto-generate slots for a doctor who hasn't
+  /// manually configured any availability windows — mirrors the old
+  /// fixed 8:00 AM-2:00 PM clinic-hours behavior, stepped by their
+  /// registered average consultation time.
+  static const int _clinicStartMinutes = 8 * 60;
+  static const int _clinicEndMinutes = 14 * 60;
+
+  List<DoctorAvailabilityWindow> _generateAutoWindows() {
+    final int step = widget.doctor.avgConsultationMinutes.clamp(1, 120);
+    final List<DoctorAvailabilityWindow> windows = [];
+    for (int weekday = 1; weekday <= 7; weekday++) {
+      for (
+        int minutes = _clinicStartMinutes;
+        minutes + step <= _clinicEndMinutes;
+        minutes += step
+      ) {
+        final String startTime =
+            '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
+        final int endMinutes = minutes + step;
+        final String endTime =
+            '${(endMinutes ~/ 60).toString().padLeft(2, '0')}:${(endMinutes % 60).toString().padLeft(2, '0')}';
+        windows.add(
+          DoctorAvailabilityWindow(
+            id: 'auto-$weekday-$startTime',
+            doctorId: widget.doctor.doctorId,
+            weekday: weekday,
+            startTime: startTime,
+            endTime: endTime,
+            capacity: 1,
+          ),
+        );
+      }
+    }
+    return windows;
+  }
+
   Future<void> _load() async {
     try {
-      final List<DoctorAvailabilityWindow> windows =
+      List<DoctorAvailabilityWindow> windows =
           await _availabilityRepository.fetchForDoctor(widget.doctor.doctorId);
+      if (windows.isEmpty) {
+        windows = _generateAutoWindows();
+      }
       final counts = <String, int>{};
       for (final window in windows) {
         for (final DateTime date in _dates) {

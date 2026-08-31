@@ -23,16 +23,32 @@ class DoctorHomeScreen extends StatefulWidget {
   State<DoctorHomeScreen> createState() => _DoctorHomeScreenState();
 }
 
+class _DoctorHomeData {
+  const _DoctorHomeData({required this.appointments, required this.seenPatientIds});
+
+  final List<DoctorAppointmentModel> appointments;
+  final Set<String> seenPatientIds;
+}
+
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
-  late Future<List<DoctorAppointmentModel>> _appointmentsFuture;
+  late Future<_DoctorHomeData> _homeDataFuture;
   String _searchQuery = '';
+  bool _isSearchingPatients = false;
+  List<AuthAccount> _searchedPatients = const <AuthAccount>[];
 
   @override
   void initState() {
     super.initState();
-    _appointmentsFuture = DoctorService.instance.getTodayAppointments(
-      widget.account,
-    );
+    _homeDataFuture = _loadHomeData();
+  }
+
+  Future<_DoctorHomeData> _loadHomeData() async {
+    final results = await (
+      DoctorService.instance.getTodayAppointments(widget.account),
+      DoctorService.instance.getPatientsSeenTodayIds(widget.account.userId),
+    ).wait;
+
+    return _DoctorHomeData(appointments: results.$1, seenPatientIds: results.$2);
   }
 
   String _greeting() {
@@ -66,14 +82,53 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     );
   }
 
+  /// Searches all registered patients by name or ID — not limited to
+  /// today's queue — and renders the matches below it as a "Patient
+  /// Search Results" list.
+  Future<void> _runPatientSearch(String value) async {
+    final String query = value.trim();
+
+    setState(() {
+      _searchQuery = value;
+      if (query.isEmpty) {
+        _searchedPatients = const <AuthAccount>[];
+        _isSearchingPatients = false;
+      } else {
+        _isSearchingPatients = true;
+      }
+    });
+
+    if (query.isEmpty) return;
+
+    final List<AuthAccount> results = await DoctorService.instance.searchPatients(query);
+    if (!mounted || _searchQuery.trim() != query) return;
+
+    setState(() {
+      _searchedPatients = results;
+      _isSearchingPatients = false;
+    });
+  }
+
+  Future<void> _openPatient(String patientId) async {
+    final record = await DoctorService.instance.getPatientRecordById(patientId);
+    if (!mounted || record == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<List<DoctorAppointmentModel>>(
-        future: _appointmentsFuture,
+      body: FutureBuilder<_DoctorHomeData>(
+        future: _homeDataFuture,
         builder: (context, snapshot) {
           final List<DoctorAppointmentModel> appointments =
-              snapshot.data ?? <DoctorAppointmentModel>[];
+              snapshot.data?.appointments ?? <DoctorAppointmentModel>[];
+          final Set<String> seenPatientIds = snapshot.data?.seenPatientIds ?? <String>{};
+          final int pendingCount = appointments
+              .where((appointment) => !seenPatientIds.contains(appointment.patientId))
+              .length;
           final visibleAppointments = appointments.where((appointment) {
             final String query = _searchQuery.trim().toLowerCase();
             if (query.isEmpty) {
@@ -137,9 +192,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                                     const SizedBox(height: 4),
                                     const SizedBox(height: 28),
                                     LiquidGlassSearchBar(
-                                      hintText: 'Search patient ID',
-                                      onChanged: (value) =>
-                                          setState(() => _searchQuery = value),
+                                      hintText: 'Search patient name or ID',
+                                      onChanged: _runPatientSearch,
                                       onSubmitted: (value) {
                                         setState(() => _searchQuery = value);
                                         _searchAndOpenPatient(value);
@@ -174,12 +228,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                         stats: [
                           StatCardData(
                             label: 'Patients Seen',
-                            value: 18,
+                            value: seenPatientIds.length,
                             icon: Icons.groups_outlined,
                           ),
                           StatCardData(
                             label: 'Pending Cases',
-                            value: 5,
+                            value: pendingCount,
                             icon: Icons.pending_actions_outlined,
                           ),
                           StatCardData(
@@ -216,6 +270,33 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                           ),
                           const SizedBox(height: 12),
                         ],
+                      if (_searchQuery.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Patient Search Results',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        if (_isSearchingPatients)
+                          const Center(
+                            child: CircularProgressIndicator(color: MColors.primaryColor),
+                          )
+                        else if (_searchedPatients.isEmpty)
+                          Text(
+                            'No patients matched "$_searchQuery".',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                          )
+                        else
+                          for (final account in _searchedPatients) ...[
+                            _PatientSearchTile(
+                              account: account,
+                              onTap: () => _openPatient(account.userId),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                      ],
                     ],
                   ),
                 ),
@@ -322,6 +403,59 @@ class _DoctorQueueTile extends StatelessWidget {
             icon: const Icon(Icons.chevron_right),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PatientSearchTile extends StatelessWidget {
+  const _PatientSearchTile({required this.account, required this.onTap});
+
+  final AuthAccount account;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1F1F1F)
+          : Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: MColors.primaryColor.withValues(alpha: 0.14),
+                child: const Icon(Icons.person_outline, color: MColors.primaryColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.fullName.isEmpty ? account.userId : account.fullName,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ID: ${account.userId}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
       ),
     );
   }

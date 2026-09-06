@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medicus/Features/Appointments/Models/appointment_record.dart';
 import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
 import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Features/Appointments/Services/doctor_availability_repository.dart';
@@ -33,6 +34,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   DoctorAvailabilityWindow? _selectedWindow;
 
   bool _loading = true;
+  bool _loadError = false;
   List<DoctorAvailabilityWindow> _windows = [];
   Map<String, int> _bookedCountByWindowId = {};
 
@@ -78,22 +80,64 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     return windows;
   }
 
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _loadError = false;
+    });
+    _load();
+  }
+
   Future<void> _load() async {
     try {
-      List<DoctorAvailabilityWindow> windows =
+      debugPrint(
+        '[DoctorProfileScreen] loading availability for doctorId='
+        '"${widget.doctor.doctorId}" avgConsultationMinutes='
+        '${widget.doctor.avgConsultationMinutes}',
+      );
+      final List<DoctorAvailabilityWindow> manualWindows =
           await _availabilityRepository.fetchForDoctor(widget.doctor.doctorId);
-      if (windows.isEmpty) {
-        windows = _generateAutoWindows();
-      }
+      debugPrint(
+        '[DoctorProfileScreen] manualWindows=${manualWindows.length} '
+        'weekdays=${manualWindows.map((w) => w.weekday).toSet()}',
+      );
+
+      // A doctor may have only manually configured some weekdays — fill in
+      // auto-generated slots just for the days they haven't touched, rather
+      // than switching off the whole week's auto schedule the moment a
+      // single manual window exists anywhere.
+      final Set<int> manualWeekdays = manualWindows.map((w) => w.weekday).toSet();
+      final List<DoctorAvailabilityWindow> autoWindows = _generateAutoWindows()
+          .where((w) => !manualWeekdays.contains(w.weekday))
+          .toList();
+      final List<DoctorAvailabilityWindow> windows = [
+        ...manualWindows,
+        ...autoWindows,
+      ];
+      debugPrint(
+        '[DoctorProfileScreen] autoWindows=${autoWindows.length} '
+        'totalWindows=${windows.length}',
+      );
+
+      // Fetched once and matched in memory below — with a short (e.g. 5
+      // minute) consultation time, auto-generated windows can number in the
+      // hundreds, and re-querying per window (as countBookingsForWindow
+      // does) turned this into hundreds of sequential Firestore round
+      // trips, slow enough to error out and leave the screen looking like
+      // the doctor has no availability at all.
+      final List<AppointmentRecord> doctorAppointments =
+          await _appointmentRepository.fetchForDoctor(widget.doctor.doctorId);
+
       final counts = <String, int>{};
       for (final window in windows) {
         for (final DateTime date in _dates) {
           if (window.weekday != date.weekday) continue;
-          final int count = await _appointmentRepository.countBookingsForWindow(
-            doctorId: widget.doctor.doctorId,
-            windowId: window.id,
-            date: date,
-          );
+          final int count = doctorAppointments.where((appointment) {
+            return appointment.windowId == window.id &&
+                appointment.date.year == date.year &&
+                appointment.date.month == date.month &&
+                appointment.date.day == date.day;
+          }).length;
           counts['${window.id}_${date.year}${date.month}${date.day}'] = count;
         }
       }
@@ -103,9 +147,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         _bookedCountByWindowId = counts;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[DoctorProfileScreen] load failed: $e\n$st');
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _loadError = true;
+      });
     }
   }
 
@@ -254,6 +302,18 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 const SizedBox(height: 12),
                 if (_loading)
                   const Center(child: CircularProgressIndicator(color: MColors.primaryColor))
+                else if (_loadError)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Couldn't load this doctor's availability — check your connection and try again.",
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton(onPressed: _retry, child: const Text('Try again')),
+                    ],
+                  )
                 else if (windows.isEmpty)
                   Text(
                     "This doctor hasn't set availability for this day yet — try another date.",

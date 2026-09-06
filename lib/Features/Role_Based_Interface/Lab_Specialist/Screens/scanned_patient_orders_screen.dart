@@ -14,10 +14,18 @@ class ScannedPatientOrdersScreen extends StatefulWidget {
     super.key,
     required this.patientId,
     required this.patientName,
+    required this.specialty,
   });
 
   final String patientId;
   final String patientName;
+
+  /// The scanning lab specialist's own specialty (e.g. "MRI") — only this
+  /// patient's pending orders of that type are shown, not every pending
+  /// order regardless of type. Empty shows everything, unfiltered — a
+  /// graceful fallback for accounts registered before a specialty was
+  /// required.
+  final String specialty;
 
   @override
   State<ScannedPatientOrdersScreen> createState() =>
@@ -34,8 +42,12 @@ class _ScannedPatientOrdersScreenState
     _pendingFuture = _load();
   }
 
-  Future<List<LabOrderModel>> _load() {
-    return LabService.instance.getPendingOrdersForPatient(widget.patientId);
+  Future<List<LabOrderModel>> _load() async {
+    final List<LabOrderModel> pending = await LabService.instance
+        .getPendingOrdersForPatient(widget.patientId);
+    final String specialty = widget.specialty.trim();
+    if (specialty.isEmpty) return pending;
+    return pending.where((order) => order.orderType == specialty).toList();
   }
 
   Future<void> _openUpload(LabOrderModel order) async {
@@ -153,7 +165,9 @@ class _ScannedPatientOrdersScreenState
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'This patient has no pending lab order right now.',
+                        widget.specialty.trim().isEmpty
+                            ? 'This patient has no pending lab order right now.'
+                            : 'This patient has no pending ${widget.specialty} order right now.',
                         textAlign: TextAlign.center,
                         style: Theme.of(
                           context,

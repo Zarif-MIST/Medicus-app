@@ -220,18 +220,103 @@ class _PrescriptionCard extends StatelessWidget {
   }
 }
 
-class _UploadedReportsSection extends StatelessWidget {
+class _UploadedReportsSection extends StatefulWidget {
   const _UploadedReportsSection({required this.future, required this.isDark});
 
   final Future<List<LabReport>> future;
   final bool isDark;
 
+  @override
+  State<_UploadedReportsSection> createState() => _UploadedReportsSectionState();
+}
+
+class _UploadedReportsSectionState extends State<_UploadedReportsSection> {
+  static const LabReportService _reportService = LabReportService();
+
+  List<LabReport>? _reports;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.future.then(
+      (reports) {
+        if (!mounted) return;
+        setState(() => _reports = reports);
+      },
+      onError: (Object error) {
+        if (!mounted) return;
+        setState(() => _error = error);
+      },
+    );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context, LabReport report) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete report?'),
+        content: Text('"${report.label}" will be permanently removed. This can\'t be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  Future<void> _delete(BuildContext context, LabReport report) async {
+    if (!await _confirmDelete(context, report)) return;
+
+    try {
+      await _reportService.delete(report.id);
+      if (!mounted) return;
+      setState(() => _reports?.removeWhere((r) => r.id == report.id));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete report: $e')),
+      );
+    }
+  }
+
   void _view(BuildContext context, LabReport report) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => Scaffold(
+        builder: (viewerContext) => Scaffold(
           backgroundColor: Colors.black,
-          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text(report.label)),
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: Text(report.label),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete report',
+                onPressed: () async {
+                  if (!await _confirmDelete(viewerContext, report)) return;
+                  try {
+                    await _reportService.delete(report.id);
+                    if (!mounted) return;
+                    setState(() => _reports?.removeWhere((r) => r.id == report.id));
+                    if (viewerContext.mounted) Navigator.of(viewerContext).pop();
+                  } catch (e) {
+                    if (!viewerContext.mounted) return;
+                    ScaffoldMessenger.of(viewerContext).showSnackBar(
+                      SnackBar(content: Text('Could not delete report: $e')),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
           body: Center(child: InteractiveViewer(child: Image.memory(report.imageBytes))),
         ),
       ),
@@ -240,44 +325,44 @@ class _UploadedReportsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<LabReport>>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator(color: MColors.primaryColor)),
-          );
-        }
-        if (snapshot.hasError) {
-          return Text(
-            'Could not load reports.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-          );
-        }
-        final List<LabReport> reports = snapshot.data ?? const [];
-        if (reports.isEmpty) {
-          return Text(
-            'No reports uploaded yet.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-          );
-        }
-        return SizedBox(
-          height: 150,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: reports.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final LabReport report = reports[index];
-              return GestureDetector(
-                onTap: () => _view(context, report),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    width: 120,
-                    color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-                    child: Column(
+    if (_reports == null) {
+      if (_error != null) {
+        return Text(
+          'Could not load reports.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+        );
+      }
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator(color: MColors.primaryColor)),
+      );
+    }
+
+    final List<LabReport> reports = _reports!;
+    if (reports.isEmpty) {
+      return Text(
+        'No reports uploaded yet.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+      );
+    }
+    return SizedBox(
+      height: 150,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: reports.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final LabReport report = reports[index];
+          return GestureDetector(
+            onTap: () => _view(context, report),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 120,
+                color: widget.isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                child: Stack(
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(child: Image.memory(report.imageBytes, fit: BoxFit.cover)),
@@ -292,13 +377,28 @@ class _UploadedReportsSection extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () => _delete(context, report),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
-        );
-      },
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

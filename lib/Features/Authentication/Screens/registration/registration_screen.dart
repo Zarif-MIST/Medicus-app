@@ -10,6 +10,8 @@ import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
 import 'package:medicus/Features/Authentication/Screens/registration/pharmacy_location_picker_screen.dart';
 import 'package:medicus/Features/Authentication/Widgets/auth_role_selector.dart';
 import 'package:medicus/Features/Authentication/Widgets/auth_text_field.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/specialty_filter_chips.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/auth_validators.dart';
@@ -55,13 +57,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _verificationCodeController =
       TextEditingController();
 
-  static const List<String> _doctorSpecialties = <String>[
-    'Dentist',
-    'Surgeon',
-    'Cardiologist',
-    'Dermatologist',
-    'Pediatrician',
-    'General Physician',
+  // Derived from kSpecialties (the same list the patient-side "Find a
+  // Doctor" filter chips use) so a specialty picked here always has a
+  // matching chip on the patient side, and vice versa.
+  static final List<String> _doctorSpecialties = <String>[
+    for (final Specialty specialty in kSpecialties) specialty.name,
   ];
 
   @override
@@ -289,6 +289,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 controller: _lastNameController,
                 label: 'Last name',
                 validator: AuthValidators.requiredField,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedSpecialty,
+                items: kLabTestTypes
+                    .map(
+                      (String testType) => DropdownMenuItem<String>(
+                        value: testType,
+                        child: Text(testType),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (String? value) =>
+                    setState(() => _selectedSpecialty = value),
+                validator: (String? value) =>
+                    value == null ? 'Select your test specialty' : null,
+                decoration: _fieldDecoration('Test specialty (e.g. X-Ray, CT Scan)'),
               ),
             ],
             const SizedBox(height: 12),
@@ -627,6 +644,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
+    if (_selectedRole == AuthRole.labSpecialist && _selectedSpecialty == null) {
+      Get.snackbar(
+        'Missing test specialty',
+        'Select the test type this lab specialist account handles.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
     if (_selectedRole == AuthRole.pharmacist && _pharmacyLatLng == null) {
       Get.snackbar(
         'Missing pharmacy location',
@@ -645,7 +671,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       password: _passwordController.text,
       phoneNumber: '+88${_phoneController.text.trim()}',
       verificationCode: '',
-      specialty: _selectedRole == AuthRole.doctor ? _selectedSpecialty : null,
+      specialty:
+          (_selectedRole == AuthRole.doctor || _selectedRole == AuthRole.labSpecialist)
+          ? _selectedSpecialty
+          : null,
       licenseNumber: _selectedRole == AuthRole.doctor
           ? _licenseController.text.trim()
           : null,

@@ -73,10 +73,11 @@ class _LabShellState extends State<_LabShell> {
               onPatientFound: (record, account) => ScannedPatientOrdersScreen(
                 patientId: record.account.userId,
                 patientName: record.account.fullName,
+                specialty: widget.account.specialty ?? '',
               ),
             )
           : const SizedBox.shrink(),
-      const LabResultsScreen(),
+      LabResultsScreen(specialty: widget.account.specialty ?? ''),
       ProfileScreen(account: widget.account),
     ];
 

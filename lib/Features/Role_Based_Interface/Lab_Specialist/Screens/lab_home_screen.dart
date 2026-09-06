@@ -38,15 +38,19 @@ class LabHomeScreenState extends State<LabHomeScreen> {
   }
 
   Future<void> _openOrderLog() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const LabOrderLogScreen()));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LabOrderLogScreen(specialty: widget.account.specialty ?? ''),
+      ),
+    );
   }
 
   Future<void> _openResults() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const LabResultsScreen()));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LabResultsScreen(specialty: widget.account.specialty ?? ''),
+      ),
+    );
   }
 
   Future<void> _openUpload(LabOrderModel order) async {
@@ -71,7 +75,10 @@ class LabHomeScreenState extends State<LabHomeScreen> {
         future: _ordersFuture,
         builder: (context, snapshot) {
           final bool isDark = MHelperFunctions.isDarkMode(context);
-          final List<LabOrderModel> orders = snapshot.data ?? <LabOrderModel>[];
+          final String specialty = widget.account.specialty?.trim() ?? '';
+          final List<LabOrderModel> orders = (snapshot.data ?? <LabOrderModel>[])
+              .where((order) => specialty.isEmpty || order.orderType == specialty)
+              .toList();
           final List<LabOrderModel> pendingOrders = orders
               .where((order) => order.status != 'Completed')
               .toList();

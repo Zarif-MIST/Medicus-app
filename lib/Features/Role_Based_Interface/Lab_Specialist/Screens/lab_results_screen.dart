@@ -5,7 +5,12 @@ import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 class LabResultsScreen extends StatefulWidget {
-  const LabResultsScreen({super.key});
+  const LabResultsScreen({super.key, required this.specialty});
+
+  /// The signed-in lab specialist's specialty (e.g. "CT Scan"); empty shows
+  /// every completed result, unfiltered — a graceful fallback for accounts
+  /// registered before a specialty was required.
+  final String specialty;
 
   @override
   State<LabResultsScreen> createState() => _LabResultsScreenState();
@@ -22,7 +27,11 @@ class _LabResultsScreenState extends State<LabResultsScreen> {
 
   Future<List<LabOrderModel>> _load() async {
     final List<LabOrderModel> all = await LabService.instance.getAllOrders();
-    return all.where((order) => order.status == 'Completed').toList();
+    final String specialty = widget.specialty.trim();
+    return all
+        .where((order) => order.status == 'Completed')
+        .where((order) => specialty.isEmpty || order.orderType == specialty)
+        .toList();
   }
 
   @override

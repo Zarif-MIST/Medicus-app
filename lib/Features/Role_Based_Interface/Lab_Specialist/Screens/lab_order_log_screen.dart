@@ -4,10 +4,16 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/la
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
-/// Read-only record of every lab order — pending and completed — opened
-/// from the Home screen's "Order Log" card.
+/// Read-only record of every lab order matching this lab specialist's own
+/// test specialty — pending and completed — opened from the Home screen's
+/// "Order Log" card.
 class LabOrderLogScreen extends StatefulWidget {
-  const LabOrderLogScreen({super.key});
+  const LabOrderLogScreen({super.key, required this.specialty});
+
+  /// The signed-in lab specialist's specialty (e.g. "X-Ray"); empty shows
+  /// every order, unfiltered — a graceful fallback for accounts registered
+  /// before a specialty was required.
+  final String specialty;
 
   @override
   State<LabOrderLogScreen> createState() => _LabOrderLogScreenState();
@@ -19,7 +25,14 @@ class _LabOrderLogScreenState extends State<LabOrderLogScreen> {
   @override
   void initState() {
     super.initState();
-    _ordersFuture = LabService.instance.getAllOrders();
+    _ordersFuture = _load();
+  }
+
+  Future<List<LabOrderModel>> _load() async {
+    final List<LabOrderModel> all = await LabService.instance.getAllOrders();
+    final String specialty = widget.specialty.trim();
+    if (specialty.isEmpty) return all;
+    return all.where((order) => order.orderType == specialty).toList();
   }
 
   @override

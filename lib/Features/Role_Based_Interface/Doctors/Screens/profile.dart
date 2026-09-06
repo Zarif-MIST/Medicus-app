@@ -70,7 +70,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final AuthAccount account = widget.account;
+    _role = _roleFor(widget.account);
+    _applyAccount(widget.account);
+    _refreshFromFirestore();
+  }
+
+  _StakeholderRole _roleFor(AuthAccount account) {
+    if (account.role == AuthRole.doctor) {
+      return _StakeholderRole.doctor;
+    }
+    if (account.role == AuthRole.pharmacist) {
+      return _StakeholderRole.pharmacist;
+    }
+    return _StakeholderRole.labSpecialist;
+  }
+
+  void _applyAccount(AuthAccount account) {
     _firstName = account.firstName;
     _lastName = account.lastName;
     _phone = account.phoneNumber;
@@ -78,13 +93,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _staffId = account.userId;
 
     if (account.role == AuthRole.doctor) {
-      _role = _StakeholderRole.doctor;
       _specialty = account.specialty ?? _specialty;
       _licenseNumber = account.licenseNumber ?? _licenseNumber;
       _gender = account.gender ?? _gender;
       _avgConsultationMinutes = account.consultationMinutes;
     } else if (account.role == AuthRole.pharmacist) {
-      _role = _StakeholderRole.pharmacist;
       _pharmacyName = account.pharmacyName ?? _pharmacyName;
       _tradeLicense = account.tradeLicense ?? _tradeLicense;
       _pharmacyLocation = account.pharmacyLocation ?? _pharmacyLocation;
@@ -94,9 +107,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _pharmacyLat = account.pharmacyLat;
       _pharmacyLng = account.pharmacyLng;
     } else {
-      _role = _StakeholderRole.labSpecialist;
       _department = account.specialty ?? _department;
       _labLocation = account.pharmacyLocation ?? _labLocation;
+    }
+  }
+
+  /// [widget.account] can be stale by the time this screen is reached (e.g.
+  /// it was fetched once at login and never refetched since), so a previous
+  /// edit's Firestore write might not show up here without this — re-pull
+  /// the account fresh on every open so the frontend always matches the
+  /// backend, then fall back silently to what's already on screen if it
+  /// fails (e.g. offline).
+  Future<void> _refreshFromFirestore() async {
+    try {
+      final AuthAccount? fresh = await AuthRegistry.instance.accountForUserId(
+        widget.account.userId,
+      );
+      if (!mounted || fresh == null) {
+        return;
+      }
+      setState(() => _applyAccount(fresh));
+    } catch (_) {
+      // Keep showing whatever was already loaded.
     }
   }
 

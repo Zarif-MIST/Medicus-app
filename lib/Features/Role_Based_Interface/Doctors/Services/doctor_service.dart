@@ -161,14 +161,35 @@ class DoctorService {
         .toList();
   }
 
+  /// Distinct medicine names across every pharmacy's inventory — used to
+  /// suggest real, stocked medicines while writing a prescription instead of
+  /// a fixed static list.
+  Future<List<String>> getKnownMedicineNames() async {
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
+        .instance
+        .collection('inventory')
+        .get();
+
+    final Set<String> names = <String>{};
+    for (final doc in snapshot.docs) {
+      final String name = (doc.data()['name'] ?? '').toString().trim();
+      if (name.isNotEmpty) {
+        names.add(name);
+      }
+    }
+
+    final List<String> sorted = names.toList()..sort();
+    return sorted;
+  }
+
   static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();
 
+  /// Medicines may be empty — a doctor can save a diagnosis-only or
+  /// lab-test-only visit (e.g. ordering a test with no medicine yet) just as
+  /// validly as one with a full medicine list.
   Future<String> savePrescription(DoctorPrescriptionModel prescription) async {
     if (prescription.diagnosis.trim().isEmpty) {
       throw ArgumentError('Diagnosis cannot be empty.');
-    }
-    if (prescription.medicines.isEmpty) {
-      throw ArgumentError('Add at least one medicine.');
     }
 
     return _prescriptionRepository.create(

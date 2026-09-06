@@ -12,6 +12,7 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/profile/p
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient_profile_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 // TODO: replace with the logged-in patient's real userId once every screen
 // consistently receives a fully-populated AuthAccount — matches the mock id
@@ -40,8 +41,10 @@ class _PatientHomeShell extends StatefulWidget {
 }
 
 class _PatientHomeShellState extends State<_PatientHomeShell> {
-  static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();
-  static const AppointmentRepository _appointmentRepository = AppointmentRepository();
+  static const PrescriptionRepository _prescriptionRepository =
+      PrescriptionRepository();
+  static const AppointmentRepository _appointmentRepository =
+      AppointmentRepository();
   static const PatientProfileService _profileService = PatientProfileService();
 
   int _index = 0;
@@ -50,8 +53,11 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
   List<PrescriptionRecord> _prescriptionRecords = [];
   bool _medicalInfoIncomplete = false;
 
-  String get _patientId => widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
-  String get _patientName => widget.account.firstName.isEmpty ? _mockPatientName : widget.account.fullName;
+  String get _patientId =>
+      widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
+  String get _patientName => widget.account.firstName.isEmpty
+      ? _mockPatientName
+      : widget.account.fullName;
 
   final _items = const [
     LiquidNavItem(
@@ -86,9 +92,14 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
 
   Future<void> _loadProfileStatus() async {
     try {
-      final PatientProfileRecord? record = await _profileService.fetch(_patientId);
+      final PatientProfileRecord? record = await _profileService.fetch(
+        _patientId,
+      );
       if (!mounted) return;
-      setState(() => _medicalInfoIncomplete = record == null || !record.medicalInfoCompleted);
+      setState(
+        () => _medicalInfoIncomplete =
+            record == null || !record.medicalInfoCompleted,
+      );
     } catch (_) {
       // Leave the banner hidden on failure (e.g. offline) rather than
       // guessing — it'll re-check next time the dashboard opens.
@@ -97,11 +108,14 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
 
   Future<void> _loadPrescriptions() async {
     try {
-      final List<PrescriptionRecord> records = await _prescriptionRepository.fetchForPatient(_patientId);
+      final List<PrescriptionRecord> records = await _prescriptionRepository
+          .fetchForPatient(_patientId);
       if (!mounted) return;
       setState(() {
         _prescriptionRecords = records;
-        _prescriptions = [for (final record in records) _toPrescription(record)];
+        _prescriptions = [
+          for (final record in records) _toPrescription(record),
+        ];
       });
     } catch (_) {
       // Leave the list empty on failure (e.g. offline) — every screen
@@ -111,9 +125,12 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
 
   Future<void> _loadAppointments() async {
     try {
-      final List<AppointmentRecord> records = await _appointmentRepository.fetchForPatient(_patientId);
+      final List<AppointmentRecord> records = await _appointmentRepository
+          .fetchForPatient(_patientId);
       if (!mounted) return;
-      final List<BookedAppointment> fetched = [for (final record in records) _toBookedAppointment(record)];
+      final List<BookedAppointment> fetched = [
+        for (final record in records) _toBookedAppointment(record),
+      ];
 
       // An optimistic booking (id.isEmpty — added locally in _addAppointment
       // before its Firestore write confirmed) can still be mid-flight when
@@ -166,7 +183,9 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
         for (final medicine in record.medicines)
           PrescriptionMedicine(
             name: medicine.name,
-            dosage: medicine.instructions.isEmpty ? medicine.dosage : '${medicine.dosage} — ${medicine.instructions}',
+            dosage: medicine.instructions.isEmpty
+                ? medicine.dosage
+                : '${medicine.dosage} — ${medicine.instructions}',
             durationDays: medicine.durationDays,
           ),
       ],
@@ -212,34 +231,41 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
         onBook: _addAppointment,
       ),
       PharmacyLocatorScreen(account: widget.account),
-      PatientProfileScreen(account: widget.account, prescriptions: _prescriptions),
+      PatientProfileScreen(
+        account: widget.account,
+        prescriptions: _prescriptions,
+      ),
     ];
 
-    return Scaffold(
-      // extendBody lets page content flow behind the nav bar so the
-      // BackdropFilter actually has something colorful to blur.
-      extendBody: true,
-      body: Stack(
-        children: [
-          pages[_index],
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: (i) {
-                setState(() => _index = i);
-                if (i == 0) {
-                  _loadProfileStatus();
-                  _loadPrescriptions();
-                  _loadAppointments();
-                }
-              },
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => setState(() => _index = 0),
+      child: Scaffold(
+        // extendBody lets page content flow behind the nav bar so the
+        // BackdropFilter actually has something colorful to blur.
+        extendBody: true,
+        body: Stack(
+          children: [
+            pages[_index],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: (i) {
+                  setState(() => _index = i);
+                  if (i == 0) {
+                    _loadProfileStatus();
+                    _loadPrescriptions();
+                    _loadAppointments();
+                  }
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

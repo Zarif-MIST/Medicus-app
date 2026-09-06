@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image/image.dart' as img;
+import 'package:medicus/Utilities/image_compression.dart';
 
 /// One uploaded report photo — the digital replacement for a handwritten
 /// report the patient used to bring in on paper. The image is stored inline
@@ -59,34 +59,14 @@ class LabReportService {
   CollectionReference<Map<String, dynamic>> get _collection =>
       FirebaseFirestore.instance.collection('lab_reports');
 
-  /// Resizes/re-encodes [rawBytes] so the base64 payload fits comfortably in
-  /// a Firestore document. Throws [LabReportTooLargeException] if even the
-  /// most aggressive pass can't get it under the limit.
+  /// Throws [LabReportTooLargeException] if even the most aggressive
+  /// resize/quality pass can't get [rawBytes] under [maxEncodedBytes].
   String _compressToBase64(Uint8List rawBytes) {
-    final img.Image? decoded = img.decodeImage(rawBytes);
-    if (decoded == null) {
+    try {
+      return compressImageToBase64(rawBytes, maxEncodedBytes: maxEncodedBytes);
+    } on ImageTooLargeException {
       throw const LabReportTooLargeException();
     }
-
-    for (final int maxDimension in [1000, 700, 500]) {
-      final img.Image resized = decoded.width > maxDimension || decoded.height > maxDimension
-          ? img.copyResize(
-              decoded,
-              width: decoded.width >= decoded.height ? maxDimension : null,
-              height: decoded.height > decoded.width ? maxDimension : null,
-            )
-          : decoded;
-
-      for (final int quality in [70, 50, 35]) {
-        final Uint8List encoded = img.encodeJpg(resized, quality: quality);
-        final String base64Str = base64Encode(encoded);
-        if (base64Str.length <= maxEncodedBytes) {
-          return base64Str;
-        }
-      }
-    }
-
-    throw const LabReportTooLargeException();
   }
 
   Future<void> upload({

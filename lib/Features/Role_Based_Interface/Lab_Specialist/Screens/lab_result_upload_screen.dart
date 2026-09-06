@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -7,6 +9,7 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/image_compression.dart';
 
 class LabResultUploadScreen extends StatefulWidget {
   const LabResultUploadScreen({super.key, required this.order});
@@ -22,6 +25,9 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
 
   final TextEditingController _noteController = TextEditingController();
   String? _selectedFileName;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageBase64;
+  bool _picking = false;
   bool _saving = false;
   late final Future<PrescriptionRecord?> _linkedPrescriptionFuture = widget.order.prescriptionId.isEmpty
       ? Future.value(null)
@@ -35,13 +41,34 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
 
   Future<void> _pickFile() async {
     final PlatformFile? file = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+      type: FileType.image,
     );
     if (file == null) {
       return;
     }
-    setState(() => _selectedFileName = file.name);
+
+    setState(() => _picking = true);
+    try {
+      final Uint8List rawBytes = await file.readAsBytes();
+      final String base64Image = compressImageToBase64(rawBytes);
+      if (!mounted) return;
+      setState(() {
+        _selectedFileName = file.name;
+        _selectedImageBase64 = base64Image;
+        _selectedImageBytes = rawBytes;
+      });
+    } on ImageTooLargeException {
+      if (!mounted) return;
+      Get.snackbar(
+        'Image too large',
+        'Could not compress this photo enough to attach — try a lower-resolution photo.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _picking = false);
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -51,6 +78,7 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
         orderId: widget.order.id,
         note: _noteController.text.trim(),
         fileName: _selectedFileName,
+        fileBase64: _selectedImageBase64,
       );
       if (!mounted) {
         return;
@@ -106,20 +134,38 @@ class _LabResultUploadScreenState extends State<LabResultUploadScreen> {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: _pickFile,
+                  onPressed: _picking ? null : _pickFile,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: MColors.primaryColor,
                     side: const BorderSide(color: MColors.primaryColor),
                   ),
-                  icon: const Icon(Icons.attach_file),
+                  icon: _picking
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.attach_file),
                   label: Text(
-                    _selectedFileName == null
-                        ? 'Pick Result File'
-                        : 'Change File',
+                    _picking
+                        ? 'Processing...'
+                        : (_selectedFileName == null
+                              ? 'Pick Result Photo'
+                              : 'Change Photo'),
                   ),
                 ),
-                if (_selectedFileName != null) ...[
-                  const SizedBox(height: 8),
+                if (_selectedImageBytes != null) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      _selectedImageBytes!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       const Icon(

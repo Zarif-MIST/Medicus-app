@@ -14,9 +14,13 @@ import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
 /// A patient's full record from the doctor's side — reached by searching a
-/// patient ID or scanning their QR. Two tabs: History (every uploaded report
-/// and past prescription on file, newest first, each showing its date and
-/// doctor) and Prescribe (write a new one right here).
+/// patient ID or scanning their QR. Read-only: every uploaded report and
+/// past prescription on file, newest first, each showing its date and
+/// doctor. Writing a new prescription is a separate, dedicated flow (the
+/// "Write Rx" action on a scheduled appointment) — reachable from here too
+/// via the "Write Prescription" button, but not embedded inline, so opening
+/// a patient's record to look something up doesn't also hand you a
+/// half-visible prescription form by default.
 class PatientDetailScreen extends StatefulWidget {
   const PatientDetailScreen({super.key, required this.record, required this.doctor});
 
@@ -27,23 +31,20 @@ class PatientDetailScreen extends StatefulWidget {
   State<PatientDetailScreen> createState() => _PatientDetailScreenState();
 }
 
-class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController = TabController(length: 2, vsync: this);
-
-  /// Bumping this forces the History tab's FutureBuilder-backed sections to
-  /// recreate (via the ValueKey below) and refetch — used right after a new
-  /// prescription is saved from the Prescribe tab.
+class _PatientDetailScreenState extends State<PatientDetailScreen> {
+  /// Bumping this forces the History section's FutureBuilder-backed
+  /// sections to recreate (via the ValueKey below) and refetch — used right
+  /// after returning from writing a new prescription.
   int _historyRefreshKey = 0;
 
-  void _onPrescriptionSaved() {
+  Future<void> _writePrescription() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PrescriptionFormScreen(doctor: widget.doctor, patient: widget.record),
+      ),
+    );
+    if (!mounted) return;
     setState(() => _historyRefreshKey++);
-    _tabController.animateTo(0);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   @override
@@ -58,6 +59,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTi
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('Patient Record'),
+        actions: [
+          TextButton.icon(
+            onPressed: _writePrescription,
+            icon: const Icon(Icons.edit_note, color: MColors.primaryColor),
+            label: const Text(
+              'Write Prescription',
+              style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -139,32 +150,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTi
               ),
             ),
             const SizedBox(height: 8),
-            TabBar(
-              controller: _tabController,
-              labelColor: MColors.primaryColor,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: MColors.primaryColor,
-              tabs: const [
-                Tab(text: 'History'),
-                Tab(text: 'Prescribe'),
-              ],
-            ),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _HistoryTab(
-                    key: ValueKey(_historyRefreshKey),
-                    patientId: record.account.userId,
-                    isDark: isDark,
-                    doctor: widget.doctor,
-                  ),
-                  PrescriptionFormBody(
-                    doctor: widget.doctor,
-                    patient: record,
-                    onSaved: _onPrescriptionSaved,
-                  ),
-                ],
+              child: _HistoryTab(
+                key: ValueKey(_historyRefreshKey),
+                patientId: record.account.userId,
+                isDark: isDark,
+                doctor: widget.doctor,
               ),
             ),
           ],
@@ -459,6 +450,25 @@ class _LabTestTile extends StatelessWidget {
 
   bool get _isCompleted => order.status == 'Completed';
 
+  void _viewAttachment(BuildContext context) {
+    final bytes = order.resultImageBytes;
+    if (bytes == null) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: Text(order.resultFileName ?? order.orderType),
+          ),
+          body: Center(child: InteractiveViewer(child: Image.memory(bytes))),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -504,6 +514,25 @@ class _LabTestTile extends StatelessWidget {
           if (_isCompleted && (order.resultNote ?? '').isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(order.resultNote!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700)),
+          ],
+          if (_isCompleted && order.resultImageBytes != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _viewAttachment(context),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.image_outlined, size: 16, color: MColors.primaryColor),
+                label: const Text(
+                  'View Attachment',
+                  style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700, fontSize: 12),
+                ),
+              ),
+            ),
           ],
         ],
       ),

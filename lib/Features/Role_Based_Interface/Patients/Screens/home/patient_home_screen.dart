@@ -48,15 +48,11 @@ class PatientHomeScreen extends StatelessWidget {
   final bool medicalInfoIncomplete;
   final VoidCallback onCompleteMedicalInfo;
 
-  /// Only appointments today or later — a past booking should never be
-  /// mistaken for "next", which is what let a stale/previous appointment
-  /// show up here instead of a newly booked upcoming one.
+  /// Only appointments whose booked time window hasn't ended yet — a past
+  /// booking should never be mistaken for "next", including one booked for
+  /// today whose window has already passed (not just an earlier day).
   List<BookedAppointment> get _upcomingAppointments {
-    final DateTime today = DateTime.now();
-    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
-    return appointments
-        .where((a) => !DateTime(a.date.year, a.date.month, a.date.day).isBefore(todayOnly))
-        .toList();
+    return appointments.where((a) => !a.hasEnded).toList();
   }
 
   int get _daysToNextAppointment {

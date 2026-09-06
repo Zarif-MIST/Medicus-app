@@ -4,6 +4,7 @@ import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_prescription_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_record_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
+import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
@@ -99,14 +100,31 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _diagnosisController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _labTestController = TextEditingController();
+  String? _selectedLabTest;
   final List<_MedicineDraft> _medicines = <_MedicineDraft>[_MedicineDraft()];
+  List<String> _knownMedicineNames = _commonMedicineNames;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKnownMedicineNames();
+  }
+
+  Future<void> _loadKnownMedicineNames() async {
+    try {
+      final List<String> names = await DoctorService.instance.getKnownMedicineNames();
+      if (mounted && names.isNotEmpty) {
+        setState(() => _knownMedicineNames = names);
+      }
+    } catch (_) {
+      // Keep the static fallback list if inventory can't be loaded.
+    }
+  }
 
   @override
   void dispose() {
     _diagnosisController.dispose();
     _notesController.dispose();
-    _labTestController.dispose();
     for (final medicine in _medicines) {
       medicine.dispose();
     }
@@ -162,7 +180,7 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
       return;
     }
 
-    final String labTest = _labTestController.text.trim();
+    final String labTest = _selectedLabTest ?? '';
     if (labTest.isNotEmpty) {
       await LabService.instance.createOrder(
         patientId: widget.patient.account.userId,
@@ -184,11 +202,11 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
     _formKey.currentState?.reset();
     _diagnosisController.clear();
     _notesController.clear();
-    _labTestController.clear();
     for (final medicine in _medicines) {
       medicine.dispose();
     }
     setState(() {
+      _selectedLabTest = null;
       _medicines
         ..clear()
         ..add(_MedicineDraft());
@@ -278,12 +296,19 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
                       ),
                     ],
                   ),
+                  Text(
+                    'Leave blank for a lab-test-only visit with no medicine.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
+                  ),
                   const SizedBox(height: 8),
                   for (int i = 0; i < _medicines.length; i++) ...[
                     _MedicineFields(
                       draft: _medicines[i],
                       index: i,
                       isDark: isDark,
+                      medicineNameSuggestions: _knownMedicineNames,
                       onRemove: _medicines.length == 1
                           ? null
                           : () => setState(() {
@@ -307,16 +332,23 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _labTestController,
-                    decoration: _inputDecoration(
-                      context,
-                      'e.g. Complete Blood Count, Lipid Profile',
-                    ),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedLabTest,
+                    items: kLabTestTypes
+                        .map(
+                          (String testType) => DropdownMenuItem<String>(
+                            value: testType,
+                            child: Text(testType),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (String? value) =>
+                        setState(() => _selectedLabTest = value),
+                    decoration: _inputDecoration(context, 'Select a test type'),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Leave blank if no test is needed. If filled, this creates a lab order linked to this prescription — the patient sees it in Medical Records and a lab specialist can attach results to it.',
+                    'Leave unselected if no test is needed. If selected, this creates a lab order linked to this prescription — the patient sees it in Medical Records and a lab specialist can attach results to it.',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
@@ -383,6 +415,16 @@ class _MedicineDraft {
   final TextEditingController durationDays;
   final List<TimeOfDay> doseTimes = [];
 
+  /// True when the doctor hasn't touched any field on this row yet — a
+  /// completely untouched row is skipped from validation entirely, so a
+  /// prescription can be saved with zero medicines (e.g. lab-test-only
+  /// visits) instead of being blocked by the default empty row.
+  bool get isBlank =>
+      name.text.trim().isEmpty &&
+      dosage.text.trim().isEmpty &&
+      instructions.text.trim().isEmpty &&
+      durationDays.text.trim().isEmpty;
+
   final FocusNode nameFocus = FocusNode();
   final FocusNode dosageFocus = FocusNode();
   final FocusNode instructionsFocus = FocusNode();
@@ -405,12 +447,14 @@ class _MedicineFields extends StatefulWidget {
     required this.draft,
     required this.index,
     required this.isDark,
+    required this.medicineNameSuggestions,
     required this.onRemove,
   });
 
   final _MedicineDraft draft;
   final int index;
   final bool isDark;
+  final List<String> medicineNameSuggestions;
   final VoidCallback? onRemove;
 
   @override
@@ -468,10 +512,14 @@ class _MedicineFieldsState extends State<_MedicineFields> {
           _SuggestingTextFormField(
             controller: draft.name,
             focusNode: draft.nameFocus,
-            suggestions: _commonMedicineNames,
-            validator: (value) => value == null || value.trim().isEmpty
-                ? 'Enter medicine name'
-                : null,
+            suggestions: widget.medicineNameSuggestions,
+            showAllOnFocus: true,
+            validator: (value) {
+              if (draft.isBlank) return null;
+              return value == null || value.trim().isEmpty
+                  ? 'Enter medicine name'
+                  : null;
+            },
             decoration: _inputDecoration(context, 'Medicine name'),
           ),
           const SizedBox(height: 10),
@@ -479,8 +527,12 @@ class _MedicineFieldsState extends State<_MedicineFields> {
             controller: draft.dosage,
             focusNode: draft.dosageFocus,
             suggestions: _commonDosages,
-            validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Enter dosage' : null,
+            validator: (value) {
+              if (draft.isBlank) return null;
+              return value == null || value.trim().isEmpty
+                  ? 'Enter dosage'
+                  : null;
+            },
             decoration: _inputDecoration(context, 'Dosage'),
           ),
           const SizedBox(height: 10),
@@ -488,9 +540,12 @@ class _MedicineFieldsState extends State<_MedicineFields> {
             controller: draft.instructions,
             focusNode: draft.instructionsFocus,
             suggestions: _commonInstructions,
-            validator: (value) => value == null || value.trim().isEmpty
-                ? 'Enter instructions'
-                : null,
+            validator: (value) {
+              if (draft.isBlank) return null;
+              return value == null || value.trim().isEmpty
+                  ? 'Enter instructions'
+                  : null;
+            },
             decoration: _inputDecoration(context, 'Instructions'),
           ),
           const SizedBox(height: 10),
@@ -500,6 +555,7 @@ class _MedicineFieldsState extends State<_MedicineFields> {
             suggestions: _commonDurations,
             keyboardType: TextInputType.number,
             validator: (value) {
+              if (draft.isBlank) return null;
               final int? parsed = int.tryParse(value?.trim() ?? '');
               if (parsed == null || parsed <= 0) {
                 return 'Enter course length in days';
@@ -558,6 +614,7 @@ class _SuggestingTextFormField extends StatelessWidget {
     required this.decoration,
     this.validator,
     this.keyboardType,
+    this.showAllOnFocus = false,
   });
 
   final TextEditingController controller;
@@ -567,6 +624,10 @@ class _SuggestingTextFormField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
 
+  /// When true, tapping the field with no text yet shows every suggestion
+  /// (scrollable) instead of waiting for the user to start typing.
+  final bool showAllOnFocus;
+
   @override
   Widget build(BuildContext context) {
     return RawAutocomplete<String>(
@@ -574,7 +635,9 @@ class _SuggestingTextFormField extends StatelessWidget {
       focusNode: focusNode,
       optionsBuilder: (TextEditingValue value) {
         final String query = value.text.trim().toLowerCase();
-        if (query.isEmpty) return const Iterable<String>.empty();
+        if (query.isEmpty) {
+          return showAllOnFocus ? suggestions : const Iterable<String>.empty();
+        }
         return suggestions.where((s) => s.toLowerCase().contains(query));
       },
       fieldViewBuilder: (context, fieldController, fieldFocusNode, onFieldSubmitted) {

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appointment_model.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_stat_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
-import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/home/stat_card_row.dart';
 import 'package:medicus/Utilities/colors.dart';
+import 'package:medicus/Utilities/helperFunctions.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({
@@ -114,6 +115,23 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (!mounted || record == null) return;
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
+    );
+  }
+
+  void _openStatDetail({
+    required String title,
+    required List<DoctorAppointmentModel> appointments,
+    required String emptyMessage,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DoctorStatDetailScreen(
+          title: title,
+          account: widget.account,
+          appointments: appointments,
+          emptyMessage: emptyMessage,
+        ),
+      ),
     );
   }
 
@@ -224,24 +242,61 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      StatCardRow(
-                        stats: [
-                          StatCardData(
-                            label: 'Patients Seen',
-                            value: seenPatientIds.length,
-                            icon: Icons.groups_outlined,
-                          ),
-                          StatCardData(
-                            label: 'Pending Cases',
-                            value: pendingCount,
-                            icon: Icons.pending_actions_outlined,
-                          ),
-                          StatCardData(
-                            label: 'Today Queue',
-                            value: appointments.length,
-                            icon: Icons.calendar_today_outlined,
-                          ),
-                        ],
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _DoctorStatTile(
+                                icon: Icons.groups_outlined,
+                                label: 'Patients Seen',
+                                value: seenPatientIds.length,
+                                big: true,
+                                onTap: () => _openStatDetail(
+                                  title: 'Patients Seen',
+                                  appointments: appointments
+                                      .where(
+                                        (a) => seenPatientIds.contains(a.patientId),
+                                      )
+                                      .toList(),
+                                  emptyMessage: 'No patients seen yet today.',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  _DoctorStatTile(
+                                    icon: Icons.pending_actions_outlined,
+                                    label: 'Pending Cases',
+                                    value: pendingCount,
+                                    onTap: () => _openStatDetail(
+                                      title: 'Pending Cases',
+                                      appointments: appointments
+                                          .where(
+                                            (a) => !seenPatientIds.contains(a.patientId),
+                                          )
+                                          .toList(),
+                                      emptyMessage: 'No pending cases right now.',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _DoctorStatTile(
+                                    icon: Icons.calendar_today_outlined,
+                                    label: 'Today Queue',
+                                    value: appointments.length,
+                                    onTap: () => _openStatDetail(
+                                      title: "Today's Queue",
+                                      appointments: appointments,
+                                      emptyMessage: 'No appointments scheduled today.',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 22),
                       Text(
@@ -264,7 +319,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                         )
                       else
                         for (final appointment in visibleAppointments) ...[
-                          _DoctorQueueTile(
+                          DoctorQueueTile(
                             account: widget.account,
                             appointment: appointment,
                           ),
@@ -309,8 +364,117 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 }
 
-class _DoctorQueueTile extends StatelessWidget {
-  const _DoctorQueueTile({required this.account, required this.appointment});
+class _DoctorStatTile extends StatelessWidget {
+  const _DoctorStatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.big = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final VoidCallback? onTap;
+
+  /// Taller, more prominent styling for the single card spanning the left
+  /// column, so it reads as the headline stat next to the two stacked ones.
+  final bool big;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = MHelperFunctions.isDarkMode(context);
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(big ? 18 : 14),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: big ? MainAxisAlignment.center : MainAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(big ? 12 : 8),
+                decoration: BoxDecoration(
+                  color: MColors.primaryColor.withValues(
+                    alpha: isDark ? 0.18 : 0.1,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: MColors.primaryColor, size: big ? 26 : 18),
+              ),
+              SizedBox(height: big ? 16 : 10),
+              Text(
+                '$value',
+                style:
+                    (big
+                            ? Theme.of(context).textTheme.headlineMedium
+                            : Theme.of(context).textTheme.titleLarge)
+                        ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (onTap != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View details',
+                      style: TextStyle(
+                        color: MColors.primaryColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: MColors.primaryColor,
+                      size: 12,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DoctorQueueTile extends StatelessWidget {
+  const DoctorQueueTile({
+    super.key,
+    required this.account,
+    required this.appointment,
+  });
 
   final AuthAccount account;
   final DoctorAppointmentModel appointment;

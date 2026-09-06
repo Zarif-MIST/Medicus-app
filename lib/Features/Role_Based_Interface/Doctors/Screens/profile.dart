@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
@@ -7,6 +8,7 @@ import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Screens/login/login.dart';
 import 'package:medicus/Features/Authentication/Screens/registration/pharmacy_location_picker_screen.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
+import 'package:medicus/Utilities/auth_validators.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -49,6 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _specialty = 'General Physician';
   String _licenseNumber = 'Not provided';
+  int _avgConsultationMinutes = 5;
 
   String _pharmacyName = 'Not provided';
   String _tradeLicense = 'Not provided';
@@ -79,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _specialty = account.specialty ?? _specialty;
       _licenseNumber = account.licenseNumber ?? _licenseNumber;
       _gender = account.gender ?? _gender;
+      _avgConsultationMinutes = account.consultationMinutes;
     } else if (account.role == AuthRole.pharmacist) {
       _role = _StakeholderRole.pharmacist;
       _pharmacyName = account.pharmacyName ?? _pharmacyName;
@@ -359,6 +363,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Lets a doctor change how long they typically spend per patient — this
+  /// drives the auto-generated booking slots patients see, so it's edited
+  /// through its own numeric sheet rather than the generic text-field editor
+  /// used for Specialty/License (which would write it back as a String).
+  Future<void> _editAvgConsultationMinutes() async {
+    final bool isDark = MHelperFunctions.isDarkMode(context);
+    final TextEditingController controller = TextEditingController(
+      text: '$_avgConsultationMinutes',
+    );
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    final int? saved = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: 20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Avg. Time per Patient',
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Used to schedule patient booking slots (1-120 minutes).',
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    labelText: 'Minutes',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: AuthValidators.consultationMinutes,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (!formKey.currentState!.validate()) return;
+                      final int minutes =
+                          int.tryParse(controller.text.trim()) ?? 5;
+                      Navigator.of(sheetContext).pop(minutes);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MColors.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (saved == null) return;
+
+    setState(() => _avgConsultationMinutes = saved);
+    await _persistToFirestore(<String, dynamic>{
+      'avgConsultationMinutes': saved,
+    });
+
+    if (!mounted) return;
+    Get.snackbar(
+      'Updated',
+      'Your average consultation time is now $saved minutes.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
   /// Lets the pharmacist drop/move the map pin patients use to find them —
   /// separate from the plain address text, since that alone never touches
   /// the coordinates the patient-facing pharmacy map actually reads.
@@ -516,6 +624,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.badge_outlined,
                   label: 'BMDC License',
                   value: _licenseNumber,
+                ),
+                _TappableInfoRow(
+                  icon: Icons.timer_outlined,
+                  label: 'Avg. Time per Patient',
+                  value: '$_avgConsultationMinutes min',
+                  onTap: _editAvgConsultationMinutes,
                   showDivider: false,
                 ),
               ],

@@ -32,6 +32,7 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
   Specialty? _selectedSpecialty;
   List<DoctorSummary> _allDoctors = [];
   bool _loading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -74,6 +75,16 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
   }
 
   List<DoctorSummary> get _visibleDoctors {
+    final String query = _searchQuery.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      return _allDoctors
+          .where(
+            (d) =>
+                d.name.toLowerCase().contains(query) ||
+                d.specialty.toLowerCase().contains(query),
+          )
+          .toList();
+    }
     if (_selectedSpecialty == null) {
       return _allDoctors.take(3).toList();
     }
@@ -82,14 +93,13 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
         .toList();
   }
 
-  /// Only appointments today or later, soonest first — a past booking
-  /// should drop off this list once its date has gone by, not stick around
-  /// forever alongside genuinely upcoming ones.
+  /// Only appointments whose booked time window hasn't ended yet, soonest
+  /// first — a booking should drop off this list once its window has
+  /// actually passed (not just once the date changes), so a same-day
+  /// appointment doesn't linger here for the rest of the day after it's over.
   List<BookedAppointment> get _upcomingAppointments {
-    final DateTime today = DateTime.now();
-    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
     final List<BookedAppointment> upcoming = widget.appointments
-        .where((a) => !DateTime(a.date.year, a.date.month, a.date.day).isBefore(todayOnly))
+        .where((a) => !a.hasEnded)
         .toList()
       ..sort((a, b) => a.date.compareTo(b.date));
     return upcoming;
@@ -135,7 +145,8 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
                       SizedBox(height: pad * 0.8),
                       LiquidGlassSearchBar(
                         hintText: 'Search specialist or doctor name',
-                        onSubmitted: (_) {},
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
                       ),
                     ],
                   ),
@@ -163,9 +174,11 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
                   ),
                   SizedBox(height: pad * 0.5),
                   Text(
-                    _selectedSpecialty == null
-                        ? 'Top Doctors'
-                        : '${_selectedSpecialty!.name} Specialists',
+                    _searchQuery.trim().isNotEmpty
+                        ? 'Search Results'
+                        : (_selectedSpecialty == null
+                              ? 'Top Doctors'
+                              : '${_selectedSpecialty!.name} Specialists'),
                     style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 14),
@@ -178,9 +191,11 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Text(
-                        _selectedSpecialty == null
-                            ? 'No doctors have registered on Medicus yet.'
-                            : 'No doctors found for this specialty yet.',
+                        _searchQuery.trim().isNotEmpty
+                            ? 'No doctors match "${_searchQuery.trim()}".'
+                            : (_selectedSpecialty == null
+                                  ? 'No doctors have registered on Medicus yet.'
+                                  : 'No doctors found for this specialty yet.'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),

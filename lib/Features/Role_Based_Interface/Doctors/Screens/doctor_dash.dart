@@ -5,6 +5,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_app
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
+import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
 class DoctorDash extends StatelessWidget {
   const DoctorDash({required this.account, super.key});
@@ -63,24 +64,27 @@ class _HomeShellState extends State<HomeShell> {
       ProfileScreen(account: widget.account),
     ];
 
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          pages[_index],
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LiquidGlassNavBar(
-              items: _items,
-              selectedIndex: _index,
-              onTap: (i) => setState(() => _index = i),
+    return DashboardBackGuard(
+      isOnHomeTab: _index == 0,
+      goToHomeTab: () => setState(() => _index = 0),
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            pages[_index],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LiquidGlassNavBar(
+                items: _items,
+                selectedIndex: _index,
+                onTap: (i) => setState(() => _index = i),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-

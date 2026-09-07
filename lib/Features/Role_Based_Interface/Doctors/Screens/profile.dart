@@ -8,6 +8,7 @@ import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Screens/login/login.dart';
 import 'package:medicus/Features/Authentication/Screens/registration/pharmacy_location_picker_screen.dart';
 import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/service_planner_screen.dart';
 import 'package:medicus/Utilities/auth_validators.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
@@ -467,6 +468,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openServicePlanner() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ServicePlannerScreen(doctor: widget.account),
+      ),
+    );
+  }
+
   /// Lets the pharmacist drop/move the map pin patients use to find them —
   /// separate from the plain address text, since that alone never touches
   /// the coordinates the patient-facing pharmacy map actually reads.
@@ -630,6 +639,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Avg. Time per Patient',
                   value: '$_avgConsultationMinutes min',
                   onTap: _editAvgConsultationMinutes,
+                ),
+                _TappableInfoRow(
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Service Planner',
+                  value: 'Manage availability',
+                  onTap: _openServicePlanner,
                   showDivider: false,
                 ),
               ],

@@ -18,7 +18,11 @@ import 'package:medicus/Utilities/helperFunctions.dart';
 /// and past prescription on file, newest first, each showing its date and
 /// doctor) and Prescribe (write a new one right here).
 class PatientDetailScreen extends StatefulWidget {
-  const PatientDetailScreen({super.key, required this.record, required this.doctor});
+  const PatientDetailScreen({
+    super.key,
+    required this.record,
+    required this.doctor,
+  });
 
   final PatientRecordModel record;
   final AuthAccount doctor;
@@ -27,8 +31,12 @@ class PatientDetailScreen extends StatefulWidget {
   State<PatientDetailScreen> createState() => _PatientDetailScreenState();
 }
 
-class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController = TabController(length: 2, vsync: this);
+class _PatientDetailScreenState extends State<PatientDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController = TabController(
+    length: 2,
+    vsync: this,
+  );
 
   /// Bumping this forces the History tab's FutureBuilder-backed sections to
   /// recreate (via the ValueKey below) and refetch — used right after a new
@@ -53,129 +61,202 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> with SingleTi
     final PatientRecordModel record = widget.record;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF181818) : const Color(0xFFF7F5F3),
+      backgroundColor: isDark
+          ? const Color(0xFF181818)
+          : const Color(0xFFF7F5F3),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('Patient Record'),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: Column(
-                children: [
-                  LiquidGlassLayer(
-                    settings: LiquidGlassSettings(
-                      thickness: 18,
-                      blur: 10,
-                      glassColor: isDark ? const Color(0x26FFFFFF) : const Color(0xA6FFFFFF),
-                      lightIntensity: 1.1,
-                      saturation: 1.15,
-                      refractiveIndex: 1.25,
-                    ),
-                    child: LiquidGlass(
-                      shape: LiquidRoundedSuperellipse(borderRadius: 28),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              MColors.primaryColor.withValues(alpha: isDark ? 0.35 : 0.16),
-                              MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.06),
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Column(
+                  children: [
+                    LiquidGlassLayer(
+                      settings: LiquidGlassSettings(
+                        thickness: 18,
+                        blur: 10,
+                        glassColor: isDark
+                            ? const Color(0x26FFFFFF)
+                            : const Color(0xA6FFFFFF),
+                        lightIntensity: 1.1,
+                        saturation: 1.15,
+                        refractiveIndex: 1.25,
+                      ),
+                      child: LiquidGlass(
+                        shape: LiquidRoundedSuperellipse(borderRadius: 28),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(28),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                MColors.primaryColor.withValues(
+                                  alpha: isDark ? 0.35 : 0.16,
+                                ),
+                                MColors.primaryColor.withValues(
+                                  alpha: isDark ? 0.18 : 0.06,
+                                ),
+                              ],
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                record.account.fullName,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: isDark ? Colors.white : Colors.black87,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Patient ID: ${record.account.userId}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.black54,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  _InfoChip(
+                                    label: 'Blood Group',
+                                    value: record.bloodGroup,
+                                    isDark: isDark,
+                                  ),
+                                  _InfoChip(
+                                    label: 'Allergies',
+                                    value: record.allergies,
+                                    isDark: isDark,
+                                  ),
+                                  _InfoChip(
+                                    label: 'Conditions',
+                                    value: record.chronicConditions,
+                                    isDark: isDark,
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              record.account.fullName,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: isDark ? Colors.white : Colors.black87,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Patient ID: ${record.account.userId}',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: isDark ? Colors.white70 : Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: [
-                                _InfoChip(label: 'Blood Group', value: record.bloodGroup, isDark: isDark),
-                                _InfoChip(label: 'Allergies', value: record.allergies, isDark: isDark),
-                                _InfoChip(label: 'Conditions', value: record.chronicConditions, isDark: isDark),
-                              ],
-                            ),
-                          ],
-                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: record.vitals.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.2,
+                    const SizedBox(height: 16),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: record.vitals.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 2.2,
+                          ),
+                      itemBuilder: (context, index) => _VitalCard(
+                        vital: record.vitals[index],
+                        isDark: isDark,
+                      ),
                     ),
-                    itemBuilder: (context, index) => _VitalCard(vital: record.vitals[index], isDark: isDark),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            TabBar(
-              controller: _tabController,
-              labelColor: MColors.primaryColor,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: MColors.primaryColor,
-              tabs: const [
-                Tab(text: 'History'),
-                Tab(text: 'Prescribe'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _HistoryTab(
-                    key: ValueKey(_historyRefreshKey),
-                    patientId: record.account.userId,
-                    isDark: isDark,
-                    doctor: widget.doctor,
-                  ),
-                  PrescriptionFormBody(
-                    doctor: widget.doctor,
-                    patient: record,
-                    onSaved: _onPrescriptionSaved,
-                  ),
-                ],
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _PinnedTabBarDelegate(
+                backgroundColor: isDark
+                    ? const Color(0xFF181818)
+                    : const Color(0xFFF7F5F3),
+                tabBar: TabBar(
+                  controller: _tabController,
+                  labelColor: MColors.primaryColor,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: MColors.primaryColor,
+                  tabs: const [
+                    Tab(text: 'History'),
+                    Tab(text: 'Prescribe'),
+                  ],
+                ),
               ),
             ),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _HistoryTab(
+                key: ValueKey(_historyRefreshKey),
+                patientId: record.account.userId,
+                isDark: isDark,
+                doctor: widget.doctor,
+              ),
+              PrescriptionFormBody(
+                doctor: widget.doctor,
+                patient: record,
+                onSaved: _onPrescriptionSaved,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// Pins the TabBar in place once the scrollable header above it (patient
+/// card + vitals) has been scrolled out of view — same TabBar, just hosted
+/// as a sliver so the header can scroll instead of overflowing on small
+/// screens or with many vitals.
+class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
+  const _PinnedTabBarDelegate({
+    required this.tabBar,
+    required this.backgroundColor,
+  });
+
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ColoredBox(color: backgroundColor, child: tabBar);
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar ||
+        oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+
 class _HistoryTab extends StatefulWidget {
-  const _HistoryTab({super.key, required this.patientId, required this.isDark, required this.doctor});
+  const _HistoryTab({
+    super.key,
+    required this.patientId,
+    required this.isDark,
+    required this.doctor,
+  });
 
   final String patientId;
   final bool isDark;
@@ -187,8 +268,8 @@ class _HistoryTab extends StatefulWidget {
 
 class _HistoryTabState extends State<_HistoryTab> {
   String _query = '';
-  late final Future<List<LabOrderModel>> _labOrdersFuture =
-      LabService.instance.getAllOrdersForPatient(widget.patientId);
+  late final Future<List<LabOrderModel>> _labOrdersFuture = LabService.instance
+      .getAllOrdersForPatient(widget.patientId);
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +285,10 @@ class _HistoryTabState extends State<_HistoryTab> {
         const SizedBox(height: 20),
         Text('Reports', style: theme.textTheme.titleMedium),
         const SizedBox(height: 10),
-        _UploadedReportsSection(patientId: widget.patientId, isDark: widget.isDark),
+        _UploadedReportsSection(
+          patientId: widget.patientId,
+          isDark: widget.isDark,
+        ),
         const SizedBox(height: 24),
         Text('Prescriptions', style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
@@ -226,26 +310,38 @@ class _HistoryTabState extends State<_HistoryTab> {
 }
 
 class _UploadedReportsSection extends StatefulWidget {
-  const _UploadedReportsSection({required this.patientId, required this.isDark});
+  const _UploadedReportsSection({
+    required this.patientId,
+    required this.isDark,
+  });
 
   final String patientId;
   final bool isDark;
 
   @override
-  State<_UploadedReportsSection> createState() => _UploadedReportsSectionState();
+  State<_UploadedReportsSection> createState() =>
+      _UploadedReportsSectionState();
 }
 
 class _UploadedReportsSectionState extends State<_UploadedReportsSection> {
   static const LabReportService _service = LabReportService();
-  late final Future<List<LabReport>> _reportsFuture = _service.fetchForPatient(widget.patientId);
+  late final Future<List<LabReport>> _reportsFuture = _service.fetchForPatient(
+    widget.patientId,
+  );
 
   void _view(LabReport report) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => Scaffold(
           backgroundColor: Colors.black,
-          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text(report.label)),
-          body: Center(child: InteractiveViewer(child: Image.memory(report.imageBytes))),
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: Text(report.label),
+          ),
+          body: Center(
+            child: InteractiveViewer(child: Image.memory(report.imageBytes)),
+          ),
         ),
       ),
     );
@@ -259,20 +355,26 @@ class _UploadedReportsSectionState extends State<_UploadedReportsSection> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator(color: MColors.primaryColor)),
+            child: Center(
+              child: CircularProgressIndicator(color: MColors.primaryColor),
+            ),
           );
         }
         if (snapshot.hasError) {
           return Text(
             'Could not load reports.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           );
         }
         final List<LabReport> reports = snapshot.data ?? const [];
         if (reports.isEmpty) {
           return Text(
             'No reports uploaded by this patient yet.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           );
         }
         return SizedBox(
@@ -289,13 +391,23 @@ class _UploadedReportsSectionState extends State<_UploadedReportsSection> {
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
                     width: 120,
-                    color: widget.isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                    color: widget.isDark
+                        ? const Color(0xFF1F1F1F)
+                        : Colors.white,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(child: Image.memory(report.imageBytes, fit: BoxFit.cover)),
+                        Expanded(
+                          child: Image.memory(
+                            report.imageBytes,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
                           child: Text(
                             report.label,
                             maxLines: 1,
@@ -332,12 +444,15 @@ class _PrescriptionHistorySection extends StatefulWidget {
   final String query;
 
   @override
-  State<_PrescriptionHistorySection> createState() => _PrescriptionHistorySectionState();
+  State<_PrescriptionHistorySection> createState() =>
+      _PrescriptionHistorySectionState();
 }
 
-class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection> {
+class _PrescriptionHistorySectionState
+    extends State<_PrescriptionHistorySection> {
   static const PrescriptionRepository _repository = PrescriptionRepository();
-  late final Future<List<PrescriptionRecord>> _future = _repository.fetchForPatient(widget.patientId);
+  late final Future<List<PrescriptionRecord>> _future = _repository
+      .fetchForPatient(widget.patientId);
 
   List<PrescriptionRecord> _sortedByRecency(List<PrescriptionRecord> records) {
     final list = [...records];
@@ -355,7 +470,9 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator(color: MColors.primaryColor)),
+            child: Center(
+              child: CircularProgressIndicator(color: MColors.primaryColor),
+            ),
           );
         }
         if (snapshot.hasError) {
@@ -365,8 +482,10 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
           );
         }
 
-        final List<PrescriptionRecord> all = snapshot.data![0] as List<PrescriptionRecord>;
-        final List<LabOrderModel> allOrders = snapshot.data![1] as List<LabOrderModel>;
+        final List<PrescriptionRecord> all =
+            snapshot.data![0] as List<PrescriptionRecord>;
+        final List<LabOrderModel> allOrders =
+            snapshot.data![1] as List<LabOrderModel>;
         final Map<String, List<LabOrderModel>> byPrescription = {};
         final List<LabOrderModel> unlinked = [];
         for (final order in allOrders) {
@@ -381,15 +500,21 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
         final List<PrescriptionRecord> filtered = query.isEmpty
             ? all
             : all.where((record) {
-                final bool matchesDoctor = record.doctorName.toLowerCase().contains(query);
+                final bool matchesDoctor = record.doctorName
+                    .toLowerCase()
+                    .contains(query);
                 final bool matchesMedicine = record.medicines.any(
                   (medicine) => medicine.name.toLowerCase().contains(query),
                 );
                 return matchesDoctor || matchesMedicine;
               }).toList();
 
-        final List<PrescriptionRecord> ongoing = _sortedByRecency(filtered.where((r) => !r.isCompleted).toList());
-        final List<PrescriptionRecord> previous = _sortedByRecency(filtered.where((r) => r.isCompleted).toList());
+        final List<PrescriptionRecord> ongoing = _sortedByRecency(
+          filtered.where((r) => !r.isCompleted).toList(),
+        );
+        final List<PrescriptionRecord> previous = _sortedByRecency(
+          filtered.where((r) => r.isCompleted).toList(),
+        );
 
         if (filtered.isEmpty) {
           return Text(
@@ -403,12 +528,20 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ongoing', style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
+            Text(
+              'Ongoing',
+              style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey),
+            ),
             const SizedBox(height: 10),
             if (ongoing.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text('None right now.', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                child: Text(
+                  'None right now.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
               )
             else
               for (final PrescriptionRecord record in ongoing) ...[
@@ -421,10 +554,16 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
                 const SizedBox(height: 12),
               ],
             const SizedBox(height: 12),
-            Text('Previous', style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
+            Text(
+              'Previous',
+              style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey),
+            ),
             const SizedBox(height: 10),
             if (previous.isEmpty)
-              Text('None on file.', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey))
+              Text(
+                'None on file.',
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+              )
             else
               for (final PrescriptionRecord record in previous) ...[
                 _PrescriptionHistoryCard(
@@ -437,7 +576,10 @@ class _PrescriptionHistorySectionState extends State<_PrescriptionHistorySection
               ],
             if (unlinked.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('Other Lab Tests', style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey)),
+              Text(
+                'Other Lab Tests',
+                style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey),
+              ),
               const SizedBox(height: 10),
               for (final LabOrderModel order in unlinked) ...[
                 _LabTestTile(order: order, isDark: widget.isDark),
@@ -474,12 +616,18 @@ class _LabTestTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.science_outlined, size: 16, color: MColors.primaryColor),
+              const Icon(
+                Icons.science_outlined,
+                size: 16,
+                color: MColors.primaryColor,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   order.orderType,
-                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -487,13 +635,16 @@ class _LabTestTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (_isCompleted ? Colors.green : Colors.orange).withValues(alpha: 0.12),
+                  color: (_isCompleted ? Colors.green : Colors.orange)
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   order.status,
                   style: TextStyle(
-                    color: _isCompleted ? Colors.green.shade700 : Colors.orange.shade800,
+                    color: _isCompleted
+                        ? Colors.green.shade700
+                        : Colors.orange.shade800,
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),
@@ -503,7 +654,12 @@ class _LabTestTile extends StatelessWidget {
           ),
           if (_isCompleted && (order.resultNote ?? '').isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(order.resultNote!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700)),
+            Text(
+              order.resultNote!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.grey.shade700,
+              ),
+            ),
           ],
         ],
       ),
@@ -536,12 +692,18 @@ class _PrescriptionHistoryCard extends StatelessWidget {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'e.g. Complete Blood Count'),
+          decoration: const InputDecoration(
+            hintText: 'e.g. Complete Blood Count',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
             child: const Text('Order'),
           ),
         ],
@@ -581,7 +743,11 @@ class _PrescriptionHistoryCard extends StatelessWidget {
         color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -592,17 +758,25 @@ class _PrescriptionHistoryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   record.doctorName,
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(_formattedDate(record.createdAt), style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+              Text(
+                _formattedDate(record.createdAt),
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
             ],
           ),
           if (record.diagnosis.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(record.diagnosis, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+            Text(
+              record.diagnosis,
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
           ],
           const SizedBox(height: 12),
           for (int i = 0; i < record.medicines.length; i++) ...[
@@ -621,8 +795,18 @@ class _PrescriptionHistoryCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               onPressed: () => _orderLabTest(context),
-              icon: const Icon(Icons.science_outlined, size: 16, color: MColors.primaryColor),
-              label: const Text('Order Lab Test', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+              icon: const Icon(
+                Icons.science_outlined,
+                size: 16,
+                color: MColors.primaryColor,
+              ),
+              label: const Text(
+                'Order Lab Test',
+                style: TextStyle(
+                  color: MColors.primaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
@@ -643,13 +827,22 @@ class _MedicineLine extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.medication_outlined, color: MColors.primaryColor, size: 18),
+        const Icon(
+          Icons.medication_outlined,
+          color: MColors.primaryColor,
+          size: 18,
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(medicine.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                medicine.name,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               Text(
                 '${medicine.dosage} · ${medicine.durationDays}-day course',
                 style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -719,7 +912,11 @@ class _VitalCard extends StatelessWidget {
         color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06), blurRadius: 10, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -728,7 +925,9 @@ class _VitalCard extends StatelessWidget {
         children: [
           Text(
             vital.label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
           const SizedBox(height: 4),
           Text(

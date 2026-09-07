@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Appointments/Models/appointment_record.dart';
 import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
+import 'package:medicus/Features/Appointments/Models/doctor_date_override.dart';
 import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Features/Appointments/Services/doctor_availability_repository.dart';
+import 'package:medicus/Features/Appointments/Services/doctor_date_override_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -11,7 +13,12 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/b
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/appointment_confirmation_screen.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
-  const DoctorProfileScreen({super.key, required this.doctor, required this.onBooked, required this.appointments});
+  const DoctorProfileScreen({
+    super.key,
+    required this.doctor,
+    required this.onBooked,
+    required this.appointments,
+  });
 
   final DoctorSummary doctor;
   final ValueChanged<BookedAppointment> onBooked;
@@ -22,8 +29,12 @@ class DoctorProfileScreen extends StatefulWidget {
 }
 
 class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
-  static const DoctorAvailabilityRepository _availabilityRepository = DoctorAvailabilityRepository();
-  static const AppointmentRepository _appointmentRepository = AppointmentRepository();
+  static const DoctorAvailabilityRepository _availabilityRepository =
+      DoctorAvailabilityRepository();
+  static const AppointmentRepository _appointmentRepository =
+      AppointmentRepository();
+  static const DoctorDateOverrideRepository _dateOverrideRepository =
+      DoctorDateOverrideRepository();
 
   late final List<DateTime> _dates = List.generate(
     7,
@@ -37,6 +48,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   bool _loadError = false;
   List<DoctorAvailabilityWindow> _windows = [];
   Map<String, int> _bookedCountByWindowId = {};
+  Map<DateTime, DoctorDateStatus> _dateOverrides = {};
 
   @override
   void initState() {
@@ -106,7 +118,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       // auto-generated slots just for the days they haven't touched, rather
       // than switching off the whole week's auto schedule the moment a
       // single manual window exists anywhere.
-      final Set<int> manualWeekdays = manualWindows.map((w) => w.weekday).toSet();
+      final Set<int> manualWeekdays = manualWindows
+          .map((w) => w.weekday)
+          .toSet();
       final List<DoctorAvailabilityWindow> autoWindows = _generateAutoWindows()
           .where((w) => !manualWeekdays.contains(w.weekday))
           .toList();
@@ -128,6 +142,17 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       final List<AppointmentRecord> doctorAppointments =
           await _appointmentRepository.fetchForDoctor(widget.doctor.doctorId);
 
+      // Service Planner overrides — a doctor blocking a date (leave,
+      // holiday) hides it from booking even if it matches their normal
+      // recurring schedule; "available" is just a confirmed-open marker,
+      // since unmarked dates already fall back to the schedule above.
+      final List<DoctorDateOverride> overrides = await _dateOverrideRepository
+          .fetchForDoctor(widget.doctor.doctorId);
+      final Map<DateTime, DoctorDateStatus> dateOverrides = {
+        for (final o in overrides)
+          DateTime(o.date.year, o.date.month, o.date.day): o.status,
+      };
+
       final counts = <String, int>{};
       for (final window in windows) {
         for (final DateTime date in _dates) {
@@ -145,6 +170,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       setState(() {
         _windows = windows;
         _bookedCountByWindowId = counts;
+        _dateOverrides = dateOverrides;
         _loading = false;
       });
     } catch (e, st) {
@@ -157,14 +183,20 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     }
   }
 
+  DoctorDateStatus? _overrideFor(DateTime date) {
+    return _dateOverrides[DateTime(date.year, date.month, date.day)];
+  }
+
   List<DoctorAvailabilityWindow> get _windowsForSelectedDate {
     final DateTime date = _dates[_selectedDateIndex];
+    if (_overrideFor(date) == DoctorDateStatus.blocked) return const [];
     return _windows.where((w) => w.weekday == date.weekday).toList();
   }
 
   int _bookedCountFor(DoctorAvailabilityWindow window) {
     final DateTime date = _dates[_selectedDateIndex];
-    return _bookedCountByWindowId['${window.id}_${date.year}${date.month}${date.day}'] ?? 0;
+    return _bookedCountByWindowId['${window.id}_${date.year}${date.month}${date.day}'] ??
+        0;
   }
 
   void _selectDate(int index) {
@@ -215,8 +247,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 34,
-                      backgroundColor: MColors.primaryColor.withValues(alpha: 0.12),
-                      child: const Icon(Icons.person, color: MColors.primaryColor, size: 34),
+                      backgroundColor: MColors.primaryColor.withValues(
+                        alpha: 0.12,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        color: MColors.primaryColor,
+                        size: 34,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -229,30 +267,42 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                             doctor.experienceYears > 0
                                 ? '${doctor.specialty} • ${doctor.experienceYears} yrs exp'
                                 : doctor.specialty,
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
                           if (doctor.hospital.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               doctor.hospital,
-                              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               if (doctor.rating > 0) ...[
-                                const Icon(Icons.star, size: 15, color: Colors.amber),
+                                const Icon(
+                                  Icons.star,
+                                  size: 15,
+                                  color: Colors.amber,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   doctor.rating.toStringAsFixed(1),
-                                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                               ],
                               Flexible(
                                 child: Text(
-                                  doctor.fee > 0 ? '৳${doctor.fee} fee' : 'Fee on request',
+                                  doctor.fee > 0
+                                      ? '৳${doctor.fee} fee'
+                                      : 'Fee on request',
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w700,
@@ -274,7 +324,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   '${doctor.name} is a ${doctor.specialty.toLowerCase()} specialist'
                   '${doctor.hospital.isNotEmpty ? ' at ${doctor.hospital}' : ''}, '
                   'helping patients with consultations, diagnoses, and ongoing treatment plans.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, height: 1.4),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    height: 1.4,
+                  ),
                 ),
                 SizedBox(height: pad),
                 Text('Select Date', style: theme.textTheme.titleMedium),
@@ -292,6 +345,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                         date: date,
                         selected: selected,
                         isDark: isDark,
+                        status: _overrideFor(date),
                         onTap: () => _selectDate(i),
                       );
                     },
@@ -301,23 +355,37 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 Text('Select Time', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 12),
                 if (_loading)
-                  const Center(child: CircularProgressIndicator(color: MColors.primaryColor))
+                  const Center(
+                    child: CircularProgressIndicator(
+                      color: MColors.primaryColor,
+                    ),
+                  )
                 else if (_loadError)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Couldn't load this doctor's availability — check your connection and try again.",
-                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
                       ),
                       const SizedBox(height: 10),
-                      OutlinedButton(onPressed: _retry, child: const Text('Try again')),
+                      OutlinedButton(
+                        onPressed: _retry,
+                        child: const Text('Try again'),
+                      ),
                     ],
                   )
                 else if (windows.isEmpty)
                   Text(
-                    "This doctor hasn't set availability for this day yet — try another date.",
-                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    _overrideFor(_dates[_selectedDateIndex]) ==
+                            DoctorDateStatus.blocked
+                        ? 'This doctor is unavailable on this date — try another day.'
+                        : "This doctor hasn't set availability for this day yet — try another date.",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
                   )
                 else
                   Wrap(
@@ -346,11 +414,17 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   backgroundColor: MColors.primaryColor,
                   disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: const Text(
                   'Book Appointment',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
@@ -362,19 +436,39 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 }
 
 class _DateChip extends StatelessWidget {
-  const _DateChip({required this.date, required this.selected, required this.isDark, required this.onTap});
+  const _DateChip({
+    required this.date,
+    required this.selected,
+    required this.isDark,
+    required this.onTap,
+    this.status,
+  });
 
   final DateTime date;
   final bool selected;
   final bool isDark;
   final VoidCallback onTap;
 
-  static const List<String> _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  /// Service Planner override for this date, if the doctor set one — drawn
+  /// as a small dot so a blocked/confirmed day is visible without tapping.
+  final DoctorDateStatus? status;
+
+  static const List<String> _weekdays = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? MColors.primaryColor : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
+      color: selected
+          ? MColors.primaryColor
+          : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -399,9 +493,24 @@ class _DateChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                  color: selected
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
                 ),
               ),
+              if (status != null) ...[
+                const SizedBox(height: 3),
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: status == DoctorDateStatus.blocked
+                        ? (selected ? Colors.white : Colors.redAccent)
+                        : (selected ? Colors.white : Colors.green),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -433,8 +542,8 @@ class _SlotChip extends StatelessWidget {
       color: isFull
           ? (isDark ? Colors.white10 : Colors.black12)
           : selected
-              ? MColors.primaryColor
-              : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
+          ? MColors.primaryColor
+          : (isDark ? const Color(0xFF1F1F1F) : Colors.white),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -452,8 +561,8 @@ class _SlotChip extends StatelessWidget {
                   color: isFull
                       ? Colors.grey
                       : selected
-                          ? Colors.white
-                          : (isDark ? Colors.white70 : Colors.black87),
+                      ? Colors.white
+                      : (isDark ? Colors.white70 : Colors.black87),
                 ),
               ),
               const SizedBox(height: 2),
@@ -464,8 +573,8 @@ class _SlotChip extends StatelessWidget {
                   color: isFull
                       ? Colors.redAccent
                       : selected
-                          ? Colors.white70
-                          : Colors.grey,
+                      ? Colors.white70
+                      : Colors.grey,
                 ),
               ),
             ],

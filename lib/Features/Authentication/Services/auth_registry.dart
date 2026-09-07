@@ -12,21 +12,6 @@ class AuthRegistry {
 
   static final AuthRegistry instance = AuthRegistry._();
 
-  static const AuthAccount _demoPharmacistAccount = AuthAccount(
-    userId: '2468',
-    role: AuthRole.pharmacist,
-    firstName: 'Demo',
-    lastName: 'Pharmacist',
-    email: 'pharmacist@example.com',
-    password: 'Pharma@123',
-    phoneNumber: '+8801900000000',
-    verificationCode: '2468',
-    pharmacyName: 'Medicus Demo Pharmacy',
-    tradeLicense: 'DL-0002468',
-    pharmacistRegistrationNumber: 'PCB-A-00248',
-    isVerified: true,
-  );
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -61,11 +46,29 @@ class AuthRegistry {
     return stored;
   }
 
-  Future<AuthAccount?> accountForUserId(String userId) async {
-    if (userId.trim() == _demoPharmacistAccount.userId) {
-      return _demoPharmacistAccount;
+  /// The account for whichever Firebase Auth session is already active, if
+  /// any — read at app startup so a signed-in user resumes straight into
+  /// their dashboard instead of the onboarding screen.
+  Future<AuthAccount?> currentAccount() async {
+    final User? firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) {
+      return null;
     }
 
+    final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
+    final Map<String, dynamic>? data = doc.data();
+    if (!doc.exists || data == null) {
+      return null;
+    }
+
+    final AuthAccount account = _fromFirestore(doc.id, data);
+    return account.isVerified ? account : null;
+  }
+
+  Future<AuthAccount?> accountForUserId(String userId) async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('users')
         .where('userId', isEqualTo: userId.trim())
@@ -130,10 +133,6 @@ class AuthRegistry {
 
     if (account.role != role) {
       return null;
-    }
-
-    if (account.userId == _demoPharmacistAccount.userId) {
-      return password == _demoPharmacistAccount.password ? account : null;
     }
 
     try {
@@ -218,9 +217,10 @@ class AuthRegistry {
   }
 
   Future<void> _queueVerificationEmail(AuthAccount account) async {
-    final String mailerSendApiKey =
-        'mlsn.5656c50b5c64daf8fd5607bceb60aa4c745c804f3407df1ea21a205503e54822';
-    final String fromEmail = 'your@test-3m5jgrop7yogdpyo.mlsender.net';
+    const String mailerSendApiKey = String.fromEnvironment(
+      'MAILERSEND_API_KEY',
+    );
+    const String fromEmail = String.fromEnvironment('MAILERSEND_FROM_EMAIL');
     const String fromName = 'Medicus';
 
     if (mailerSendApiKey.isEmpty || fromEmail.isEmpty) {

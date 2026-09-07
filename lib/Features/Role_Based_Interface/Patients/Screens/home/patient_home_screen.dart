@@ -48,29 +48,24 @@ class PatientHomeScreen extends StatelessWidget {
   final bool medicalInfoIncomplete;
   final VoidCallback onCompleteMedicalInfo;
 
-  /// Only appointments today or later — a past booking should never be
-  /// mistaken for "next", which is what let a stale/previous appointment
-  /// show up here instead of a newly booked upcoming one.
+  /// Only appointments whose booked time window hasn't ended yet — a past
+  /// booking should never be mistaken for "next", including one booked for
+  /// today whose window has already passed (not just an earlier day).
   List<BookedAppointment> get _upcomingAppointments {
-    final DateTime today = DateTime.now();
-    final DateTime todayOnly = DateTime(today.year, today.month, today.day);
-    return appointments
-        .where((a) => !DateTime(a.date.year, a.date.month, a.date.day).isBefore(todayOnly))
-        .toList();
+    return appointments.where((a) => !a.hasEnded).toList();
   }
 
   int get _daysToNextAppointment {
     final List<BookedAppointment> upcoming = _upcomingAppointments;
     if (upcoming.isEmpty) return 0;
-    return upcoming
-        .map((a) => a.daysFromNow)
-        .reduce((a, b) => a < b ? a : b);
+    return upcoming.map((a) => a.daysFromNow).reduce((a, b) => a < b ? a : b);
   }
 
   BookedAppointment? get _nextAppointment {
     final List<BookedAppointment> upcoming = _upcomingAppointments;
     if (upcoming.isEmpty) return null;
-    final List<BookedAppointment> sorted = [...upcoming]..sort((a, b) => a.date.compareTo(b.date));
+    final List<BookedAppointment> sorted = [...upcoming]
+      ..sort((a, b) => a.date.compareTo(b.date));
     return sorted.first;
   }
 
@@ -142,15 +137,21 @@ class PatientHomeScreen extends StatelessWidget {
                                     height: 46,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.18),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.18,
+                                      ),
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.3),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.3,
+                                        ),
                                         width: 1.5,
                                       ),
                                     ),
                                     child: Text(
-                                      patientName.isNotEmpty ? patientName[0].toUpperCase() : 'P',
+                                      patientName.isNotEmpty
+                                          ? patientName[0].toUpperCase()
+                                          : 'P',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,
@@ -161,7 +162,8 @@ class PatientHomeScreen extends StatelessWidget {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           _greeting,
@@ -195,7 +197,8 @@ class PatientHomeScreen extends StatelessWidget {
                                         builder: (_) => NotificationsSheet(
                                           patientId: patientId,
                                           nextAppointment: _nextAppointment,
-                                          activePrescriptions: prescriptionRecords,
+                                          activePrescriptions:
+                                              prescriptionRecords,
                                         ),
                                       ),
                                       child: const Padding(
@@ -212,19 +215,21 @@ class PatientHomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 26),
                               LiquidGlassSearchBar(
-                                hintText: 'Search doctors, pharmacies, hospitals…',
-                                onSubmitted: (value) => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => PatientSearchScreen(
-                                      initialQuery: value,
-                                      prescriptions: prescriptions,
-                                      appointments: appointments,
-                                      onBookAppointment: onBookAppointment,
-                                      patientId: patientId,
-                                      patientName: patientName,
+                                hintText:
+                                    'Search doctors, pharmacies, hospitals…',
+                                onSubmitted: (value) =>
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => PatientSearchScreen(
+                                          initialQuery: value,
+                                          prescriptions: prescriptions,
+                                          appointments: appointments,
+                                          onBookAppointment: onBookAppointment,
+                                          patientId: patientId,
+                                          patientName: patientName,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
                               ),
                               const SizedBox(height: 18),
                               Align(
@@ -268,7 +273,8 @@ class PatientHomeScreen extends StatelessWidget {
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
-                      builder: (_) => AppointmentCalendarSheet(appointments: appointments),
+                      builder: (_) =>
+                          AppointmentCalendarSheet(appointments: appointments),
                     ),
                     stats: [
                       StatCardData(
@@ -285,6 +291,7 @@ class PatientHomeScreen extends StatelessWidget {
                         label: 'Next Appointment',
                         value: _daysToNextAppointment,
                         suffix: 'd',
+                        valueOverride: _nextAppointment == null ? 'None' : null,
                         icon: Icons.event_outlined,
                       ),
                     ],
@@ -297,7 +304,9 @@ class PatientHomeScreen extends StatelessWidget {
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (_) => AppointmentCalendarSheet(appointments: appointments),
+                        builder: (_) => AppointmentCalendarSheet(
+                          appointments: appointments,
+                        ),
                       ),
                     ),
                   ],
@@ -309,7 +318,10 @@ class PatientHomeScreen extends StatelessWidget {
                     ),
                   ],
                   SizedBox(height: pad),
-                  _PrescriptionTimelineSection(ongoing: ongoing, prescriptions: prescriptions),
+                  _PrescriptionTimelineSection(
+                    ongoing: ongoing,
+                    prescriptions: prescriptions,
+                  ),
                   SizedBox(height: pad * 0.6),
                   Text(
                     'Quick Actions',
@@ -336,7 +348,10 @@ class PatientHomeScreen extends StatelessWidget {
                         icon: Icons.upload_file_outlined,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => UploadReportScreen(patientId: patientId, patientName: patientName),
+                            builder: (_) => UploadReportScreen(
+                              patientId: patientId,
+                              patientName: patientName,
+                            ),
                           ),
                         ),
                       ),
@@ -368,29 +383,38 @@ class PatientHomeScreen extends StatelessWidget {
 /// "+N more" link into the full "See all" screen. Owns the doctor-filter
 /// selection itself since nothing else on the page needs it.
 class _PrescriptionTimelineSection extends StatefulWidget {
-  const _PrescriptionTimelineSection({required this.ongoing, required this.prescriptions});
+  const _PrescriptionTimelineSection({
+    required this.ongoing,
+    required this.prescriptions,
+  });
 
   final List<PrescriptionTimelineEntry> ongoing;
   final List<Prescription> prescriptions;
 
   @override
-  State<_PrescriptionTimelineSection> createState() => _PrescriptionTimelineSectionState();
+  State<_PrescriptionTimelineSection> createState() =>
+      _PrescriptionTimelineSectionState();
 }
 
-class _PrescriptionTimelineSectionState extends State<_PrescriptionTimelineSection> {
+class _PrescriptionTimelineSectionState
+    extends State<_PrescriptionTimelineSection> {
   String? _selectedDoctor;
 
   List<String> get _doctorNames {
     final List<String> names = [];
     for (final PrescriptionTimelineEntry e in widget.ongoing) {
-      if (e.doctorName.isNotEmpty && !names.contains(e.doctorName)) names.add(e.doctorName);
+      if (e.doctorName.isNotEmpty && !names.contains(e.doctorName))
+        names.add(e.doctorName);
     }
     return names;
   }
 
   void _openSeeAll(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PrescriptionMedicinesScreen(prescriptions: widget.prescriptions)),
+      MaterialPageRoute(
+        builder: (_) =>
+            PrescriptionMedicinesScreen(prescriptions: widget.prescriptions),
+      ),
     );
   }
 
@@ -411,7 +435,12 @@ class _PrescriptionTimelineSectionState extends State<_PrescriptionTimelineSecti
       children: [
         Row(
           children: [
-            Expanded(child: Text('Prescription Timeline', style: theme.textTheme.titleMedium)),
+            Expanded(
+              child: Text(
+                'Prescription Timeline',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
             if (widget.prescriptions.isNotEmpty)
               TextButton(
                 onPressed: () => _openSeeAll(context),
@@ -421,7 +450,10 @@ class _PrescriptionTimelineSectionState extends State<_PrescriptionTimelineSecti
                   minimumSize: const Size(0, 0),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('See all', style: TextStyle(fontWeight: FontWeight.w600)),
+                child: const Text(
+                  'See all',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
           ],
         ),
@@ -440,7 +472,9 @@ class _PrescriptionTimelineSectionState extends State<_PrescriptionTimelineSecti
                 itemCount: doctorNames.length + 1,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final String? doctor = index == 0 ? null : doctorNames[index - 1];
+                  final String? doctor = index == 0
+                      ? null
+                      : doctorNames[index - 1];
                   final bool selected = _selectedDoctor == doctor;
                   return ChoiceChip(
                     label: Text(doctor ?? 'All Doctors'),
@@ -465,7 +499,10 @@ class _PrescriptionTimelineSectionState extends State<_PrescriptionTimelineSecti
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             )
           else ...[
-            PrescriptionTimeline(entries: filtered.take(4).toList(), overlapNamesOverride: overlapNames),
+            PrescriptionTimeline(
+              entries: filtered.take(4).toList(),
+              overlapNamesOverride: overlapNames,
+            ),
             if (filtered.length > 4) ...[
               const SizedBox(height: 4),
               TextButton(
@@ -506,12 +543,18 @@ class _MedicalInfoBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Complete your medical profile for emergencies',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               const Icon(Icons.chevron_right, color: Colors.orange),

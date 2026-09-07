@@ -10,13 +10,18 @@ class Specialty {
   final IconData icon;
 }
 
+/// The single source of truth for doctor specialties across the app — the
+/// registration screen's specialty dropdown is built from this same list, so
+/// a specialty a doctor can register under always has a matching filter chip
+/// here (and vice versa). Keep these two in sync by only editing this list.
 const List<Specialty> kSpecialties = [
-  Specialty(name: 'General', icon: Icons.medical_information_outlined),
+  Specialty(name: 'General Physician', icon: Icons.medical_information_outlined),
   Specialty(name: 'Cardiologist', icon: Icons.favorite_border),
   Specialty(name: 'Dermatologist', icon: Icons.face_outlined),
   Specialty(name: 'Pediatrician', icon: Icons.child_care_outlined),
   Specialty(name: 'Orthopedic', icon: Icons.accessibility_new_outlined),
   Specialty(name: 'Dentist', icon: Icons.sentiment_satisfied_outlined),
+  Specialty(name: 'Surgeon', icon: Icons.medical_services_outlined),
   Specialty(name: 'Gynecologist', icon: Icons.pregnant_woman_outlined),
   Specialty(name: 'ENT', icon: Icons.hearing_outlined),
   Specialty(name: 'Psychiatrist', icon: Icons.psychology_outlined),

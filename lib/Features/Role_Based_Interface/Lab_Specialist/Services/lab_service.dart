@@ -106,6 +106,7 @@ class LabService {
     required String orderId,
     required String note,
     String? fileName,
+    String? fileBase64,
   }) async {
     final String id = orderId.trim();
     if (id.isEmpty) {
@@ -116,6 +117,7 @@ class LabService {
       'status': 'Completed',
       'resultNote': note,
       'resultFileName': fileName,
+      'resultFileBase64': fileBase64,
       'completedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -135,6 +137,7 @@ class LabService {
       completedAt: rawCompletedAt is Timestamp ? rawCompletedAt.toDate() : null,
       resultNote: data['resultNote'] as String?,
       resultFileName: data['resultFileName'] as String?,
+      resultFileBase64: data['resultFileBase64'] as String?,
     );
   }
 }

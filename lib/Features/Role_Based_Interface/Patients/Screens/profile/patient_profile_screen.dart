@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
+import 'package:medicus/Features/Authentication/Screens/login/login.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -37,7 +40,11 @@ BoxDecoration _cardDecoration(bool isDark) {
 }
 
 class PatientProfileScreen extends StatefulWidget {
-  const PatientProfileScreen({super.key, required this.account, required this.prescriptions});
+  const PatientProfileScreen({
+    super.key,
+    required this.account,
+    required this.prescriptions,
+  });
 
   final AuthAccount account;
   final List<Prescription> prescriptions;
@@ -50,8 +57,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   static const PatientProfileService _profileService = PatientProfileService();
   final ImagePicker _imagePicker = ImagePicker();
 
-  String get _patientId => widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
-  String get _patientName => widget.account.firstName.isEmpty ? _mockPatientName : widget.account.fullName;
+  String get _patientId =>
+      widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
+  String get _patientName => widget.account.firstName.isEmpty
+      ? _mockPatientName
+      : widget.account.fullName;
 
   String _phone = '';
   String _email = '';
@@ -81,10 +91,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
   Future<void> _loadProfile() async {
     try {
-      final PatientProfileRecord? record = await _profileService.fetch(_patientId);
+      final PatientProfileRecord? record = await _profileService.fetch(
+        _patientId,
+      );
       if (!mounted || record == null) return;
       setState(() {
-        _phone = record.phone.isNotEmpty ? record.phone : widget.account.phoneNumber;
+        _phone = record.phone.isNotEmpty
+            ? record.phone
+            : widget.account.phoneNumber;
         _email = record.email.isNotEmpty ? record.email : widget.account.email;
         _address = record.address;
         _dob = record.dateOfBirth;
@@ -117,7 +131,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           emergencyContactName: _emergencyName,
           emergencyContactPhone: _emergencyPhone,
           photoBase64: _photoBase64,
-          medicalInfoCompleted: _medicalInfoCompleted || _bloodGroup.trim().isNotEmpty,
+          medicalInfoCompleted:
+              _medicalInfoCompleted || _bloodGroup.trim().isNotEmpty,
         ),
       );
     } catch (_) {
@@ -127,7 +142,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final XFile? picked = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 90);
+    final XFile? picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 90,
+    );
     if (picked == null) return;
 
     setState(() => _uploadingPhoto = true);
@@ -143,7 +161,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       if (!mounted) return;
       setState(() => _uploadingPhoto = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't upload that photo — try a smaller image.")),
+        const SnackBar(
+          content: Text("Couldn't upload that photo — try a smaller image."),
+        ),
       );
     }
   }
@@ -226,7 +246,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Text(
                               'Save',
@@ -327,16 +350,34 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text('Account', style: Theme.of(sheetContext).textTheme.titleMedium),
+                    child: Text(
+                      'Account',
+                      style: Theme.of(sheetContext).textTheme.titleMedium,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                _ActionRow(icon: Icons.notifications_outlined, label: 'Notification Preferences', onTap: () {}),
-                _ActionRow(icon: Icons.lock_outline, label: 'Change Password', onTap: () {}),
+                _ActionRow(
+                  icon: Icons.notifications_outlined,
+                  label: 'Notification Preferences',
+                  onTap: () {},
+                ),
+                _ActionRow(
+                  icon: Icons.lock_outline,
+                  label: 'Change Password',
+                  onTap: () {},
+                ),
                 _ActionRow(
                   icon: Icons.logout,
                   label: 'Logout',
-                  onTap: () {},
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await FirebaseAuth.instance.signOut();
+                    Get.offAll(
+                      () => const LoginScreen(),
+                      transition: Transition.fadeIn,
+                    );
+                  },
                   isDestructive: true,
                   showDivider: false,
                 ),
@@ -355,10 +396,27 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           key: const ValueKey(_ProfileTab.personal),
           onEdit: _editPersonalInfo,
           children: [
-            _InfoRow(icon: Icons.phone_outlined, label: 'Phone', value: _orPlaceholder(_phone)),
-            _InfoRow(icon: Icons.email_outlined, label: 'Email', value: _orPlaceholder(_email)),
-            _InfoRow(icon: Icons.home_outlined, label: 'Address', value: _orPlaceholder(_address)),
-            _InfoRow(icon: Icons.cake_outlined, label: 'Date of Birth', value: _orPlaceholder(_dob), showDivider: false),
+            _InfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Phone',
+              value: _orPlaceholder(_phone),
+            ),
+            _InfoRow(
+              icon: Icons.email_outlined,
+              label: 'Email',
+              value: _orPlaceholder(_email),
+            ),
+            _InfoRow(
+              icon: Icons.home_outlined,
+              label: 'Address',
+              value: _orPlaceholder(_address),
+            ),
+            _InfoRow(
+              icon: Icons.cake_outlined,
+              label: 'Date of Birth',
+              value: _orPlaceholder(_dob),
+              showDivider: false,
+            ),
           ],
         );
       case _ProfileTab.medical:
@@ -366,8 +424,16 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           key: const ValueKey(_ProfileTab.medical),
           onEdit: _editMedicalInfo,
           children: [
-            _InfoRow(icon: Icons.bloodtype_outlined, label: 'Blood Group', value: _orPlaceholder(_bloodGroup)),
-            _InfoRow(icon: Icons.warning_amber_outlined, label: 'Allergies', value: _orPlaceholder(_allergies)),
+            _InfoRow(
+              icon: Icons.bloodtype_outlined,
+              label: 'Blood Group',
+              value: _orPlaceholder(_bloodGroup),
+            ),
+            _InfoRow(
+              icon: Icons.warning_amber_outlined,
+              label: 'Allergies',
+              value: _orPlaceholder(_allergies),
+            ),
             _InfoRow(
               icon: Icons.healing_outlined,
               label: 'Chronic Conditions',
@@ -381,8 +447,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
           key: const ValueKey(_ProfileTab.emergency),
           onEdit: _editEmergencyContact,
           children: [
-            _InfoRow(icon: Icons.person_outline, label: 'Name', value: _orPlaceholder(_emergencyName)),
-            _InfoRow(icon: Icons.phone_outlined, label: 'Phone', value: _orPlaceholder(_emergencyPhone), showDivider: false),
+            _InfoRow(
+              icon: Icons.person_outline,
+              label: 'Name',
+              value: _orPlaceholder(_emergencyName),
+            ),
+            _InfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Phone',
+              value: _orPlaceholder(_emergencyPhone),
+              showDivider: false,
+            ),
           ],
         );
     }
@@ -418,7 +493,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             ),
             if (!_medicalInfoCompleted) ...[
               SizedBox(height: pad * 0.6),
-              _MedicalInfoReminder(onTap: () => setState(() => _activeTab = _ProfileTab.medical)),
+              _MedicalInfoReminder(
+                onTap: () => setState(() => _activeTab = _ProfileTab.medical),
+              ),
             ],
             SizedBox(height: pad),
             _FactChipsRow(
@@ -428,7 +505,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
               chronicConditions: _orPlaceholder(_chronicConditions),
             ),
             SizedBox(height: pad),
-            _ProfileTabBar(active: _activeTab, onChanged: (t) => setState(() => _activeTab = t)),
+            _ProfileTabBar(
+              active: _activeTab,
+              onChanged: (t) => setState(() => _activeTab = t),
+            ),
             const SizedBox(height: 14),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
@@ -527,7 +607,10 @@ class _ProfileHero extends StatelessWidget {
             child: Container(
               width: 160,
               height: 160,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           Positioned(
@@ -536,7 +619,10 @@ class _ProfileHero extends StatelessWidget {
             child: Container(
               width: 120,
               height: 120,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           Column(
@@ -558,16 +644,30 @@ class _ProfileHero extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.white.withValues(alpha: 0.16),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 1.5,
+                            ),
                             image: photoBase64 != null
-                                ? DecorationImage(image: MemoryImage(base64Decode(photoBase64!)), fit: BoxFit.cover)
+                                ? DecorationImage(
+                                    image: MemoryImage(
+                                      base64Decode(photoBase64!),
+                                    ),
+                                    fit: BoxFit.cover,
+                                  )
                                 : null,
                           ),
                           child: photoBase64 != null
                               ? null
                               : Text(
-                                  patientName.isNotEmpty ? patientName[0].toUpperCase() : 'P',
-                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                  patientName.isNotEmpty
+                                      ? patientName[0].toUpperCase()
+                                      : 'P',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                         ),
                         Positioned(
@@ -578,41 +678,69 @@ class _ProfileHero extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
-                              border: Border.all(color: MColors.primaryColor, width: 1.5),
+                              border: Border.all(
+                                color: MColors.primaryColor,
+                                width: 1.5,
+                              ),
                             ),
                             child: uploadingPhoto
                                 ? const SizedBox(
                                     width: 11,
                                     height: 11,
-                                    child: CircularProgressIndicator(strokeWidth: 1.5, color: MColors.primaryColor),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: MColors.primaryColor,
+                                    ),
                                   )
-                                : const Icon(Icons.camera_alt, size: 11, color: MColors.primaryColor),
+                                : const Icon(
+                                    Icons.camera_alt,
+                                    size: 11,
+                                    color: MColors.primaryColor,
+                                  ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const Spacer(),
-                  _HeroIconButton(icon: Icons.qr_code_2_rounded, onTap: onQrTap),
+                  _HeroIconButton(
+                    icon: Icons.qr_code_2_rounded,
+                    onTap: onQrTap,
+                  ),
                   const SizedBox(width: 8),
-                  _HeroIconButton(icon: Icons.settings_outlined, onTap: onSettingsTap),
+                  _HeroIconButton(
+                    icon: Icons.settings_outlined,
+                    onTap: onSettingsTap,
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
               Text(
                 patientName,
-                style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, height: 1.05),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  height: 1.05,
+                ),
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   'Patient ID · $patientId',
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -640,12 +768,18 @@ class _MedicalInfoReminder extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Complete your medical profile — blood group, allergies, and conditions help in an emergency.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               const Icon(Icons.chevron_right, color: Colors.orange),
@@ -695,7 +829,11 @@ class _FactChipsRow extends StatelessWidget {
 }
 
 class _FactChip extends StatelessWidget {
-  const _FactChip({required this.icon, required this.label, required this.value});
+  const _FactChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -745,14 +883,20 @@ class _ProfileTabBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1F1F1F) : Colors.black.withValues(alpha: 0.05),
+        color: isDark
+            ? const Color(0xFF1F1F1F)
+            : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           for (final _ProfileTab tab in _ProfileTab.values)
             Expanded(
-              child: _ProfileTabChip(tab: tab, selected: tab == active, onTap: () => onChanged(tab)),
+              child: _ProfileTabChip(
+                tab: tab,
+                selected: tab == active,
+                onTap: () => onChanged(tab),
+              ),
             ),
         ],
       ),
@@ -761,7 +905,11 @@ class _ProfileTabBar extends StatelessWidget {
 }
 
 class _ProfileTabChip extends StatelessWidget {
-  const _ProfileTabChip({required this.tab, required this.selected, required this.onTap});
+  const _ProfileTabChip({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
 
   final _ProfileTab tab;
   final bool selected;
@@ -791,7 +939,11 @@ class _ProfileTabChip extends StatelessWidget {
           child: Text(
             _label,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: selected ? Colors.white : Colors.grey),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : Colors.grey,
+            ),
           ),
         ),
       ),
@@ -828,7 +980,10 @@ class _TabSectionCard extends StatelessWidget {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: const Icon(Icons.edit_outlined, size: 15),
-                label: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Edit',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ...children,
@@ -866,9 +1021,7 @@ class _InfoRow extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 label,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
               ),
               const SizedBox(width: 12),
               Expanded(

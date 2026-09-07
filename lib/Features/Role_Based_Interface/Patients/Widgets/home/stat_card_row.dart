@@ -10,6 +10,7 @@ class StatCardData {
     required this.icon,
     this.suffix = '',
     this.onTap,
+    this.valueOverride,
   });
 
   final String label;
@@ -19,6 +20,12 @@ class StatCardData {
 
   /// Called when this card is tapped, if it's rendered as a non-highlight card.
   final VoidCallback? onTap;
+
+  /// Static text shown instead of the animated `value + suffix` counter —
+  /// e.g. "None" when there's nothing to count, so a bare 0 doesn't read as
+  /// a real measurement (like "0 days until your next appointment" when
+  /// there simply isn't one).
+  final String? valueOverride;
 }
 
 /// A bento-style stat layout: one "highlight" card (spotlighting the most
@@ -131,20 +138,29 @@ class _HighlightStatCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: data.value.toDouble()),
-                    duration: const Duration(milliseconds: 900),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, _) {
-                      return Text(
-                        '${value.round()}${data.suffix}',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
-                  ),
+                  if (data.valueOverride != null)
+                    Text(
+                      data.valueOverride!,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  else
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: data.value.toDouble()),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, _) {
+                        return Text(
+                          '${value.round()}${data.suffix}',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                    ),
                   const SizedBox(height: 2),
                   Text(
                     data.label,
@@ -229,19 +245,27 @@ class _StatCard extends StatelessWidget {
                 child: Icon(data.icon, color: MColors.primaryColor, size: 14),
               ),
               const SizedBox(height: 8),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: data.value.toDouble()),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, _) {
-                  return Text(
-                    '${value.round()}${data.suffix}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                },
-              ),
+              if (data.valueOverride != null)
+                Text(
+                  data.valueOverride!,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              else
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: data.value.toDouble()),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, _) {
+                    return Text(
+                      '${value.round()}${data.suffix}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
               const SizedBox(height: 1),
               Text(
                 data.label,

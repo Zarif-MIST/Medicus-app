@@ -47,7 +47,7 @@ class DoctorSummary {
     return DoctorSummary(
       doctorId: account.userId,
       name: displayName,
-      specialty: (account.specialty ?? '').trim().isEmpty ? 'General' : account.specialty!.trim(),
+      specialty: (account.specialty ?? '').trim().isEmpty ? 'General Physician' : account.specialty!.trim(),
       hospital: '',
       rating: 0,
       experienceYears: 0,

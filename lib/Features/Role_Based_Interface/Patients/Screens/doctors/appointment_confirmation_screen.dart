@@ -66,7 +66,13 @@ class AppointmentConfirmationScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                color: MColors.primaryColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -75,15 +81,23 @@ class AppointmentConfirmationScreen extends StatelessWidget {
 
   Future<void> _confirm(BuildContext context) async {
     final List<BookedAppointment> sameDay = existingAppointments.where((a) {
-      return a.date.year == date.year && a.date.month == date.month && a.date.day == date.day;
+      return a.date.year == date.year &&
+          a.date.month == date.month &&
+          a.date.day == date.day;
     }).toList();
 
     if (sameDay.any((a) => a.doctorId == doctor.doctorId)) {
-      _showBlockedDialog(context, 'You already have an appointment with ${doctor.name} on this day.');
+      _showBlockedDialog(
+        context,
+        'You already have an appointment with ${doctor.name} on this day.',
+      );
       return;
     }
     if (sameDay.length >= 2) {
-      _showBlockedDialog(context, 'You can book at most 2 appointments a day, with 2 different doctors.');
+      _showBlockedDialog(
+        context,
+        'You can book at most 2 appointments a day, with 2 different doctors.',
+      );
       return;
     }
 
@@ -98,7 +112,11 @@ class AppointmentConfirmationScreen extends StatelessWidget {
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't confirm the booking — check your connection and try again.")),
+        const SnackBar(
+          content: Text(
+            "Couldn't confirm the booking — check your connection and try again.",
+          ),
+        ),
       );
       return;
     }
@@ -109,22 +127,36 @@ class AppointmentConfirmationScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Slot just filled up'),
-          content: const Text('This time window reached capacity while you were booking — please choose another.'),
+          content: const Text(
+            'This time window reached capacity while you were booking — please choose another.',
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 Navigator.of(context).pop();
               },
-              child: const Text('Choose another time', style: TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Choose another time',
+                style: TextStyle(
+                  color: MColors.primaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         ),
       );
       return;
     }
+
+    // FCFS — the count fetched just above, before this write, is exactly
+    // this patient's queue position for the block.
+    final int serialNumber = booked + 1;
 
     onConfirmed(
       BookedAppointment(
@@ -136,6 +168,7 @@ class AppointmentConfirmationScreen extends StatelessWidget {
         time: window.label,
         fee: doctor.fee,
         windowId: window.id,
+        serialNumber: serialNumber,
       ),
     );
 
@@ -161,6 +194,21 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                 dialogContext,
               ).textTheme.bodySmall?.copyWith(color: Colors.grey),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: MColors.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                'Your serial number: $serialNumber',
+                style: const TextStyle(
+                  color: MColors.primaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         ),
@@ -251,7 +299,9 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                           _SummaryRow(
                             icon: Icons.payments_outlined,
                             label: 'Fee',
-                            value: doctor.fee > 0 ? '৳${doctor.fee}' : 'On request',
+                            value: doctor.fee > 0
+                                ? '৳${doctor.fee}'
+                                : 'On request',
                             showDivider: false,
                           ),
                         ],
@@ -325,9 +375,7 @@ class _SummaryRow extends StatelessWidget {
               // forcing them to wrap unnecessarily.
               Text(
                 label,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
               ),
               const SizedBox(width: 12),
               Expanded(

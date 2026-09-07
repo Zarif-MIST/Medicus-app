@@ -3,9 +3,28 @@ import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 
-const List<String> _kWeekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const List<String> _kWeekdays = [
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
+];
 const List<String> _kMonths = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /// A preview of the soonest upcoming appointment. Tapping it opens the
@@ -13,7 +32,11 @@ const List<String> _kMonths = [
 /// see that day's booking — so this card is the entry point into "watch my
 /// upcoming appointments" rather than just a bare day-count.
 class NextAppointmentCard extends StatelessWidget {
-  const NextAppointmentCard({super.key, required this.appointment, required this.onTap});
+  const NextAppointmentCard({
+    super.key,
+    required this.appointment,
+    required this.onTap,
+  });
 
   final BookedAppointment appointment;
   final VoidCallback onTap;
@@ -58,10 +81,16 @@ class NextAppointmentCard extends StatelessWidget {
                 height: 38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: MColors.primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                  color: MColors.primaryColor.withValues(
+                    alpha: isDark ? 0.18 : 0.1,
+                  ),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: const Icon(Icons.event_available_rounded, color: MColors.primaryColor, size: 19),
+                child: const Icon(
+                  Icons.event_available_rounded,
+                  color: MColors.primaryColor,
+                  size: 19,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -71,13 +100,18 @@ class NextAppointmentCard extends StatelessWidget {
                   children: [
                     Text(
                       appointment.doctorName,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '${appointment.specialty} · ${appointment.hospital}',
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                        fontSize: 11,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -91,9 +125,27 @@ class NextAppointmentCard extends StatelessWidget {
                 children: [
                   Text(
                     _formattedDate,
-                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: MColors.primaryColor),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: MColors.primaryColor,
+                    ),
                   ),
-                  Text(appointment.time, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11)),
+                  Text(
+                    appointment.time,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                      fontSize: 11,
+                    ),
+                  ),
+                  if (appointment.serialNumber > 0)
+                    Text(
+                      'Serial ${appointment.serialNumber}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: MColors.primaryColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
                 ],
               ),
             ],

@@ -403,8 +403,9 @@ class _PrescriptionTimelineSectionState
   List<String> get _doctorNames {
     final List<String> names = [];
     for (final PrescriptionTimelineEntry e in widget.ongoing) {
-      if (e.doctorName.isNotEmpty && !names.contains(e.doctorName))
+      if (e.doctorName.isNotEmpty && !names.contains(e.doctorName)) {
         names.add(e.doctorName);
+      }
     }
     return names;
   }

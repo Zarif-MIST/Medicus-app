@@ -19,6 +19,7 @@ class AppointmentRecord {
     required this.status,
     required this.createdAt,
     this.windowId = '',
+    this.serialNumber = 0,
   });
 
   static const String statusConfirmed = 'Confirmed';
@@ -41,22 +42,31 @@ class AppointmentRecord {
   /// on that exact date, so it can be closed once it hits capacity.
   final String windowId;
 
-  Map<String, dynamic> toCreateJson() => {
-        'patientId': patientId,
-        'patientName': patientName,
-        'doctorId': doctorId,
-        'doctorName': doctorName,
-        'specialty': specialty,
-        'hospital': hospital,
-        'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
-        'time': time,
-        'fee': fee,
-        'status': statusConfirmed,
-        'createdAt': FieldValue.serverTimestamp(),
-        'windowId': windowId,
-      };
+  /// This patient's first-come-first-served position within [windowId] on
+  /// [date] — set once at booking time from the count of bookings already
+  /// in that window (see AppointmentConfirmationScreen._confirm), the same
+  /// "serial number" a real chamber hands out instead of an exact time.
+  final int serialNumber;
 
-  factory AppointmentRecord.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+  Map<String, dynamic> toCreateJson() => {
+    'patientId': patientId,
+    'patientName': patientName,
+    'doctorId': doctorId,
+    'doctorName': doctorName,
+    'specialty': specialty,
+    'hospital': hospital,
+    'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+    'time': time,
+    'fee': fee,
+    'status': statusConfirmed,
+    'createdAt': FieldValue.serverTimestamp(),
+    'windowId': windowId,
+    'serialNumber': serialNumber,
+  };
+
+  factory AppointmentRecord.fromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data()!;
     return AppointmentRecord(
       id: doc.id,
@@ -72,6 +82,7 @@ class AppointmentRecord {
       status: data['status'] as String? ?? statusConfirmed,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       windowId: data['windowId'] as String? ?? '',
+      serialNumber: (data['serialNumber'] as num?)?.toInt() ?? 0,
     );
   }
 }

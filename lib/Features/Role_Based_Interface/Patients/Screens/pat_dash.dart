@@ -171,6 +171,7 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
       time: record.time,
       fee: record.fee,
       windowId: record.windowId,
+      serialNumber: record.serialNumber,
     );
   }
 
@@ -206,6 +207,7 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
         time: appointment.time,
         fee: appointment.fee,
         windowId: appointment.windowId,
+        serialNumber: appointment.serialNumber,
       );
     } catch (_) {
       // Booking still shows locally for this session even if the write

@@ -58,23 +58,32 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
   /// Clinic hours used to auto-generate slots for a doctor who hasn't
   /// manually configured any availability windows — mirrors the old
-  /// fixed 8:00 AM-2:00 PM clinic-hours behavior, stepped by their
-  /// registered average consultation time.
+  /// fixed 8:00 AM-2:00 PM clinic-hours behavior.
   static const int _clinicStartMinutes = 8 * 60;
   static const int _clinicEndMinutes = 14 * 60;
 
+  /// Patients pick a 2-hour session block — the same "serial system" every
+  /// real chamber in Bangladesh already uses — rather than an exact minute,
+  /// even though the doctor's average consultation time still governs how
+  /// many patients that block can hold (see [_generateAutoWindows]).
+  static const int _blockMinutes = 120;
+
   List<DoctorAvailabilityWindow> _generateAutoWindows() {
-    final int step = widget.doctor.avgConsultationMinutes.clamp(1, 120);
+    final int avgMinutes = widget.doctor.avgConsultationMinutes.clamp(1, 120);
+    final int capacityPerBlock = (_blockMinutes / avgMinutes).floor().clamp(
+      1,
+      999,
+    );
     final List<DoctorAvailabilityWindow> windows = [];
     for (int weekday = 1; weekday <= 7; weekday++) {
       for (
         int minutes = _clinicStartMinutes;
-        minutes + step <= _clinicEndMinutes;
-        minutes += step
+        minutes + _blockMinutes <= _clinicEndMinutes;
+        minutes += _blockMinutes
       ) {
         final String startTime =
             '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
-        final int endMinutes = minutes + step;
+        final int endMinutes = minutes + _blockMinutes;
         final String endTime =
             '${(endMinutes ~/ 60).toString().padLeft(2, '0')}:${(endMinutes % 60).toString().padLeft(2, '0')}';
         windows.add(
@@ -84,7 +93,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             weekday: weekday,
             startTime: startTime,
             endTime: endTime,
-            capacity: 1,
+            capacity: capacityPerBlock,
           ),
         );
       }
@@ -567,7 +576,11 @@ class _SlotChip extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                isFull ? 'Full' : '$bookedCount/${window.capacity} booked',
+                // FCFS — booking into this block now would make you the
+                // next serial number, not a specific minute.
+                isFull
+                    ? 'Full'
+                    : 'Serial ${bookedCount + 1} of ${window.capacity}',
                 style: TextStyle(
                   fontSize: 10,
                   color: isFull

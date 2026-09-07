@@ -22,6 +22,7 @@ class AppointmentRepository {
     required String time,
     required int fee,
     String windowId = '',
+    int serialNumber = 0,
   }) async {
     final AppointmentRecord draft = AppointmentRecord(
       id: '',
@@ -37,9 +38,12 @@ class AppointmentRepository {
       status: AppointmentRecord.statusConfirmed,
       createdAt: DateTime.now(),
       windowId: windowId,
+      serialNumber: serialNumber,
     );
 
-    final DocumentReference<Map<String, dynamic>> ref = await _collection.add(draft.toCreateJson());
+    final DocumentReference<Map<String, dynamic>> ref = await _collection.add(
+      draft.toCreateJson(),
+    );
     return ref.id;
   }
 
@@ -55,7 +59,9 @@ class AppointmentRepository {
     required DateTime date,
   }) async {
     if (windowId.isEmpty) return 0;
-    final List<AppointmentRecord> doctorAppointments = await fetchForDoctor(doctorId);
+    final List<AppointmentRecord> doctorAppointments = await fetchForDoctor(
+      doctorId,
+    );
     return doctorAppointments
         .where(
           (a) =>
@@ -68,18 +74,22 @@ class AppointmentRepository {
   }
 
   Future<List<AppointmentRecord>> fetchForPatient(String patientId) async {
-    final QuerySnapshot<Map<String, dynamic>> snapshot =
-        await _collection.where('patientId', isEqualTo: patientId).get();
-    final List<AppointmentRecord> records = snapshot.docs.map(AppointmentRecord.fromDoc).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _collection
+        .where('patientId', isEqualTo: patientId)
+        .get();
+    final List<AppointmentRecord> records =
+        snapshot.docs.map(AppointmentRecord.fromDoc).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     return records;
   }
 
   Future<List<AppointmentRecord>> fetchForDoctor(String doctorId) async {
-    final QuerySnapshot<Map<String, dynamic>> snapshot =
-        await _collection.where('doctorId', isEqualTo: doctorId).get();
-    final List<AppointmentRecord> records = snapshot.docs.map(AppointmentRecord.fromDoc).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await _collection
+        .where('doctorId', isEqualTo: doctorId)
+        .get();
+    final List<AppointmentRecord> records =
+        snapshot.docs.map(AppointmentRecord.fromDoc).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     return records;
   }
 }

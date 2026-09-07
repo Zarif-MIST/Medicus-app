@@ -9,6 +9,7 @@ class BookedAppointment {
     required this.time,
     required this.fee,
     this.windowId = '',
+    this.serialNumber = 0,
   });
 
   /// Firestore document id once persisted; empty for a freshly-built booking
@@ -25,6 +26,12 @@ class BookedAppointment {
   /// The availability window this was booked against, if any — lets the
   /// backend count bookings per window to enforce its capacity.
   final String windowId;
+
+  /// This patient's first-come-first-served position within [windowId] —
+  /// the "serial number" shown instead of an exact appointment time,
+  /// matching how a real chamber's queue works. 0 for a legacy booking made
+  /// before this field existed.
+  final int serialNumber;
 
   int get daysFromNow {
     final DateTime today = DateTime.now();

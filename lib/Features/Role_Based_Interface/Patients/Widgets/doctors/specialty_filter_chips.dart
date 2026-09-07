@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 
@@ -15,7 +14,10 @@ class Specialty {
 /// a specialty a doctor can register under always has a matching filter chip
 /// here (and vice versa). Keep these two in sync by only editing this list.
 const List<Specialty> kSpecialties = [
-  Specialty(name: 'General Physician', icon: Icons.medical_information_outlined),
+  Specialty(
+    name: 'General Physician',
+    icon: Icons.medical_information_outlined,
+  ),
   Specialty(name: 'Cardiologist', icon: Icons.favorite_border),
   Specialty(name: 'Dermatologist', icon: Icons.face_outlined),
   Specialty(name: 'Pediatrician', icon: Icons.child_care_outlined),
@@ -77,52 +79,40 @@ class _SpecialtyChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
 
-    return LiquidGlassLayer(
-      settings: LiquidGlassSettings(
-        thickness: 12,
-        blur: 8,
-        glassColor: selected
-            ? MColors.primaryColor.withValues(alpha: 0.32)
-            : (isDark ? const Color(0x22FFFFFF) : const Color(0x70FFFFFF)),
-        lightIntensity: 1.0,
-        saturation: 1.1,
-        refractiveIndex: 1.2,
-      ),
-      fake: true,
-      child: LiquidGlass(
-        shape: LiquidRoundedSuperellipse(borderRadius: 20),
-        child: Material(
-          color: selected
-              ? MColors.primaryColor
-              : (isDark ? const Color(0xFF1F1F1F) : Colors.grey.shade100),
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    specialty.icon,
-                    size: 16,
-                    color: selected ? Colors.white : MColors.primaryColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    specialty.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: selected
-                          ? Colors.white
-                          : (isDark ? Colors.white : Colors.black87),
-                    ),
-                  ),
-                ],
+    // Plain Material, not glass — the pill fill below is fully opaque, so
+    // the glass shader behind it was pure cost with no visible effect, and
+    // repainting it on every scroll frame (this row scrolls horizontally)
+    // caused the chips to blank out for a moment after a fling gesture.
+    return Material(
+      color: selected
+          ? MColors.primaryColor
+          : (isDark ? const Color(0xFF1F1F1F) : Colors.grey.shade100),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                specialty.icon,
+                size: 16,
+                color: selected ? Colors.white : MColors.primaryColor,
               ),
-            ),
+              const SizedBox(width: 6),
+              Text(
+                specialty.name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black87),
+                ),
+              ),
+            ],
           ),
         ),
       ),

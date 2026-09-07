@@ -234,7 +234,9 @@ class AppointmentConfirmationScreen extends StatelessWidget {
                           _SummaryRow(
                             icon: Icons.local_hospital_outlined,
                             label: 'Hospital',
-                            value: doctor.hospital,
+                            value: doctor.hospital.isNotEmpty
+                                ? doctor.hospital
+                                : 'Not specified',
                           ),
                           _SummaryRow(
                             icon: Icons.event_outlined,
@@ -310,18 +312,25 @@ class _SummaryRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
+            // `start`, not the default `center` — if the value still wraps
+            // to a second line, centering would sink the icon and label
+            // below its first line instead of lining up with it.
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, size: 20, color: MColors.primaryColor),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
-                  ),
+              // Label keeps its own natural width instead of an equal
+              // (Expanded) share of the row — that was squeezing longer
+              // values like a full doctor name into half the row and
+              // forcing them to wrap unnecessarily.
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey,
                 ),
               ),
-              Flexible(
+              const SizedBox(width: 12),
+              Expanded(
                 child: Text(
                   value,
                   textAlign: TextAlign.right,

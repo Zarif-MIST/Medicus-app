@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/helperFunctions.dart';
 import 'package:medicus/Utilities/sizes.dart';
@@ -27,7 +26,8 @@ class SpecialistSelectionScreen extends StatefulWidget {
 }
 
 class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
-  static const DoctorDirectoryService _directoryService = DoctorDirectoryService();
+  static const DoctorDirectoryService _directoryService =
+      DoctorDirectoryService();
 
   Specialty? _selectedSpecialty;
   List<DoctorSummary> _allDoctors = [];
@@ -42,7 +42,8 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
 
   Future<void> _load() async {
     try {
-      final List<DoctorSummary> doctors = await _directoryService.fetchAllDoctors();
+      final List<DoctorSummary> doctors = await _directoryService
+          .fetchAllDoctors();
       if (!mounted) return;
       setState(() {
         _allDoctors = doctors;
@@ -98,10 +99,9 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
   /// actually passed (not just once the date changes), so a same-day
   /// appointment doesn't linger here for the rest of the day after it's over.
   List<BookedAppointment> get _upcomingAppointments {
-    final List<BookedAppointment> upcoming = widget.appointments
-        .where((a) => !a.hasEnded)
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final List<BookedAppointment> upcoming =
+        widget.appointments.where((a) => !a.hasEnded).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     return upcoming;
   }
 
@@ -159,11 +159,16 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (upcomingAppointments.isNotEmpty) ...[
-                    Text('Upcoming Appointments', style: theme.textTheme.titleMedium),
+                    Text(
+                      'Upcoming Appointments',
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 14),
                     for (int i = 0; i < upcomingAppointments.length; i++) ...[
                       if (i != 0) const SizedBox(height: 10),
-                      _UpcomingAppointmentCard(appointment: upcomingAppointments[i]),
+                      _UpcomingAppointmentCard(
+                        appointment: upcomingAppointments[i],
+                      ),
                     ],
                     SizedBox(height: pad),
                   ],
@@ -185,7 +190,11 @@ class _SpecialistSelectionScreenState extends State<SpecialistSelectionScreen> {
                   if (_loading)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: CircularProgressIndicator(color: MColors.primaryColor)),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: MColors.primaryColor,
+                        ),
+                      ),
                     )
                   else if (doctors.isEmpty)
                     Padding(
@@ -256,73 +265,63 @@ class _UpcomingAppointmentCard extends StatelessWidget {
     final String formattedDate =
         '${_weekdays[date.weekday - 1]}, ${date.day} ${_months[date.month - 1]}';
 
-    return LiquidGlassLayer(
-      settings: LiquidGlassSettings(
-        thickness: 16,
-        blur: 10,
-        glassColor: isDark ? const Color(0x22FFFFFF) : const Color(0x92FFFFFF),
-        lightIntensity: 1.05,
-        saturation: 1.15,
-        refractiveIndex: 1.25,
-      ),
-      fake: true,
-      child: LiquidGlass(
-        shape: LiquidRoundedSuperellipse(borderRadius: 16),
-        child: Material(
-          color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
+    // Plain Material, not glass — see DoctorResultCard for why: an opaque
+    // fill behind the glass shader means the shader has nothing to refract,
+    // and repainting it on every scroll frame was blanking this card out
+    // for a moment after a fling gesture.
+    return Material(
+      color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: MColors.primaryColor.withValues(alpha: 0.12),
+              child: const Icon(
+                Icons.event_available,
+                color: MColors.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appointment.doctorName,
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    appointment.specialty,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: MColors.primaryColor.withValues(alpha: 0.12),
-                  child: const Icon(
-                    Icons.event_available,
-                    color: MColors.primaryColor,
+                Text(
+                  formattedDate,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        appointment.doctorName,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        appointment.specialty,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 2),
+                Text(
+                  appointment.time,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      formattedDate,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      appointment.time,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );

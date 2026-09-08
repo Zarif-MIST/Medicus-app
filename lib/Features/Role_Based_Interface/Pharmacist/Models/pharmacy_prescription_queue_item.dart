@@ -5,6 +5,7 @@ class PrescribedMedicine {
     required this.frequency,
     required this.duration,
     required this.quantity,
+    this.dispensedQuantity = 0,
     this.instructions,
   });
 
@@ -21,11 +22,22 @@ class PrescribedMedicine {
   /// How long the course runs, e.g. "10 days".
   final String duration;
 
-  /// Total units to dispense from inventory for this course.
+  /// Total units for the full course, as written by the doctor.
   final int quantity;
+
+  /// Units already handed to the patient across all visits so far — a
+  /// patient may not want the whole course dispensed at once, so this can
+  /// be less than [quantity] indefinitely (topped up on a later visit).
+  final int dispensedQuantity;
 
   /// Optional extra guidance, e.g. "Take after meals".
   final String? instructions;
+
+  /// Units still owed on this course — never negative even if
+  /// [dispensedQuantity] somehow exceeds [quantity].
+  int get remainingQuantity => (quantity - dispensedQuantity).clamp(0, quantity);
+
+  bool get isFullyDispensed => dispensedQuantity >= quantity;
 }
 
 class PharmacyPrescriptionQueueItem {

@@ -264,7 +264,9 @@ class _ScannedPrescriptionCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '×${medicine.quantity}',
+                      medicine.dispensedQuantity > 0
+                          ? '×${medicine.remainingQuantity} left'
+                          : '×${medicine.quantity}',
                       style: TextStyle(
                         color: MColors.primaryColor,
                         fontWeight: FontWeight.w700,

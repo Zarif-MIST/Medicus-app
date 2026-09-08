@@ -60,14 +60,12 @@ class _PrescriptionFulfillmentScreenState
           final Map<String, MedicineShortfall> shortfallByName = {
             for (final MedicineShortfall s in shortfalls) s.medicineName: s,
           };
-          final bool canDispense = shortfalls.isEmpty;
 
           return _FulfillmentBody(
             item: widget.item,
             isDark: isDark,
             shortfalls: shortfalls,
             shortfallByName: shortfallByName,
-            canDispense: canDispense,
             pharmacistId: widget.pharmacistId,
           );
         },
@@ -76,13 +74,12 @@ class _PrescriptionFulfillmentScreenState
   }
 }
 
-class _FulfillmentBody extends StatelessWidget {
+class _FulfillmentBody extends StatefulWidget {
   const _FulfillmentBody({
     required this.item,
     required this.isDark,
     required this.shortfalls,
     required this.shortfallByName,
-    required this.canDispense,
     required this.pharmacistId,
   });
 
@@ -90,33 +87,107 @@ class _FulfillmentBody extends StatelessWidget {
   final bool isDark;
   final List<MedicineShortfall> shortfalls;
   final Map<String, MedicineShortfall> shortfallByName;
-  final bool canDispense;
   final String pharmacistId;
 
   @override
+  State<_FulfillmentBody> createState() => _FulfillmentBodyState();
+}
+
+class _FulfillmentBodyState extends State<_FulfillmentBody> {
+  /// How many units of each medicine the pharmacist has chosen to dispense
+  /// this visit — defaults to everything still owed, capped by whatever's
+  /// actually in stock right now (never more than either).
+  late final Map<String, int> _selectedQuantities = {
+    for (final medicine in widget.item.medicines)
+      medicine.name: _maxSelectable(medicine),
+  };
+
+  bool _submitting = false;
+
+  int _maxSelectable(PrescribedMedicine medicine) {
+    final MedicineShortfall? shortfall = widget.shortfallByName[medicine.name];
+    if (shortfall == null) return medicine.remainingQuantity;
+    return shortfall.availableStock.clamp(0, medicine.remainingQuantity);
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    try {
+      await PharmacistService.instance.dispensePartial(
+        prescriptionId: widget.item.id,
+        pharmacistId: widget.pharmacistId,
+        quantitiesToDispense: _selectedQuantities,
+      );
+    } on InsufficientStockException catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Cannot dispense',
+        e.message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+      );
+      return;
+    } catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Could not dispense',
+        '$e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+      );
+      return;
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+
+    if (!mounted) return;
+
+    final bool fullyDispensed = widget.item.medicines.every(
+      (medicine) =>
+          (_selectedQuantities[medicine.name] ?? 0) + medicine.dispensedQuantity >=
+          medicine.quantity,
+    );
+    Get.snackbar(
+      fullyDispensed ? 'Prescription dispensed' : 'Partially dispensed',
+      fullyDispensed
+          ? 'Prescription ${widget.item.id} has been fully dispensed.'
+          : 'Some medicine remains on prescription ${widget.item.id} — dispense the rest on a later visit.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+    Navigator.of(context).pop();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final int totalSelected = _selectedQuantities.values.fold(0, (a, b) => a + b);
+    final bool allFullyDispensedAlready = widget.item.medicines.every(
+      (medicine) => medicine.isFullyDispensed,
+    );
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
         _Card(
-          isDark: isDark,
+          isDark: widget.isDark,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                item.patientName,
+                widget.item.patientName,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 4),
               Text(
-                'Patient ID: ${item.patientId}',
+                'Patient ID: ${widget.item.patientId}',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
               ),
               const SizedBox(height: 12),
               Text(
-                'Doctor: ${item.doctorName}',
+                'Doctor: ${widget.item.doctorName}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
@@ -124,66 +195,54 @@ class _FulfillmentBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        if (!canDispense) ...[
-          _StockShortageBanner(shortfalls: shortfalls),
+        if (widget.shortfalls.isNotEmpty) ...[
+          _StockShortageBanner(shortfalls: widget.shortfalls),
           const SizedBox(height: 16),
         ],
         Text(
-          'Medicines (${item.medicines.length})',
+          'Medicines (${widget.item.medicines.length})',
           style: Theme.of(context).textTheme.titleSmall,
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Choose how much of each to hand over now — the patient may not want the full course at once. You can dispense the rest on a later visit.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
         const SizedBox(height: 10),
-        for (final medicine in item.medicines) ...[
+        for (final medicine in widget.item.medicines) ...[
           _MedicineCard(
-            isDark: isDark,
+            isDark: widget.isDark,
             medicine: medicine,
-            shortfall: shortfallByName[medicine.name],
+            shortfall: widget.shortfallByName[medicine.name],
+            maxSelectable: _maxSelectable(medicine),
+            selectedQuantity: _selectedQuantities[medicine.name] ?? 0,
+            onChanged: (value) =>
+                setState(() => _selectedQuantities[medicine.name] = value),
           ),
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 4),
         FilledButton.icon(
-          onPressed: !canDispense
-              ? null
-              : () async {
-                  try {
-                    await PharmacistService.instance.markDispensed(
-                      item.id,
-                      pharmacistId,
-                    );
-                  } on InsufficientStockException catch (e) {
-                    if (!context.mounted) {
-                      return;
-                    }
-                    Get.snackbar(
-                      'Cannot dispense',
-                      e.message,
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red.shade50,
-                    );
-                    return;
-                  }
-                  if (!context.mounted) {
-                    return;
-                  }
-                  Get.snackbar(
-                    'Marked dispensed',
-                    'Prescription ${item.id} has been marked as dispensed.',
-                    snackPosition: SnackPosition.BOTTOM,
-                  );
-                  Navigator.of(context).pop();
-                },
+          onPressed: (totalSelected == 0 || _submitting) ? null : _submit,
           style: FilledButton.styleFrom(
             backgroundColor: MColors.primaryColor,
             foregroundColor: Colors.white,
             disabledBackgroundColor: Colors.grey.shade400,
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-          icon: const Icon(Icons.check_circle_outline),
+          icon: _submitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.check_circle_outline),
           label: Text(
-            canDispense
-                ? 'Mark as Dispensed'
-                : 'Insufficient stock to dispense',
+            allFullyDispensedAlready
+                ? 'Already fully dispensed'
+                : (totalSelected == 0
+                      ? 'Choose a quantity to dispense'
+                      : 'Dispense Selected'),
           ),
         ),
       ],
@@ -195,11 +254,17 @@ class _MedicineCard extends StatelessWidget {
   const _MedicineCard({
     required this.isDark,
     required this.medicine,
+    required this.maxSelectable,
+    required this.selectedQuantity,
+    required this.onChanged,
     this.shortfall,
   });
 
   final bool isDark;
   final PrescribedMedicine medicine;
+  final int maxSelectable;
+  final int selectedQuantity;
+  final ValueChanged<int> onChanged;
   final MedicineShortfall? shortfall;
 
   @override
@@ -237,7 +302,9 @@ class _MedicineCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Qty ${medicine.quantity}',
+                  medicine.dispensedQuantity > 0
+                      ? '${medicine.dispensedQuantity}/${medicine.quantity} given'
+                      : 'Qty ${medicine.quantity}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: hasShortfall
                         ? Colors.red.shade700
@@ -289,7 +356,7 @@ class _MedicineCard extends StatelessWidget {
                     child: Text(
                       shortfall!.isOutOfStock
                           ? 'Out of stock in inventory'
-                          : 'Only ${shortfall!.availableStock} in stock — need ${shortfall!.requiredQuantity}',
+                          : 'Only ${shortfall!.availableStock} in stock — ${shortfall!.requiredQuantity} still owed on this course',
                       style: TextStyle(
                         color: Colors.red.shade700,
                         fontSize: 12,
@@ -329,8 +396,83 @@ class _MedicineCard extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          if (medicine.isFullyDispensed)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  'Fully dispensed',
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            )
+          else
+            _QuantityStepper(
+              label: 'Dispense now',
+              value: selectedQuantity,
+              max: maxSelectable,
+              onChanged: onChanged,
+            ),
         ],
       ),
+    );
+  }
+}
+
+class _QuantityStepper extends StatelessWidget {
+  const _QuantityStepper({
+    required this.label,
+    required this.value,
+    required this.max,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final int max;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            '$label (max $max)',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ),
+        IconButton(
+          onPressed: value > 0 ? () => onChanged(value - 1) : null,
+          icon: const Icon(Icons.remove_circle_outline),
+          color: MColors.primaryColor,
+          visualDensity: VisualDensity.compact,
+        ),
+        SizedBox(
+          width: 32,
+          child: Text(
+            '$value',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        IconButton(
+          onPressed: value < max ? () => onChanged(value + 1) : null,
+          icon: const Icon(Icons.add_circle_outline),
+          color: MColors.primaryColor,
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
     );
   }
 }

@@ -188,6 +188,8 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
                 ? medicine.dosage
                 : '${medicine.dosage} — ${medicine.instructions}',
             durationDays: medicine.durationDays,
+            quantity: medicine.derivedQuantity,
+            dispensedQuantity: record.dispensedQuantities[medicine.name] ?? 0,
           ),
       ],
     );

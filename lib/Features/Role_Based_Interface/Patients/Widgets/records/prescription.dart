@@ -5,11 +5,26 @@ class PrescriptionMedicine {
     required this.name,
     required this.dosage,
     required this.durationDays,
+    this.quantity = 0,
+    this.dispensedQuantity = 0,
   });
 
   final String name;
   final String dosage;
   final int durationDays;
+
+  /// Total units for the full course, as written by the doctor.
+  final int quantity;
+
+  /// Units the pharmacy has actually handed over so far — can permanently
+  /// sit below [quantity] if the patient only wanted part of their course.
+  final int dispensedQuantity;
+
+  int get remainingQuantity => (quantity - dispensedQuantity).clamp(0, quantity);
+
+  bool get isFullyDispensed => quantity > 0 && dispensedQuantity >= quantity;
+
+  bool get hasDispenseInfo => quantity > 0;
 }
 
 /// One prescription slip issued by a doctor — has its own id/date/doctor and

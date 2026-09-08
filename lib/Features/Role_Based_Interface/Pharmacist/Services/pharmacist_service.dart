@@ -424,7 +424,7 @@ class PharmacistService {
         medicine.name,
         -requestedQty,
         type: InventoryTransactionType.dispensed,
-        reason: 'Dispensed $requestedQty for prescription $id',
+        reason: 'Dispensed $requestedQty for ${item.patientName}',
       );
       updatedDispensedQuantities[medicine.name] =
           medicine.dispensedQuantity + requestedQty;
@@ -440,6 +440,36 @@ class PharmacistService {
           ? PrescriptionRecord.statusDispensed
           : PrescriptionRecord.statusPartiallyDispensed,
       if (fullyDispensed) 'dispensedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Permanently closes out a partially-dispensed prescription as
+  /// "Dispensed" without handing out (or deducting inventory for) the
+  /// remaining balance — for when a patient won't be coming back for the
+  /// rest of their course. Does not touch `dispensedQuantities`, so the
+  /// patient's own record still accurately shows how much was actually
+  /// given, even though the prescription itself is now closed.
+  Future<void> closeAsFullyDispensed(String prescriptionId) async {
+    final String id = prescriptionId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('Prescription ID is required.');
+    }
+
+    final DocumentSnapshot<Map<String, dynamic>> doc = await _firestore
+        .collection('prescriptions')
+        .doc(id)
+        .get();
+    final Map<String, dynamic>? data = doc.data();
+    if (!doc.exists || data == null) {
+      throw ArgumentError('Prescription $id was not found.');
+    }
+    if (data['status'] == PrescriptionRecord.statusDispensed) {
+      return;
+    }
+
+    await _firestore.collection('prescriptions').doc(id).update(<String, dynamic>{
+      'status': PrescriptionRecord.statusDispensed,
+      'dispensedAt': FieldValue.serverTimestamp(),
     });
   }
 }

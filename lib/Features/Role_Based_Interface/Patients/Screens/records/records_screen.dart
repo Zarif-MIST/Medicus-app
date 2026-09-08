@@ -179,7 +179,7 @@ class _PrescriptionCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(prescription.id, style: theme.textTheme.titleSmall?.copyWith(color: MColors.primaryColor)),
+                child: Text('Prescription', style: theme.textTheme.titleSmall?.copyWith(color: MColors.primaryColor)),
               ),
               Text(_formattedDate, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
             ],
@@ -190,9 +190,41 @@ class _PrescriptionCard extends StatelessWidget {
           for (final medicine in prescription.medicines)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '${medicine.name} — ${medicine.dosage} (${medicine.durationDays}d)',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${medicine.name} — ${medicine.dosage} (${medicine.durationDays}d)',
+                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+                    ),
+                  ),
+                  if (medicine.hasDispenseInfo) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (medicine.isFullyDispensed ? Colors.green : Colors.orange)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        medicine.isFullyDispensed
+                            ? 'Dispensed'
+                            : (medicine.dispensedQuantity > 0
+                                  ? '${medicine.dispensedQuantity}/${medicine.quantity} given'
+                                  : 'Not dispensed yet'),
+                        style: TextStyle(
+                          color: medicine.isFullyDispensed
+                              ? Colors.green.shade700
+                              : Colors.orange.shade800,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           if (labTests.isNotEmpty) ...[

@@ -22,6 +22,13 @@ class PrescriptionRecordMedicine {
   /// (or the doctor skipped it) and won't appear in the dose schedule.
   final List<String> doseTimes;
 
+  /// Total units for the full course — one unit per scheduled dose per day,
+  /// same derivation the pharmacist's dispensing flow uses, so a patient
+  /// sees the same "X of Y given" numbers a pharmacist does.
+  int get derivedQuantity => durationDays > 0 && doseTimes.isNotEmpty
+      ? durationDays * doseTimes.length
+      : (durationDays > 0 ? durationDays : 1);
+
   Map<String, dynamic> toJson() => {
         'name': name,
         'dosage': dosage,
@@ -68,6 +75,7 @@ class PrescriptionRecord {
     required this.status,
     required this.createdAt,
     this.dispensedAt,
+    this.dispensedQuantities = const {},
   });
 
   static const String statusPending = 'Pending';
@@ -86,6 +94,12 @@ class PrescriptionRecord {
   final String status;
   final DateTime createdAt;
   final DateTime? dispensedAt;
+
+  /// Cumulative units of each medicine (by name) actually handed to the
+  /// patient so far, across every pharmacy visit — a patient may not take
+  /// their whole course dispensed at once, so this can permanently sit
+  /// below a medicine's full course quantity.
+  final Map<String, int> dispensedQuantities;
 
   /// Whether every medicine's course has run its full length — the same
   /// day-elapsed-vs-duration check the patient's dose/timeline views use
@@ -129,6 +143,10 @@ class PrescriptionRecord {
       status: data['status'] as String? ?? PrescriptionRecord.statusPending,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       dispensedAt: (data['dispensedAt'] as Timestamp?)?.toDate(),
+      dispensedQuantities: {
+        for (final entry in (data['dispensedQuantities'] as Map<String, dynamic>? ?? const {}).entries)
+          entry.key: (entry.value as num?)?.toInt() ?? 0,
+      },
     );
   }
 }

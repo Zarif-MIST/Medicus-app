@@ -196,7 +196,7 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
     }
     Get.snackbar(
       'Prescription saved',
-      '$rxId issued for ${widget.patient.account.fullName} — visible in their app now.',
+      'Issued for ${widget.patient.account.fullName} — visible in their app now.',
       snackPosition: SnackPosition.BOTTOM,
     );
     _formKey.currentState?.reset();

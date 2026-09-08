@@ -320,6 +320,20 @@ class _MedicineRow extends StatelessWidget {
                 '${medicine.durationDays}-day course',
                 style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
               ),
+              if (medicine.hasDispenseInfo) ...[
+                const SizedBox(height: 2),
+                Text(
+                  medicine.isFullyDispensed
+                      ? 'Fully dispensed'
+                      : (medicine.dispensedQuantity > 0
+                            ? '${medicine.dispensedQuantity} of ${medicine.quantity} dispensed'
+                            : 'Not dispensed yet'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: medicine.isFullyDispensed ? Colors.green.shade700 : Colors.orange.shade800,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

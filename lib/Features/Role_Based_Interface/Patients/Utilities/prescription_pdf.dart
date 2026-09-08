@@ -59,13 +59,7 @@ Future<Uint8List> buildPrescriptionPdf({
             ),
             pw.Divider(),
             pw.SizedBox(height: 8),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Prescription ID: ${prescription.id}'),
-                pw.Text('Date: $formattedDate'),
-              ],
-            ),
+            pw.Text('Date: $formattedDate'),
             pw.SizedBox(height: 4),
             pw.Text('Patient: $patientName (ID: $patientId)'),
             pw.SizedBox(height: 4),

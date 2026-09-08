@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/medicine_shortfall.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
@@ -103,6 +104,7 @@ class _FulfillmentBodyState extends State<_FulfillmentBody> {
   };
 
   bool _submitting = false;
+  bool _closing = false;
 
   int _maxSelectable(PrescribedMedicine medicine) {
     final MedicineShortfall? shortfall = widget.shortfallByName[medicine.name];
@@ -152,8 +154,58 @@ class _FulfillmentBodyState extends State<_FulfillmentBody> {
     Get.snackbar(
       fullyDispensed ? 'Prescription dispensed' : 'Partially dispensed',
       fullyDispensed
-          ? 'Prescription ${widget.item.id} has been fully dispensed.'
-          : 'Some medicine remains on prescription ${widget.item.id} — dispense the rest on a later visit.',
+          ? 'Prescription for ${widget.item.patientName} has been fully dispensed.'
+          : 'Some medicine remains for ${widget.item.patientName} — dispense the rest on a later visit.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _closeAsFullyDispensed() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Close as fully dispensed?'),
+        content: Text(
+          '${widget.item.patientName} will not receive the remaining medicine on this prescription. '
+          'It will be marked "Dispensed" and removed from the pending queue. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Close Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _closing = true);
+    try {
+      await PharmacistService.instance.closeAsFullyDispensed(widget.item.id);
+    } catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Could not close prescription',
+        '$e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+      );
+      return;
+    } finally {
+      if (mounted) {
+        setState(() => _closing = false);
+      }
+    }
+
+    if (!mounted) return;
+    Get.snackbar(
+      'Prescription closed',
+      'Marked as fully dispensed for ${widget.item.patientName}.',
       snackPosition: SnackPosition.BOTTOM,
     );
     Navigator.of(context).pop();
@@ -245,6 +297,31 @@ class _FulfillmentBodyState extends State<_FulfillmentBody> {
                       : 'Dispense Selected'),
           ),
         ),
+        if (widget.item.status == PrescriptionRecord.statusPartiallyDispensed) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _closing ? null : _closeAsFullyDispensed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red.shade700,
+              side: BorderSide(color: Colors.red.shade200),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            icon: _closing
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red.shade700),
+                  )
+                : const Icon(Icons.block_outlined),
+            label: const Text('Close as Fully Dispensed'),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Use this if the patient won\'t be coming back for the rest of this course.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ],
       ],
     );
   }

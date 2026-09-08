@@ -71,6 +71,7 @@ class PrescriptionRecord {
   });
 
   static const String statusPending = 'Pending';
+  static const String statusPartiallyDispensed = 'Partially Dispensed';
   static const String statusDispensed = 'Dispensed';
 
   final String id;

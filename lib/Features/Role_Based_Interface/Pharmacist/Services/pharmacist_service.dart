@@ -10,15 +10,17 @@ class PharmacistService {
   static final PharmacistService instance = PharmacistService._();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Anything not yet fully dispensed — includes both untouched ("Pending")
+  /// prescriptions and ones a previous visit only partially filled, since
+  /// both still need pharmacist attention.
   Future<List<PharmacyPrescriptionQueueItem>> getPendingPrescriptions() async {
     final QuerySnapshot<Map<String, dynamic>> snapshot = await _firestore
         .collection('prescriptions')
-        .where('status', isEqualTo: PrescriptionRecord.statusPending)
+        .where('status', isNotEqualTo: PrescriptionRecord.statusDispensed)
         .get();
 
     return [
-      for (final doc in snapshot.docs)
-        _fromFirestore(doc.id, doc.data(), status: PrescriptionRecord.statusPending),
+      for (final doc in snapshot.docs) _fromFirestore(doc.id, doc.data()),
     ];
   }
 
@@ -42,8 +44,8 @@ class PharmacistService {
 
     return [
       for (final doc in snapshot.docs)
-        if ((doc.data()['status'] ?? '') == PrescriptionRecord.statusPending)
-          _fromFirestore(doc.id, doc.data(), status: PrescriptionRecord.statusPending),
+        if ((doc.data()['status'] ?? '') != PrescriptionRecord.statusDispensed)
+          _fromFirestore(doc.id, doc.data()),
     ];
   }
 
@@ -55,8 +57,7 @@ class PharmacistService {
         .get();
 
     return [
-      for (final doc in snapshot.docs)
-        _fromFirestore(doc.id, doc.data(), status: PrescriptionRecord.statusDispensed),
+      for (final doc in snapshot.docs) _fromFirestore(doc.id, doc.data()),
     ];
   }
 
@@ -83,28 +84,36 @@ class PharmacistService {
 
   PharmacyPrescriptionQueueItem _fromFirestore(
     String id,
-    Map<String, dynamic> data, {
-    required String status,
-  }) {
+    Map<String, dynamic> data,
+  ) {
     final List<dynamic> rawMedicines =
         (data['medicines'] as List<dynamic>?) ?? const <dynamic>[];
     final Object? rawDispensedAt = data['dispensedAt'];
+    final Map<String, dynamic> dispensedQuantities =
+        (data['dispensedQuantities'] as Map<String, dynamic>?) ?? const {};
 
     return PharmacyPrescriptionQueueItem(
       id: id,
       patientId: (data['patientId'] ?? '') as String,
       patientName: (data['patientName'] ?? '') as String,
       doctorName: (data['doctorName'] ?? '') as String,
-      status: status,
+      status: (data['status'] ?? PrescriptionRecord.statusPending) as String,
       medicines: [
         for (final rawMedicine in rawMedicines)
-          _medicineFromFirestore(rawMedicine as Map<String, dynamic>),
+          _medicineFromFirestore(
+            rawMedicine as Map<String, dynamic>,
+            dispensedQuantities,
+          ),
       ],
       dispensedAt: rawDispensedAt is Timestamp ? rawDispensedAt.toDate() : null,
     );
   }
 
-  PrescribedMedicine _medicineFromFirestore(Map<String, dynamic> data) {
+  PrescribedMedicine _medicineFromFirestore(
+    Map<String, dynamic> data,
+    Map<String, dynamic> dispensedQuantities,
+  ) {
+    final String name = (data['name'] ?? '').toString();
     final String frequency = (data['frequency'] ?? '').toString().trim();
     final int? durationDays = (data['durationDays'] as num?)?.toInt();
     final String instructions = (data['instructions'] ?? '').toString().trim();
@@ -120,11 +129,12 @@ class PharmacistService {
         : (durationDays ?? 1);
 
     return PrescribedMedicine(
-      name: (data['name'] ?? '').toString(),
+      name: name,
       dosage: (data['dosage'] ?? '').toString(),
       frequency: frequency.isEmpty ? 'As directed' : frequency,
       duration: durationDays == null ? 'Not specified' : '$durationDays days',
       quantity: explicitQuantity ?? derivedQuantity,
+      dispensedQuantity: (dispensedQuantities[name] as num?)?.toInt() ?? 0,
       instructions: instructions.isEmpty ? null : instructions,
     );
   }
@@ -300,8 +310,9 @@ class PharmacistService {
     );
   }
 
-  /// Returns the medicines that don't have enough stock to fulfil [medicines],
-  /// empty if everything required is available.
+  /// Returns the medicines that don't have enough stock to fulfil what's
+  /// still owed on [medicines] (i.e. each medicine's [remainingQuantity],
+  /// not its full course) — empty if everything still needed is available.
   Future<List<MedicineShortfall>> checkStockAvailability(
     String pharmacistId,
     List<PrescribedMedicine> medicines,
@@ -320,16 +331,27 @@ class PharmacistService {
 
     return [
       for (final PrescribedMedicine medicine in medicines)
-        if (availableStockOf(medicine.name) < medicine.quantity)
+        if (availableStockOf(medicine.name) < medicine.remainingQuantity)
           MedicineShortfall(
             medicineName: medicine.name,
-            requiredQuantity: medicine.quantity,
+            requiredQuantity: medicine.remainingQuantity,
             availableStock: availableStockOf(medicine.name),
           ),
     ];
   }
 
-  Future<void> markDispensed(String prescriptionId, String pharmacistId) async {
+  /// Hands out [quantitiesToDispense] (medicine name -> units to give right
+  /// now) against [prescriptionId] — a patient may not want their whole
+  /// course at once, so any entry may be less than that medicine's
+  /// remaining balance, but never more. Deducts inventory only for what's
+  /// actually dispensed this visit, and marks the prescription "Dispensed"
+  /// once every medicine's cumulative total reaches its full course, or
+  /// "Partially Dispensed" if some balance remains.
+  Future<void> dispensePartial({
+    required String prescriptionId,
+    required String pharmacistId,
+    required Map<String, int> quantitiesToDispense,
+  }) async {
     final String id = prescriptionId.trim();
     if (id.isEmpty) {
       throw ArgumentError('Prescription ID is required.');
@@ -344,35 +366,80 @@ class PharmacistService {
       throw ArgumentError('Prescription $id was not found.');
     }
 
-    final PharmacyPrescriptionQueueItem item = _fromFirestore(
-      doc.id,
-      data,
-      status: 'Pending',
-    );
+    final PharmacyPrescriptionQueueItem item = _fromFirestore(doc.id, data);
 
-    final List<MedicineShortfall> shortfalls = await checkStockAvailability(
-      pharmacistId,
-      item.medicines,
-    );
+    final Map<String, int> requested = {
+      for (final entry in quantitiesToDispense.entries)
+        if (entry.value > 0) entry.key: entry.value,
+    };
+    if (requested.isEmpty) {
+      throw ArgumentError('Choose at least one medicine to dispense.');
+    }
+
+    final List<MedicineInventoryItem> inventory = await getInventory(pharmacistId);
+    int availableStockOf(String name) {
+      for (final MedicineInventoryItem invItem in inventory) {
+        if (invItem.name == name) return invItem.stock;
+      }
+      return 0;
+    }
+
+    final List<MedicineShortfall> shortfalls = [];
+    for (final PrescribedMedicine medicine in item.medicines) {
+      final int requestedQty = requested[medicine.name] ?? 0;
+      if (requestedQty <= 0) continue;
+
+      if (requestedQty > medicine.remainingQuantity) {
+        throw ArgumentError(
+          'Cannot dispense $requestedQty of ${medicine.name} — only ${medicine.remainingQuantity} left on this prescription.',
+        );
+      }
+
+      final int available = availableStockOf(medicine.name);
+      if (requestedQty > available) {
+        shortfalls.add(
+          MedicineShortfall(
+            medicineName: medicine.name,
+            requiredQuantity: requestedQty,
+            availableStock: available,
+          ),
+        );
+      }
+    }
     if (shortfalls.isNotEmpty) {
       throw InsufficientStockException(shortfalls);
     }
 
+    final Map<String, int> updatedDispensedQuantities = {
+      for (final PrescribedMedicine medicine in item.medicines)
+        medicine.name: medicine.dispensedQuantity,
+    };
+
     for (final PrescribedMedicine medicine in item.medicines) {
+      final int requestedQty = requested[medicine.name] ?? 0;
+      if (requestedQty <= 0) continue;
+
       await changeInventoryStock(
         pharmacistId,
         medicine.name,
-        -medicine.quantity,
+        -requestedQty,
         type: InventoryTransactionType.dispensed,
-        reason: 'Dispensed for prescription $id',
+        reason: 'Dispensed $requestedQty for prescription $id',
       );
+      updatedDispensedQuantities[medicine.name] =
+          medicine.dispensedQuantity + requestedQty;
     }
 
-    await _firestore.collection('prescriptions').doc(id).update(
-      <String, dynamic>{
-        'status': PrescriptionRecord.statusDispensed,
-        'dispensedAt': FieldValue.serverTimestamp(),
-      },
+    final bool fullyDispensed = item.medicines.every(
+      (medicine) => updatedDispensedQuantities[medicine.name]! >= medicine.quantity,
     );
+
+    await _firestore.collection('prescriptions').doc(id).update(<String, dynamic>{
+      'dispensedQuantities': updatedDispensedQuantities,
+      'status': fullyDispensed
+          ? PrescriptionRecord.statusDispensed
+          : PrescriptionRecord.statusPartiallyDispensed,
+      if (fullyDispensed) 'dispensedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

@@ -23,6 +23,7 @@ class AppointmentRecord {
   });
 
   static const String statusConfirmed = 'Confirmed';
+  static const String statusCompleted = 'Completed';
 
   final String id;
   final String patientId;

@@ -92,4 +92,11 @@ class AppointmentRepository {
           ..sort((a, b) => a.date.compareTo(b.date));
     return records;
   }
+
+  Future<void> markCompleted(String appointmentId) async {
+    await _collection.doc(appointmentId).update({
+      'status': AppointmentRecord.statusCompleted,
+      'completedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

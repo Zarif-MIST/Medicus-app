@@ -50,7 +50,11 @@ class _ServicePlannerScreenState extends State<ServicePlannerScreen> {
   bool _loading = true;
   Map<DateTime, DoctorDateStatus> _overridesByDate = {};
 
-  String get _doctorId => widget.doctor.firebaseUid ?? widget.doctor.userId;
+  // `userId`, not `firebaseUid` — every other doctor-availability write
+  // (DoctorAvailabilityScreen, DoctorSummary.doctorId) keys off `userId`,
+  // and a blocked date saved under the wrong id here would silently never
+  // match what the patient-facing booking screen looks up.
+  String get _doctorId => widget.doctor.userId;
 
   @override
   void initState() {

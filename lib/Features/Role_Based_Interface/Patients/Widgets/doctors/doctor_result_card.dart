@@ -14,6 +14,8 @@ class DoctorSummary {
     required this.fee,
     required this.nextAvailable,
     this.avgConsultationMinutes = 5,
+    this.clinicStartTime = '08:00',
+    this.clinicEndTime = '14:00',
   });
 
   /// Empty for the (soon to be retired) hand-authored demo doctors; a real
@@ -32,6 +34,11 @@ class DoctorSummary {
   /// auto-generated clinic-hours time slots used as a fallback when they
   /// haven't manually configured any availability windows.
   final int avgConsultationMinutes;
+
+  /// This doctor's daily clinic hours ("HH:mm", 24-hour) — the range that
+  /// gets sliced into auto-generated booking blocks.
+  final String clinicStartTime;
+  final String clinicEndTime;
 
   /// Registration only collects a doctor's name and specialty today — the
   /// hospital/fee/experience/rating/availability fields below don't exist
@@ -55,6 +62,8 @@ class DoctorSummary {
       fee: 0,
       nextAvailable: 'Book to request a time',
       avgConsultationMinutes: account.consultationMinutes,
+      clinicStartTime: account.clinicStartTimeOrDefault,
+      clinicEndTime: account.clinicEndTimeOrDefault,
     );
   }
 }

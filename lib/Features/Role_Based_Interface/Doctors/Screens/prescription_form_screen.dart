@@ -50,17 +50,21 @@ class PrescriptionFormScreen extends StatelessWidget {
     super.key,
     required this.doctor,
     required this.patient,
+    this.appointmentId = '',
   });
 
   final AuthAccount doctor;
   final PatientRecordModel patient;
+  final String appointmentId;
 
   @override
   Widget build(BuildContext context) {
     final bool isDark = MHelperFunctions.isDarkMode(context);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF181818) : const Color(0xFFF7F5F3),
+      backgroundColor: isDark
+          ? const Color(0xFF181818)
+          : const Color(0xFFF7F5F3),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -69,6 +73,7 @@ class PrescriptionFormScreen extends StatelessWidget {
       body: PrescriptionFormBody(
         doctor: doctor,
         patient: patient,
+        appointmentId: appointmentId,
         onSaved: () => Navigator.of(context).pop(),
       ),
     );
@@ -86,11 +91,13 @@ class PrescriptionFormBody extends StatefulWidget {
     required this.doctor,
     required this.patient,
     required this.onSaved,
+    this.appointmentId = '',
   });
 
   final AuthAccount doctor;
   final PatientRecordModel patient;
   final VoidCallback onSaved;
+  final String appointmentId;
 
   @override
   State<PrescriptionFormBody> createState() => _PrescriptionFormBodyState();
@@ -100,7 +107,8 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _diagnosisController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  String? _selectedLabTest;
+  final TextEditingController _labTestController = TextEditingController();
+  final FocusNode _labTestFocus = FocusNode();
   final List<_MedicineDraft> _medicines = <_MedicineDraft>[_MedicineDraft()];
   List<String> _knownMedicineNames = _commonMedicineNames;
 
@@ -112,7 +120,8 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
 
   Future<void> _loadKnownMedicineNames() async {
     try {
-      final List<String> names = await DoctorService.instance.getKnownMedicineNames();
+      final List<String> names = await DoctorService.instance
+          .getKnownMedicineNames();
       if (mounted && names.isNotEmpty) {
         setState(() => _knownMedicineNames = names);
       }
@@ -125,6 +134,8 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
   void dispose() {
     _diagnosisController.dispose();
     _notesController.dispose();
+    _labTestController.dispose();
+    _labTestFocus.dispose();
     for (final medicine in _medicines) {
       medicine.dispose();
     }
@@ -136,8 +147,9 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
       return;
     }
 
-    final List<_MedicineDraft> namedMedicines =
-        _medicines.where((medicine) => medicine.name.text.trim().isNotEmpty).toList();
+    final List<_MedicineDraft> namedMedicines = _medicines
+        .where((medicine) => medicine.name.text.trim().isNotEmpty)
+        .toList();
     if (namedMedicines.any((medicine) => medicine.doseTimes.isEmpty)) {
       Get.snackbar(
         'Add dose times',
@@ -160,9 +172,11 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
               name: medicine.name.text.trim(),
               dosage: medicine.dosage.text.trim(),
               instructions: medicine.instructions.text.trim(),
-              durationDays: int.tryParse(medicine.durationDays.text.trim()) ?? 0,
+              durationDays:
+                  int.tryParse(medicine.durationDays.text.trim()) ?? 0,
               doseTimes: [
-                for (final t in medicine.doseTimes) '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
+                for (final t in medicine.doseTimes)
+                  '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}',
               ],
             ),
           )
@@ -176,11 +190,17 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
       rxId = await DoctorService.instance.savePrescription(prescription);
     } catch (e) {
       if (!mounted) return;
-      Get.snackbar('Could not save prescription', '$e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Could not save prescription',
+        '$e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return;
     }
 
-    final String labTest = _selectedLabTest ?? '';
+    await DoctorService.instance.completeAppointment(widget.appointmentId);
+
+    final String labTest = _labTestController.text.trim();
     if (labTest.isNotEmpty) {
       await LabService.instance.createOrder(
         patientId: widget.patient.account.userId,
@@ -202,11 +222,11 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
     _formKey.currentState?.reset();
     _diagnosisController.clear();
     _notesController.clear();
+    _labTestController.clear();
     for (final medicine in _medicines) {
       medicine.dispose();
     }
     setState(() {
-      _selectedLabTest = null;
       _medicines
         ..clear()
         ..add(_MedicineDraft());
@@ -223,179 +243,174 @@ class _PrescriptionFormBodyState extends State<PrescriptionFormBody> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
-            _FormCard(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.patient.account.fullName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Specialty: ${widget.doctor.specialty ?? 'General Physician'}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
+          _FormCard(
+            isDark: isDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.patient.account.fullName,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Specialty: ${widget.doctor.specialty ?? 'General Physician'}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            _FormCard(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Diagnosis',
-                    style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 14),
+          _FormCard(
+            isDark: isDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Diagnosis',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _diagnosisController,
+                  minLines: 3,
+                  maxLines: 5,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter diagnosis notes'
+                      : null,
+                  decoration: _inputDecoration(
+                    context,
+                    'Enter diagnosis or clinical impression',
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _diagnosisController,
-                    minLines: 3,
-                    maxLines: 5,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Enter diagnosis notes'
-                        : null,
-                    decoration: _inputDecoration(
-                      context,
-                      'Enter diagnosis or clinical impression',
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            _FormCard(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Medicines',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+          ),
+          const SizedBox(height: 14),
+          _FormCard(
+            isDark: isDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Medicines',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      TextButton.icon(
-                        onPressed: () =>
-                            setState(() => _medicines.add(_MedicineDraft())),
-                        icon: const Icon(
-                          Icons.add,
-                          color: MColors.primaryColor,
-                        ),
-                        label: const Text(
-                          'Add',
-                          style: TextStyle(color: MColors.primaryColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Leave blank for a lab-test-only visit with no medicine.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
-                  ),
-                  const SizedBox(height: 8),
-                  for (int i = 0; i < _medicines.length; i++) ...[
-                    _MedicineFields(
-                      draft: _medicines[i],
-                      index: i,
-                      isDark: isDark,
-                      medicineNameSuggestions: _knownMedicineNames,
-                      onRemove: _medicines.length == 1
-                          ? null
-                          : () => setState(() {
-                              _medicines[i].dispose();
-                              _medicines.removeAt(i);
-                            }),
                     ),
-                    if (i != _medicines.length - 1) const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () =>
+                          setState(() => _medicines.add(_MedicineDraft())),
+                      icon: const Icon(Icons.add, color: MColors.primaryColor),
+                      label: const Text(
+                        'Add',
+                        style: TextStyle(color: MColors.primaryColor),
+                      ),
+                    ),
                   ],
+                ),
+                Text(
+                  'Leave blank for a lab-test-only visit with no medicine.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (int i = 0; i < _medicines.length; i++) ...[
+                  _MedicineFields(
+                    draft: _medicines[i],
+                    index: i,
+                    isDark: isDark,
+                    medicineNameSuggestions: _knownMedicineNames,
+                    onRemove: _medicines.length == 1
+                        ? null
+                        : () => setState(() {
+                            _medicines[i].dispose();
+                            _medicines.removeAt(i);
+                          }),
+                  ),
+                  if (i != _medicines.length - 1) const SizedBox(height: 12),
                 ],
-              ),
+              ],
             ),
-            const SizedBox(height: 14),
-            _FormCard(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Recommend a Lab Test (optional)',
-                    style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 14),
+          _FormCard(
+            isDark: isDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Recommend a Lab Test (optional)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                _SuggestingTextFormField(
+                  controller: _labTestController,
+                  focusNode: _labTestFocus,
+                  suggestions: kLabTestTypes,
+                  showAllOnFocus: true,
+                  decoration: _inputDecoration(
+                    context,
+                    'Enter or select a test type',
                   ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedLabTest,
-                    items: kLabTestTypes
-                        .map(
-                          (String testType) => DropdownMenuItem<String>(
-                            value: testType,
-                            child: Text(testType),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (String? value) =>
-                        setState(() => _selectedLabTest = value),
-                    decoration: _inputDecoration(context, 'Select a test type'),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Leave unselected if no test is needed. If selected, this creates a lab order linked to this prescription — the patient sees it in Medical Records and a lab specialist can attach results to it.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    fontSize: 11,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Leave unselected if no test is needed. If selected, this creates a lab order linked to this prescription — the patient sees it in Medical Records and a lab specialist can attach results to it.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            _FormCard(
-              isDark: isDark,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Additional Notes',
-                    style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 14),
+          _FormCard(
+            isDark: isDark,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Additional Notes',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesController,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: _inputDecoration(
+                    context,
+                    'Advice, investigations, or follow-up instructions',
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _notesController,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: _inputDecoration(
-                      context,
-                      'Advice, investigations, or follow-up instructions',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Specialty-specific fields can later be added through specialtyExtras without changing this base form.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Specialty-specific fields can later be added through specialtyExtras without changing this base form.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+              ],
             ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: _submit,
-              style: FilledButton.styleFrom(
-                backgroundColor: MColors.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text('Save Prescription'),
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: _submit,
+            style: FilledButton.styleFrom(
+              backgroundColor: MColors.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
             ),
+            child: const Text('Save Prescription'),
+          ),
         ],
       ),
     );
@@ -463,15 +478,22 @@ class _MedicineFields extends StatefulWidget {
 
 class _MedicineFieldsState extends State<_MedicineFields> {
   Future<void> _addTime() async {
-    final TimeOfDay? picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
     if (picked == null) return;
 
-    final bool alreadyAdded = widget.draft.doseTimes.any((t) => t.hour == picked.hour && t.minute == picked.minute);
+    final bool alreadyAdded = widget.draft.doseTimes.any(
+      (t) => t.hour == picked.hour && t.minute == picked.minute,
+    );
     if (alreadyAdded) return;
 
     setState(() {
       widget.draft.doseTimes.add(picked);
-      widget.draft.doseTimes.sort((a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute));
+      widget.draft.doseTimes.sort(
+        (a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute),
+      );
     });
   }
 
@@ -565,7 +587,12 @@ class _MedicineFieldsState extends State<_MedicineFields> {
             decoration: _inputDecoration(context, 'Duration (days)'),
           ),
           const SizedBox(height: 10),
-          Text('Dose times', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+          Text(
+            'Dose times',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -574,17 +601,29 @@ class _MedicineFieldsState extends State<_MedicineFields> {
               for (final TimeOfDay time in draft.doseTimes)
                 Chip(
                   label: Text(time.format(context)),
-                  labelStyle: const TextStyle(color: MColors.primaryColor, fontWeight: FontWeight.w600),
+                  labelStyle: const TextStyle(
+                    color: MColors.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                   backgroundColor: MColors.primaryColor.withValues(alpha: 0.1),
                   side: BorderSide.none,
                   onDeleted: () => _removeTime(time),
                   deleteIconColor: MColors.primaryColor,
                 ),
               ActionChip(
-                avatar: const Icon(Icons.add, size: 16, color: MColors.primaryColor),
-                label: const Text('Add time', style: TextStyle(color: MColors.primaryColor)),
+                avatar: const Icon(
+                  Icons.add,
+                  size: 16,
+                  color: MColors.primaryColor,
+                ),
+                label: const Text(
+                  'Add time',
+                  style: TextStyle(color: MColors.primaryColor),
+                ),
                 backgroundColor: Colors.transparent,
-                side: BorderSide(color: MColors.primaryColor.withValues(alpha: 0.4)),
+                side: BorderSide(
+                  color: MColors.primaryColor.withValues(alpha: 0.4),
+                ),
                 onPressed: _addTime,
               ),
             ],
@@ -594,7 +633,10 @@ class _MedicineFieldsState extends State<_MedicineFields> {
               padding: const EdgeInsets.only(top: 6),
               child: Text(
                 'Add at least one time so this shows up on the patient\'s dose schedule.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey, fontSize: 11),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey,
+                  fontSize: 11,
+                ),
               ),
             ),
         ],
@@ -640,15 +682,16 @@ class _SuggestingTextFormField extends StatelessWidget {
         }
         return suggestions.where((s) => s.toLowerCase().contains(query));
       },
-      fieldViewBuilder: (context, fieldController, fieldFocusNode, onFieldSubmitted) {
-        return TextFormField(
-          controller: fieldController,
-          focusNode: fieldFocusNode,
-          keyboardType: keyboardType,
-          validator: validator,
-          decoration: decoration,
-        );
-      },
+      fieldViewBuilder:
+          (context, fieldController, fieldFocusNode, onFieldSubmitted) {
+            return TextFormField(
+              controller: fieldController,
+              focusNode: fieldFocusNode,
+              keyboardType: keyboardType,
+              validator: validator,
+              decoration: decoration,
+            );
+          },
       optionsViewBuilder: (context, onSelected, options) {
         final bool isDark = MHelperFunctions.isDarkMode(context);
         return Align(

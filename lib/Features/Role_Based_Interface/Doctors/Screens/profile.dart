@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Authentication/Models/auth_role.dart';
 import 'package:medicus/Features/Authentication/Screens/login/login.dart';
@@ -53,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _specialty = 'General Physician';
   String _licenseNumber = 'Not provided';
   int _avgConsultationMinutes = 5;
+  String _clinicStartTime = '08:00';
+  String _clinicEndTime = '14:00';
 
   String _pharmacyName = 'Not provided';
   String _tradeLicense = 'Not provided';
@@ -98,6 +101,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _licenseNumber = account.licenseNumber ?? _licenseNumber;
       _gender = account.gender ?? _gender;
       _avgConsultationMinutes = account.consultationMinutes;
+      _clinicStartTime = account.clinicStartTimeOrDefault;
+      _clinicEndTime = account.clinicEndTimeOrDefault;
     } else if (account.role == AuthRole.pharmacist) {
       _pharmacyName = account.pharmacyName ?? _pharmacyName;
       _tradeLicense = account.tradeLicense ?? _tradeLicense;
@@ -500,6 +505,155 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  static TimeOfDay _timeOfDayFromClock(String hhmm) {
+    final List<String> parts = hhmm.split(':');
+    return TimeOfDay(
+      hour: int.tryParse(parts.elementAtOrNull(0) ?? '') ?? 8,
+      minute: int.tryParse(parts.elementAtOrNull(1) ?? '') ?? 0,
+    );
+  }
+
+  static String _clockFromTimeOfDay(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+  /// Lets a doctor set the daily clinic hours the auto-generated booking
+  /// blocks (see DoctorProfileScreen on the patient side) get sliced from —
+  /// e.g. 8-10 AM instead of the default 8 AM-2 PM, for a doctor who only
+  /// sees patients for a couple of hours a day.
+  Future<void> _editClinicHours() async {
+    final bool isDark = MHelperFunctions.isDarkMode(context);
+    TimeOfDay start = _timeOfDayFromClock(_clinicStartTime);
+    TimeOfDay end = _timeOfDayFromClock(_clinicEndTime);
+
+    final List<TimeOfDay>? saved = await showModalBottomSheet<List<TimeOfDay>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            Future<void> pickStart() async {
+              final TimeOfDay? picked = await showTimePicker(
+                context: sheetContext,
+                initialTime: start,
+              );
+              if (picked != null) setSheetState(() => start = picked);
+            }
+
+            Future<void> pickEnd() async {
+              final TimeOfDay? picked = await showTimePicker(
+                context: sheetContext,
+                initialTime: end,
+              );
+              if (picked != null) setSheetState(() => end = picked);
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: 20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Clinic Hours',
+                    style: Theme.of(sheetContext).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "The daily window patients can book into when you haven't set custom availability.",
+                    style: Theme.of(
+                      sheetContext,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: pickStart,
+                          child: Text('Start: ${start.format(sheetContext)}'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: pickEnd,
+                          child: Text('End: ${end.format(sheetContext)}'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final int startMinutes = start.hour * 60 + start.minute;
+                        final int endMinutes = end.hour * 60 + end.minute;
+                        if (endMinutes <= startMinutes) {
+                          Get.snackbar(
+                            'Invalid hours',
+                            'End time must be after start time.',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                          return;
+                        }
+                        Navigator.of(sheetContext).pop([start, end]);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MColors.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (saved == null) return;
+
+    final String startClock = _clockFromTimeOfDay(saved[0]);
+    final String endClock = _clockFromTimeOfDay(saved[1]);
+
+    setState(() {
+      _clinicStartTime = startClock;
+      _clinicEndTime = endClock;
+    });
+    await _persistToFirestore(<String, dynamic>{
+      'clinicStartTime': startClock,
+      'clinicEndTime': endClock,
+    });
+
+    if (!mounted) return;
+    Get.snackbar(
+      'Updated',
+      'Clinic hours set to ${saved[0].format(context)} - ${saved[1].format(context)}.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
   void _openServicePlanner() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -671,6 +825,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Avg. Time per Patient',
                   value: '$_avgConsultationMinutes min',
                   onTap: _editAvgConsultationMinutes,
+                ),
+                _TappableInfoRow(
+                  icon: Icons.schedule_outlined,
+                  label: 'Clinic Hours',
+                  value:
+                      '${formatClockTime(_clinicStartTime)} - ${formatClockTime(_clinicEndTime)}',
+                  onTap: _editClinicHours,
                 ),
                 _TappableInfoRow(
                   icon: Icons.calendar_month_outlined,

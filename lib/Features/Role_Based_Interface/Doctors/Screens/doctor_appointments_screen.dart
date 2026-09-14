@@ -41,7 +41,10 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
       return;
     }
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PatientDetailScreen(record: record, doctor: widget.account)),
+      MaterialPageRoute(
+        builder: (_) =>
+            PatientDetailScreen(record: record, doctor: widget.account),
+      ),
     );
   }
 
@@ -57,10 +60,20 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     }
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            PrescriptionFormScreen(doctor: widget.account, patient: record),
+        builder: (_) => PrescriptionFormScreen(
+          doctor: widget.account,
+          patient: record,
+          appointmentId: appointment.id,
+        ),
       ),
     );
+    if (mounted) {
+      setState(() {
+        _appointmentsFuture = DoctorService.instance.getTodayAppointments(
+          widget.account,
+        );
+      });
+    }
   }
 
   @override
@@ -80,7 +93,10 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
             tooltip: 'My Availability',
             icon: const Icon(Icons.event_available_outlined),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => DoctorAvailabilityScreen(doctor: widget.account)),
+              MaterialPageRoute(
+                builder: (_) =>
+                    DoctorAvailabilityScreen(doctor: widget.account),
+              ),
             ),
           ),
         ],

@@ -56,34 +56,53 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     _load();
   }
 
-  /// Clinic hours used to auto-generate slots for a doctor who hasn't
-  /// manually configured any availability windows — mirrors the old
-  /// fixed 8:00 AM-2:00 PM clinic-hours behavior.
-  static const int _clinicStartMinutes = 8 * 60;
-  static const int _clinicEndMinutes = 14 * 60;
-
   /// Patients pick a 2-hour session block — the same "serial system" every
   /// real chamber in Bangladesh already uses — rather than an exact minute,
   /// even though the doctor's average consultation time still governs how
-  /// many patients that block can hold (see [_generateAutoWindows]).
-  static const int _blockMinutes = 120;
+  /// many patients that block can hold (see [_generateAutoWindows]). If a
+  /// doctor has set clinic hours shorter than 2 hours (e.g. 8-9 AM), the
+  /// whole span becomes one block instead of producing zero.
+  static const int _maxBlockMinutes = 120;
+
+  static int _parseClockMinutes(String hhmm, int fallback) {
+    final List<String> parts = hhmm.split(':');
+    if (parts.length != 2) return fallback;
+    final int? hour = int.tryParse(parts[0]);
+    final int? minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return fallback;
+    return hour * 60 + minute;
+  }
 
   List<DoctorAvailabilityWindow> _generateAutoWindows() {
+    final int clinicStartMinutes = _parseClockMinutes(
+      widget.doctor.clinicStartTime,
+      8 * 60,
+    );
+    final int clinicEndMinutes = _parseClockMinutes(
+      widget.doctor.clinicEndTime,
+      14 * 60,
+    );
+    final int totalMinutes = clinicEndMinutes - clinicStartMinutes;
+    if (totalMinutes <= 0) return const [];
+
+    final int blockMinutes = totalMinutes < _maxBlockMinutes
+        ? totalMinutes
+        : _maxBlockMinutes;
     final int avgMinutes = widget.doctor.avgConsultationMinutes.clamp(1, 120);
-    final int capacityPerBlock = (_blockMinutes / avgMinutes).floor().clamp(
+    final int capacityPerBlock = (blockMinutes / avgMinutes).floor().clamp(
       1,
       999,
     );
     final List<DoctorAvailabilityWindow> windows = [];
     for (int weekday = 1; weekday <= 7; weekday++) {
       for (
-        int minutes = _clinicStartMinutes;
-        minutes + _blockMinutes <= _clinicEndMinutes;
-        minutes += _blockMinutes
+        int minutes = clinicStartMinutes;
+        minutes + blockMinutes <= clinicEndMinutes;
+        minutes += blockMinutes
       ) {
         final String startTime =
             '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
-        final int endMinutes = minutes + _blockMinutes;
+        final int endMinutes = minutes + blockMinutes;
         final String endTime =
             '${(endMinutes ~/ 60).toString().padLeft(2, '0')}:${(endMinutes % 60).toString().padLeft(2, '0')}';
         windows.add(

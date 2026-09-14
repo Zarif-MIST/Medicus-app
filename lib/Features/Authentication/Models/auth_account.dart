@@ -24,6 +24,8 @@ class AuthAccount {
     this.pharmacyLng,
     this.isVerified = false,
     this.avgConsultationMinutes,
+    this.clinicStartTime,
+    this.clinicEndTime,
   });
 
   final String? firebaseUid;
@@ -52,9 +54,19 @@ class AuthAccount {
   /// Doctors registered before this field existed fall back to 5 minutes.
   final int? avgConsultationMinutes;
 
+  /// A doctor's daily clinic hours ("HH:mm", 24-hour) — the range the
+  /// patient-facing booking screen slices into blocks when they haven't set
+  /// up custom availability windows. Defaults to 8:00 AM-2:00 PM for
+  /// doctors who haven't edited this yet.
+  final String? clinicStartTime;
+  final String? clinicEndTime;
+
   String get fullName => '$firstName $lastName'.trim();
 
   int get consultationMinutes => avgConsultationMinutes ?? 5;
+
+  String get clinicStartTimeOrDefault => clinicStartTime ?? '08:00';
+  String get clinicEndTimeOrDefault => clinicEndTime ?? '14:00';
 
   String get maskedEmail {
     final int atIndex = email.indexOf('@');
@@ -88,6 +100,8 @@ class AuthAccount {
     double? pharmacyLng,
     bool? isVerified,
     int? avgConsultationMinutes,
+    String? clinicStartTime,
+    String? clinicEndTime,
   }) {
     return AuthAccount(
       firebaseUid: firebaseUid ?? this.firebaseUid,
@@ -114,6 +128,8 @@ class AuthAccount {
       isVerified: isVerified ?? this.isVerified,
       avgConsultationMinutes:
           avgConsultationMinutes ?? this.avgConsultationMinutes,
+      clinicStartTime: clinicStartTime ?? this.clinicStartTime,
+      clinicEndTime: clinicEndTime ?? this.clinicEndTime,
     );
   }
 }

@@ -50,17 +50,25 @@ class DoctorService {
         ),
       };
 
-  static const AppointmentRepository _appointmentRepository = AppointmentRepository();
+  static const AppointmentRepository _appointmentRepository =
+      AppointmentRepository();
 
   Future<List<DoctorAppointmentModel>> getTodayAppointments(
     AuthAccount doctor,
   ) async {
     if (doctor.userId.isEmpty) return const [];
 
-    final List<AppointmentRecord> records = await _appointmentRepository.fetchForDoctor(doctor.userId);
+    final List<AppointmentRecord> records = await _appointmentRepository
+        .fetchForDoctor(doctor.userId);
     final DateTime now = DateTime.now();
     final List<AppointmentRecord> today = records
-        .where((r) => r.date.year == now.year && r.date.month == now.month && r.date.day == now.day)
+        .where(
+          (r) =>
+              r.status != AppointmentRecord.statusCompleted &&
+              r.date.year == now.year &&
+              r.date.month == now.month &&
+              r.date.day == now.day,
+        )
         .toList();
 
     return [
@@ -77,6 +85,11 @@ class DoctorService {
     ];
   }
 
+  Future<void> completeAppointment(String appointmentId) async {
+    if (appointmentId.isEmpty) return;
+    await _appointmentRepository.markCompleted(appointmentId);
+  }
+
   /// IDs of patients this doctor has already written a prescription for
   /// today — drives the "Patients Seen" / "Pending Cases" home-screen stats.
   Future<Set<String>> getPatientsSeenTodayIds(String doctorId) async {
@@ -85,7 +98,8 @@ class DoctorService {
     final DateTime now = DateTime.now();
     final DateTime startOfToday = DateTime(now.year, now.month, now.day);
 
-    final QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore.instance
+    final QuerySnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
+        .instance
         .collection('prescriptions')
         .where('doctorId', isEqualTo: doctorId)
         .get();
@@ -119,14 +133,21 @@ class DoctorService {
     }
 
     const PatientProfileService profileService = PatientProfileService();
-    final PatientProfileRecord? profile = await profileService.fetch(normalizedId);
+    final PatientProfileRecord? profile = await profileService.fetch(
+      normalizedId,
+    );
 
     return PatientRecordModel(
       account: account,
-      bloodGroup: (profile?.bloodGroup.trim().isNotEmpty ?? false) ? profile!.bloodGroup : 'Not set',
-      allergies: (profile?.allergies.trim().isNotEmpty ?? false) ? profile!.allergies : 'Not set',
-      chronicConditions:
-          (profile?.chronicConditions.trim().isNotEmpty ?? false) ? profile!.chronicConditions : 'Not set',
+      bloodGroup: (profile?.bloodGroup.trim().isNotEmpty ?? false)
+          ? profile!.bloodGroup
+          : 'Not set',
+      allergies: (profile?.allergies.trim().isNotEmpty ?? false)
+          ? profile!.allergies
+          : 'Not set',
+      chronicConditions: (profile?.chronicConditions.trim().isNotEmpty ?? false)
+          ? profile!.chronicConditions
+          : 'Not set',
       // TODO(firebase): no vitals-recording feature exists yet — these stay
       // as honest placeholders rather than fabricated numbers once one does.
       vitals: const [
@@ -144,7 +165,8 @@ class DoctorService {
     final String normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return const <AuthAccount>[];
 
-    final List<AuthAccount> patients = await AuthRegistry.instance.patientAccounts();
+    final List<AuthAccount> patients = await AuthRegistry.instance
+        .patientAccounts();
     final List<AuthAccount> matches = patients.where((account) {
       return account.userId.toLowerCase().contains(normalized) ||
           account.fullName.toLowerCase().contains(normalized);
@@ -152,13 +174,12 @@ class DoctorService {
 
     if (matches.isNotEmpty) return matches;
 
-    return _mockPatientRecords.values
-        .map((record) => record.account)
-        .where((account) {
-          return account.userId.toLowerCase().contains(normalized) ||
-              account.fullName.toLowerCase().contains(normalized);
-        })
-        .toList();
+    return _mockPatientRecords.values.map((record) => record.account).where((
+      account,
+    ) {
+      return account.userId.toLowerCase().contains(normalized) ||
+          account.fullName.toLowerCase().contains(normalized);
+    }).toList();
   }
 
   /// Distinct medicine names across every pharmacy's inventory — used to
@@ -182,7 +203,8 @@ class DoctorService {
     return sorted;
   }
 
-  static const PrescriptionRepository _prescriptionRepository = PrescriptionRepository();
+  static const PrescriptionRepository _prescriptionRepository =
+      PrescriptionRepository();
 
   /// Medicines may be empty — a doctor can save a diagnosis-only or
   /// lab-test-only visit (e.g. ordering a test with no medicine yet) just as

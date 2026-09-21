@@ -95,7 +95,7 @@ class AuthValidators {
       return requiredResult;
     }
 
-    if (!RegExp('^\\d{' + length.toString() + r'}$').hasMatch(value!.trim())) {
+    if (!RegExp('^\\d{$length}\$').hasMatch(value!.trim())) {
       return 'Enter the $length digit code';
     }
     return null;

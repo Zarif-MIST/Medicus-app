@@ -15,12 +15,6 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/qr/my_qr_screen.dart';
 
-// TODO: replace with the logged-in patient's real userId once every screen
-// consistently receives a fully-populated AuthAccount — matches the mock id
-// used app-wide (pharmacy, lab reports, doctor's mock patient lookup).
-const String _mockPatientId = '4821';
-const String _mockPatientName = 'Tareq';
-
 String _orPlaceholder(String value) => value.trim().isEmpty ? 'Not set' : value;
 
 enum _ProfileTab { personal, medical, emergency }
@@ -57,11 +51,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   static const PatientProfileService _profileService = PatientProfileService();
   final ImagePicker _imagePicker = ImagePicker();
 
-  String get _patientId =>
-      widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
-  String get _patientName => widget.account.firstName.isEmpty
-      ? _mockPatientName
-      : widget.account.fullName;
+  /// Not defaulted: a blank ID must load an empty profile rather than
+  /// another patient's medical details.
+  String get _patientId => widget.account.userId;
+  String get _patientName =>
+      widget.account.fullName.isEmpty ? 'Patient' : widget.account.fullName;
 
   String _phone = '';
   String _email = '';

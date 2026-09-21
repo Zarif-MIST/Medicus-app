@@ -14,12 +14,6 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/b
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
 import 'package:medicus/Utilities/dashboard_back_guard.dart';
 
-// TODO: replace with the logged-in patient's real userId once every screen
-// consistently receives a fully-populated AuthAccount — matches the mock id
-// used app-wide (pharmacy, lab reports, doctor's mock patient lookup).
-const String _mockPatientId = '4821';
-const String _mockPatientName = 'Tareq';
-
 class PatientDashboardScreen extends StatelessWidget {
   const PatientDashboardScreen({super.key, required this.account});
 
@@ -53,11 +47,12 @@ class _PatientHomeShellState extends State<_PatientHomeShell> {
   List<PrescriptionRecord> _prescriptionRecords = [];
   bool _medicalInfoIncomplete = false;
 
-  String get _patientId =>
-      widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
-  String get _patientName => widget.account.firstName.isEmpty
-      ? _mockPatientName
-      : widget.account.fullName;
+  /// Deliberately not defaulted: an account with no userId must read as
+  /// "no records" rather than borrowing another patient's ID. Every
+  /// repository already returns an empty result for a blank ID.
+  String get _patientId => widget.account.userId;
+  String get _patientName =>
+      widget.account.fullName.isEmpty ? 'Patient' : widget.account.fullName;
 
   final _items = const [
     LiquidNavItem(

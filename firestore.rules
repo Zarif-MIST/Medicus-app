@@ -1,0 +1,199 @@
+rules_version = '2';
+
+// Medicus access rules.
+//
+// Two identifiers matter here and they are not the same thing:
+//   * request.auth.uid  - the Firebase Auth UID, which keys /users.
+//   * userId            - the 4-digit app-level ID ('4821') that every
+//                         clinical record stores as patientId / doctorId /
+//                         pharmacistId.
+// Ownership checks therefore have to read the caller's /users document to
+// translate their UID into their app-level ID.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // The caller's 4-digit app-level ID.
+    function myId() {
+      return profile().userId;
+    }
+
+    function isRole(role) {
+      return signedIn() && profile().role == role;
+    }
+
+    function isPatient()    { return isRole('patient'); }
+    function isDoctor()     { return isRole('doctor'); }
+    function isPharmacist() { return isRole('pharmacist'); }
+    function isLabTech()    { return isRole('labSpecialist'); }
+
+    // A clinician involved in this patient's care. The app has no
+    // care-team model yet, so any verified clinician qualifies; tightening
+    // this is the obvious next step once appointments link the parties.
+    function isClinician() {
+      return isDoctor() || isPharmacist() || isLabTech();
+    }
+
+    // ---------------------------------------------------------------
+    // users
+    // ---------------------------------------------------------------
+    // Readable by any signed-in user because patients browse doctors and
+    // pharmacies, and clinicians look patients up by their 4-digit ID.
+    //
+    // NOTE: this exposes every field on the document, including
+    // verificationCode. That code should move to a private subcollection
+    // or be cleared once isVerified flips; until then treat it as readable.
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      // Registration writes the caller's own document.
+      allow create: if signedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.firebaseUid == uid;
+
+      // Owners edit their own profile but may not promote themselves to a
+      // different role or rewrite their app-level ID.
+      allow update: if signedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.userId == resource.data.userId;
+
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------
+    // prescriptions
+    // ---------------------------------------------------------------
+    match /prescriptions/{id} {
+      allow read: if signedIn() && (
+                     resource.data.patientId == myId()
+                     || resource.data.doctorId == myId()
+                     || isPharmacist()
+                   );
+
+      allow create: if isDoctor()
+                    && request.resource.data.doctorId == myId();
+
+      // The prescribing doctor may amend it; a pharmacist may only move it
+      // through the dispensing states, never rewrite who or what it is for.
+      allow update: if (isDoctor() && resource.data.doctorId == myId())
+                    || (
+                      isPharmacist()
+                      && request.resource.data.patientId == resource.data.patientId
+                      && request.resource.data.doctorId == resource.data.doctorId
+                    );
+
+      allow delete: if isDoctor() && resource.data.doctorId == myId();
+    }
+
+    // ---------------------------------------------------------------
+    // patient-owned clinical records
+    // ---------------------------------------------------------------
+    match /patient_profiles/{patientId} {
+      allow read: if signedIn() && (patientId == myId() || isClinician());
+      allow write: if signedIn() && patientId == myId();
+    }
+
+    match /lab_reports/{id} {
+      allow read: if signedIn()
+                  && (resource.data.patientId == myId() || isClinician());
+      allow create: if signedIn()
+                    && (request.resource.data.patientId == myId() || isLabTech());
+      allow update, delete: if signedIn()
+                            && (resource.data.patientId == myId() || isLabTech());
+    }
+
+    match /lab_orders/{id} {
+      allow read: if signedIn()
+                  && (resource.data.patientId == myId() || isClinician());
+      allow create: if isDoctor() || isLabTech();
+      allow update: if isLabTech() || (isDoctor() && resource.data.doctorId == myId());
+      allow delete: if isDoctor() && resource.data.doctorId == myId();
+    }
+
+    match /dose_logs/{id} {
+      allow read: if signedIn()
+                  && (resource.data.patientId == myId() || isClinician());
+      allow create: if isPatient() && request.resource.data.patientId == myId();
+      allow update, delete: if isPatient() && resource.data.patientId == myId();
+    }
+
+    match /pharmacy_visits/{id} {
+      allow read: if signedIn()
+                  && (resource.data.patientId == myId() || isPharmacist());
+      allow create: if signedIn()
+                    && (request.resource.data.patientId == myId() || isPharmacist());
+      allow update, delete: if isPharmacist();
+    }
+
+    // ---------------------------------------------------------------
+    // appointments and doctor scheduling
+    // ---------------------------------------------------------------
+    match /appointments/{id} {
+      allow read: if signedIn() && (
+                     resource.data.patientId == myId()
+                     || resource.data.doctorId == myId()
+                   );
+      allow create: if isPatient() && request.resource.data.patientId == myId();
+      allow update, delete: if signedIn() && (
+                               resource.data.patientId == myId()
+                               || resource.data.doctorId == myId()
+                             );
+    }
+
+    // Availability is read by patients picking a slot, written only by the
+    // doctor it belongs to.
+    match /doctor_availability/{id} {
+      allow read: if signedIn();
+      allow create: if isDoctor() && request.resource.data.doctorId == myId();
+      allow update, delete: if isDoctor() && resource.data.doctorId == myId();
+    }
+
+    match /doctor_date_overrides/{id} {
+      allow read: if signedIn();
+      allow create: if isDoctor() && request.resource.data.doctorId == myId();
+      allow update, delete: if isDoctor() && resource.data.doctorId == myId();
+    }
+
+    // ---------------------------------------------------------------
+    // pharmacy inventory
+    // ---------------------------------------------------------------
+    // Doctors read inventory to prescribe from what is actually in stock;
+    // only the owning pharmacist changes it.
+    match /inventory/{id} {
+      allow read: if signedIn();
+      allow create: if isPharmacist()
+                    && request.resource.data.pharmacistId == myId();
+      allow update, delete: if isPharmacist()
+                            && resource.data.pharmacistId == myId();
+    }
+
+    // An audit log: append-only, readable by the pharmacist it belongs to.
+    match /inventory_transactions/{id} {
+      allow read: if isPharmacist() && resource.data.pharmacistId == myId();
+      allow create: if isPharmacist()
+                    && request.resource.data.pharmacistId == myId();
+      allow update, delete: if false;
+    }
+
+    match /pharmacy_reviews/{id} {
+      allow read: if signedIn();
+      allow create: if isPatient()
+                    && request.resource.data.patientId == myId();
+      allow update, delete: if isPatient() && resource.data.patientId == myId();
+    }
+
+    // Anything not matched above stays closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

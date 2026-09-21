@@ -14,12 +14,6 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/pharmacie
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/pharmacies/pharmacy_review.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/pharmacies/pharmacy_card.dart';
 
-// TODO: replace with the logged-in patient's AuthAccount once this screen
-// receives it from PatientDashboardScreen (same mock pattern as
-// patient_home_screen.dart).
-const String _mockPatientId = '4821';
-const String _mockPatientName = 'Tareq';
-
 enum _LoadState { loading, success, permissionDenied, serviceDisabled, error }
 
 class PharmacyLocatorScreen extends StatefulWidget {
@@ -45,11 +39,11 @@ class _PharmacyLocatorScreenState extends State<PharmacyLocatorScreen> {
   Map<String, List<PharmacyReview>> _reviewsByPharmacy = {};
   final MapController _mapController = MapController();
 
-  String get _patientId =>
-      widget.account.userId.isEmpty ? _mockPatientId : widget.account.userId;
-  String get _patientName => widget.account.firstName.isEmpty
-      ? _mockPatientName
-      : widget.account.firstName;
+  /// Not defaulted: visits and reviews written from here are attributed to
+  /// this ID, so a blank one must record nothing rather than act as 4821.
+  String get _patientId => widget.account.userId;
+  String get _patientName =>
+      widget.account.firstName.isEmpty ? 'Patient' : widget.account.firstName;
 
   @override
   void initState() {

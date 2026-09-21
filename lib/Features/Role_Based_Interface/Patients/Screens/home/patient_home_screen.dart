@@ -22,11 +22,6 @@ import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/b
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/records/prescription.dart';
 import 'package:medicus/Utilities/colors.dart';
 
-// TODO: replace with the logged-in patient's AuthAccount once this screen
-// receives it from PatientDashboardScreen (same way RoleLandingScreen does).
-const String _mockPatientId = '4821';
-const String _mockPatientName = 'Tareq';
-
 class PatientHomeScreen extends StatelessWidget {
   const PatientHomeScreen({
     super.key,
@@ -90,12 +85,11 @@ class PatientHomeScreen extends StatelessWidget {
     final bool isDark = MHelperFunctions.isDarkMode(context);
     final double pad = Sizes.responsivePadding(context);
     final List<PrescriptionTimelineEntry> ongoing = _ongoingPrescriptions;
-    final String patientName = account.firstName.isEmpty
-        ? _mockPatientName
-        : account.firstName;
-    final String patientId = account.userId.isEmpty
-        ? _mockPatientId
-        : account.userId;
+    final String patientName =
+        account.firstName.isEmpty ? 'Patient' : account.firstName;
+    // Not defaulted: a blank ID must show no records rather than another
+    // patient's.
+    final String patientId = account.userId;
 
     return Container(
       color: isDark ? const Color(0xFF181818) : Colors.white,

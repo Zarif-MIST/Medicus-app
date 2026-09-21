@@ -11,7 +11,7 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/la
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/lab_report_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/common/app_search_bar.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// A patient's full record from the doctor's side — reached by searching a
 /// patient ID or scanning their QR. Read-only: every uploaded report and

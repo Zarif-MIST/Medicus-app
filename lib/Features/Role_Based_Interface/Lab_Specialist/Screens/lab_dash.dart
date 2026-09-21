@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/profile.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/scanqr.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_navbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/scanned_patient_orders_screen.dart';

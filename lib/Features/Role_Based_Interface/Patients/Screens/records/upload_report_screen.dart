@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/lab_report_service.dart';
 

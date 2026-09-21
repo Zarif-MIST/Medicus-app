@@ -5,7 +5,7 @@ import 'package:medicus/Features/Prescriptions/Models/scheduled_dose.dart';
 import 'package:medicus/Features/Prescriptions/Services/dose_log_repository.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/dose_schedule_screen.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// The patient's real next-due medicine — computed from active
 /// prescriptions' dose times, not a hardcoded string. "Mark as taken" and

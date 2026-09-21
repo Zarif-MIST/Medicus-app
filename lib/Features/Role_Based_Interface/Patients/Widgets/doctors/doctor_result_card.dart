@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class DoctorSummary {
   const DoctorSummary({

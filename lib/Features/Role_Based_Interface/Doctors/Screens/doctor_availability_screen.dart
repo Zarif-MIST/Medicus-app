@@ -4,7 +4,7 @@ import 'package:medicus/Features/Appointments/Models/doctor_availability_window.
 import 'package:medicus/Features/Appointments/Services/doctor_availability_repository.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// Where a doctor defines the recurring weekly windows patients can book
 /// into — e.g. "every Monday, 4-6 PM, up to 20 patients". Patients only ever

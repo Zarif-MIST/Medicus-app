@@ -4,7 +4,7 @@ import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/inventor
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key, required this.pharmacistId});

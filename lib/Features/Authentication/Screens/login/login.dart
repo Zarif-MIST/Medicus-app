@@ -10,7 +10,7 @@ import 'package:medicus/Utilities/auth_validators.dart';
 import '../../Widgets/auth_role_selector.dart';
 import '../../Widgets/auth_text_field.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_dash.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_dash.dart';

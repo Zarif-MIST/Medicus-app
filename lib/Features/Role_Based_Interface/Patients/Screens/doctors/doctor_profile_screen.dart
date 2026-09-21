@@ -6,7 +6,7 @@ import 'package:medicus/Features/Appointments/Services/appointment_repository.da
 import 'package:medicus/Features/Appointments/Services/doctor_availability_repository.dart';
 import 'package:medicus/Features/Appointments/Services/doctor_date_override_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// Read-only record of every lab order matching this lab specialist's own
 /// test specialty — pending and completed — opened from the Home screen's

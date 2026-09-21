@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// A single active prescription's course progress — how many days into
 /// the prescribed course the patient currently is.

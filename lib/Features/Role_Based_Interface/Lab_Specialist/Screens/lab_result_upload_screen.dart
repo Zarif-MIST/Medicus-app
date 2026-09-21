@@ -8,7 +8,7 @@ import 'package:medicus/Features/Prescriptions/Services/prescription_repository.
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/image_compression.dart';
 
 class LabResultUploadScreen extends StatefulWidget {

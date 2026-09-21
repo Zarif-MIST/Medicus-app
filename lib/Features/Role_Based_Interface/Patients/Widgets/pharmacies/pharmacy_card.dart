@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/pharmacies/pharmacy.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class PharmacyCard extends StatelessWidget {
   const PharmacyCard({

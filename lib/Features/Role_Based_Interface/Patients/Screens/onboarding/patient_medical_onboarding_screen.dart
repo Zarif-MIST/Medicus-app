@@ -4,7 +4,7 @@ import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pat_dash.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Utilities/patient_profile_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 
 const List<String> _kBloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];

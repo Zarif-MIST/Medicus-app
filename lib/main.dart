@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:medicus/Theme/Theme.dart';
+import 'package:medicus/Theme/theme.dart';
 import 'package:get/get.dart';
 import 'Features/Authentication/Models/auth_account.dart';
 import 'Features/Authentication/Models/auth_role.dart';

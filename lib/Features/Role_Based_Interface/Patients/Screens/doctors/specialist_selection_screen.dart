@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/specialty_filter_chips.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_search_bar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/custom_shapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/doctor_profile_screen.dart';

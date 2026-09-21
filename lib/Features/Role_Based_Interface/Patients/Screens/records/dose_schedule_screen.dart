@@ -4,7 +4,7 @@ import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
 import 'package:medicus/Features/Prescriptions/Models/scheduled_dose.dart';
 import 'package:medicus/Features/Prescriptions/Services/dose_log_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 
 const List<String> _kWeekdayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];

@@ -7,7 +7,7 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// A snapshot of things the patient probably wants to know right now —
 /// derived live from data already in Firestore (next appointment, next

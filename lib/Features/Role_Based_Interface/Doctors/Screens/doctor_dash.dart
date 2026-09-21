@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_navbar.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_appointments_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_home_screen.dart';

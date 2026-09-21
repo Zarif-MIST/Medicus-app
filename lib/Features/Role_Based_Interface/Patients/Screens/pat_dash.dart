@@ -4,7 +4,7 @@ import 'package:medicus/Features/Appointments/Services/appointment_repository.da
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
 import 'package:medicus/Features/Prescriptions/Services/prescription_repository.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidNavbar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_navbar.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/home/patient_home_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/doctors/specialist_selection_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/pharmacies/pharmacy_locator_screen.dart';

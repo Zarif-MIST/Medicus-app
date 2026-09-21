@@ -4,7 +4,7 @@ import 'package:medicus/Features/Appointments/Models/doctor_date_override.dart';
 import 'package:medicus/Features/Appointments/Services/doctor_date_override_repository.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 const List<String> _kMonthNames = [
   'January',

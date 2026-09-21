@@ -4,7 +4,7 @@ import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_result_upload_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// Shown after a lab specialist scans a patient's QR code. Scoped strictly
 /// to that one patient's pending lab order(s) — no other patient data or

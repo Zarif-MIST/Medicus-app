@@ -7,7 +7,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/prescripti
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/empty_appointments.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {
   const DoctorAppointmentsScreen({super.key, required this.account});

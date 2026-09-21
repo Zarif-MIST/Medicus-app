@@ -3,7 +3,7 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:medicus/Features/Appointments/Models/doctor_availability_window.dart';
 import 'package:medicus/Features/Appointments/Services/appointment_repository.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/doctor_result_card.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/booked_appointment.dart';

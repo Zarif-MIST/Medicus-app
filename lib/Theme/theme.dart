@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:medicus/Theme/Custom_themes/Text_theme.dart';
+import 'package:medicus/Theme/Custom_themes/text_theme.dart';
 
 class MTheme {
   MTheme._();

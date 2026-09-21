@@ -13,7 +13,7 @@ import 'package:medicus/Features/Authentication/Widgets/auth_text_field.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Widgets/doctors/specialty_filter_chips.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/auth_validators.dart';
 
 class RegistrationScreen extends StatefulWidget {

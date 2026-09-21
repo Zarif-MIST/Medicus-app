@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:get/get.dart';
-import 'package:medicus/Features/Authentication/OnBoard/OnBoard_Controller.dart';
+import 'package:medicus/Features/Authentication/OnBoard/on_board_controller.dart';
 import 'package:medicus/Utilities/colors.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';

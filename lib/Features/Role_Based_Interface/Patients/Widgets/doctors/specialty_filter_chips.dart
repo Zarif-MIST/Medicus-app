@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class Specialty {
   const Specialty({required this.name, required this.icon});

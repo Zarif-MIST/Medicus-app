@@ -6,7 +6,7 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/patient_rec
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// Shared patient-QR scanner reused by every role's "Scan QR" tab. What
 /// happens after a patient is found differs by role: a doctor gets that

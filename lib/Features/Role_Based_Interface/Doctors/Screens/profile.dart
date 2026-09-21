@@ -12,7 +12,7 @@ import 'package:medicus/Features/Authentication/Services/auth_registry.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/service_planner_screen.dart';
 import 'package:medicus/Utilities/auth_validators.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 
 enum _StakeholderRole { doctor, pharmacist, labSpecialist }

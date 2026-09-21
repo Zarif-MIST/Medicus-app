@@ -3,7 +3,7 @@ import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_fulfillment_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// Shown after a pharmacist scans a patient's QR code. Scoped strictly to
 /// that one patient's pending prescription(s) — no other patient data,

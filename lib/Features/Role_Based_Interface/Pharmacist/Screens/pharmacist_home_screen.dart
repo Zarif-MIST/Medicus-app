@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_search_bar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/custom_shapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/pharmacy_prescription_queue_item.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/dispensed_today_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/inventory_log_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Screens/prescription_fulfillment_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class PharmacistHomeScreen extends StatefulWidget {
   const PharmacistHomeScreen({

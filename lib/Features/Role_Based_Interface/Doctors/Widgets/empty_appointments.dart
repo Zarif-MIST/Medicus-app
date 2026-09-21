@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// A friendly placeholder shown wherever a doctor has no appointments to
 /// display — the home screen queue and the full appointments list both use

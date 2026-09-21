@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Models/inventory_transaction.dart';
 import 'package:medicus/Features/Role_Based_Interface/Pharmacist/Services/pharmacist_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class InventoryLogScreen extends StatefulWidget {
   const InventoryLogScreen({super.key, required this.pharmacistId});

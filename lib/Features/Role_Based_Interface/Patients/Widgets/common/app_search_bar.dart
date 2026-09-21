@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 /// A borderless, transparent search field — no filled background, just a
 /// thin outline — so it sits directly on whatever surface it's placed on

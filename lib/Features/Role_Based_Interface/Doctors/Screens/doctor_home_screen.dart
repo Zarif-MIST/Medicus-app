@@ -5,10 +5,10 @@ import 'package:medicus/Features/Role_Based_Interface/Doctors/Models/doctor_appo
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/doctor_stat_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Screens/patient_detail_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Doctors/Services/doctor_service.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_search_bar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/custom_shapes.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({

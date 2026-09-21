@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/custom_shapes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Models/lab_order_model.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_order_log_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_result_upload_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Screens/lab_results_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Lab_Specialist/Services/lab_service.dart';
 import 'package:medicus/Utilities/colors.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 
 class LabHomeScreen extends StatefulWidget {
   const LabHomeScreen({super.key, required this.account});

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:medicus/Features/Authentication/Models/auth_account.dart';
 import 'package:medicus/Features/Prescriptions/Models/prescription_record.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/LiquidSearchBar.dart';
-import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/customShapes.dart';
-import 'package:medicus/Utilities/helperFunctions.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/liquid_search_bar.dart';
+import 'package:medicus/Features/Role_Based_Interface/Doctors/Widgets/custom_shapes.dart';
+import 'package:medicus/Utilities/helper_functions.dart';
 import 'package:medicus/Utilities/sizes.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/qr/my_qr_screen.dart';
 import 'package:medicus/Features/Role_Based_Interface/Patients/Screens/records/prescription_medicines_screen.dart';

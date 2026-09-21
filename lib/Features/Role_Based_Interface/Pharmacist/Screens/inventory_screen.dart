@@ -141,6 +141,10 @@ class InventoryScreenState extends State<InventoryScreen> {
     final int stock = int.tryParse(stockController.text.trim()) ?? 0;
     final int? threshold = int.tryParse(thresholdController.text.trim());
 
+    if (!mounted) {
+      return;
+    }
+
     if (name.isEmpty || supplier.isEmpty || stock < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter valid medicine details.')),
